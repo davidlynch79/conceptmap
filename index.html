@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compact Node & Timeline Diagrammer</title>
+  <title>Concept Map - Data Tools</title>
   <style>
     * {
       box-sizing: border-box;
@@ -222,6 +222,19 @@
       border-color: #00f5d4;
       box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.5);
     }
+    .node .node-content {
+      color: inherit;
+      text-decoration: none;
+    }
+    .node .node-content.has-url {
+      color: #90e0ef;
+      text-decoration: underline;
+    }
+    .node .node-url-text {
+      font-size: 9px;
+      color: #778da9;
+      margin-left: 4px;
+    }
     .node .delete-btn {
       display: none;
       color: #ff4d6d;
@@ -238,12 +251,13 @@
 
   <div id="toolbar">
     <div class="tool-group">
-      <input type="text" id="node-text" placeholder="Box text..." />
+      <input type="text" id="node-text" placeholder="Box text or URL..." />
       <button id="add-btn">Add Box</button>
     </div>
 
     <div class="tool-group">
       <label><input type="checkbox" id="show-timeline-chk" checked> Timeline Overlay</label>
+      <label><input type="checkbox" id="show-urls-chk"> Show URLs</label>
       <label><input type="checkbox" id="create-line-chk"> Create Line</label>
       <label><input type="checkbox" id="drag-graph-chk"> Drag Graph</label>
     </div>
@@ -296,6 +310,7 @@
     const nodeTextInput = document.getElementById('node-text');
     const addBtn = document.getElementById('add-btn');
     const showTimelineChk = document.getElementById('show-timeline-chk');
+    const showUrlsChk = document.getElementById('show-urls-chk');
     const createLineChk = document.getElementById('create-line-chk');
     const dragGraphChk = document.getElementById('drag-graph-chk');
     const arrowStyleSelect = document.getElementById('arrow-style');
@@ -312,6 +327,7 @@
       nodes: [],
       lines: [],
       showTimeline: true,
+      showUrls: false,
       timelinePos: { x: 50, y: 50, width: 700 }
     };
 
@@ -329,6 +345,18 @@
 
     function generateId() {
       return 'id_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function parseTextAndUrl(input) {
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const match = input.match(urlRegex);
+      if (match) {
+        const url = match[0];
+        let text = input.replace(url, '').trim();
+        if (!text) text = url;
+        return { text, url };
+      }
+      return { text: input.trim() || 'Node', url: null };
     }
 
     // --- TIMELINE OVERLAY GENERATION ---
@@ -400,14 +428,18 @@
 
     // --- NODE CREATION ---
     function createBox() {
-      const text = nodeTextInput.value.trim() || 'Node';
+      const rawInput = nodeTextInput.value;
+      if (!rawInput.trim()) return;
+
+      const parsed = parseTextAndUrl(rawInput);
       const count = state.nodes.length;
       const x = 80 + (count % 10) * 20;
       const y = 140 + (count % 10) * 20;
 
       const node = {
         id: generateId(),
-        text: text,
+        text: parsed.text,
+        url: parsed.url,
         x: x,
         y: y
       };
@@ -433,6 +465,8 @@
         showTimelineChk.checked = false;
       }
 
+      showUrlsChk.checked = !!state.showUrls;
+
       // Clear existing Nodes & Lines DOM
       document.querySelectorAll('.node').forEach(el => el.remove());
       svgLayer.querySelectorAll('path').forEach(el => el.remove());
@@ -448,9 +482,22 @@
         el.style.top = node.y + 'px';
         el.dataset.id = node.id;
 
-        const textSpan = document.createElement('span');
-        textSpan.textContent = node.text;
-        el.appendChild(textSpan);
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'node-content';
+        contentSpan.textContent = node.text;
+
+        if (node.url) {
+          contentSpan.classList.add('has-url');
+        }
+
+        el.appendChild(contentSpan);
+
+        if (node.url && state.showUrls) {
+          const urlSpan = document.createElement('span');
+          urlSpan.className = 'node-url-text';
+          urlSpan.textContent = `(${node.url})`;
+          el.appendChild(urlSpan);
+        }
 
         const delBtn = document.createElement('span');
         delBtn.className = 'delete-btn';
@@ -461,14 +508,21 @@
         };
         el.appendChild(delBtn);
 
-        // Double-click inline text edit
+        // Double-click opens link or prompts inline edit
         el.ondblclick = (e) => {
           e.stopPropagation();
-          const newText = prompt("Edit box text:", node.text);
-          if (newText !== null && newText.trim() !== "") {
-            node.text = newText.trim();
-            saveState();
-            render();
+          if (node.url) {
+            window.open(node.url, '_blank');
+          } else {
+            const currentVal = node.url ? `${node.text} ${node.url}` : node.text;
+            const newText = prompt("Edit box text/URL:", currentVal);
+            if (newText !== null && newText.trim() !== "") {
+              const parsed = parseTextAndUrl(newText);
+              node.text = parsed.text;
+              node.url = parsed.url;
+              saveState();
+              render();
+            }
           }
         };
 
@@ -741,6 +795,12 @@
       render();
     };
 
+    showUrlsChk.onchange = (e) => {
+      state.showUrls = e.target.checked;
+      saveState();
+      render();
+    };
+
     exportBtn.onclick = () => {
       let prefix = "diagram";
       if (state.nodes.length > 0) {
@@ -774,6 +834,7 @@
               nodes: importedState.nodes || [],
               lines: importedState.lines || [],
               showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : true,
+              showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
               timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 }
             };
             saveState();
@@ -789,7 +850,7 @@
 
     clearBtn.onclick = () => {
       if (confirm("Clear all nodes and connections?")) {
-        state = { nodes: [], lines: [], showTimeline: state.showTimeline, timelinePos: state.timelinePos };
+        state = { nodes: [], lines: [], showTimeline: state.showTimeline, showUrls: state.showUrls, timelinePos: state.timelinePos };
         selectedSourceNode = null;
         saveState();
         render();
