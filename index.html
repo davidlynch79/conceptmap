@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Concept Map - Data Tools</title>
+  <title>Concept Map - Custom Node Resizing & Auto Toggle</title>
   <style>
     * {
       box-sizing: border-box;
@@ -19,10 +19,13 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
+
+    /* TOOLBAR BASE & DOCKING STYLES */
     #toolbar {
       background: #1b263b;
-      border-bottom: 1px solid #415a77;
+      border: 1px solid #415a77;
       padding: 6px 12px;
       display: flex;
       flex-wrap: wrap;
@@ -31,7 +34,102 @@
       z-index: 100;
       font-size: 12px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+      transition: none;
     }
+
+    /* Resizable Panel Splitter Handle */
+    #sidebar-resizer {
+      display: none;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: #415a77;
+      cursor: col-resize;
+      z-index: 101;
+      transition: background 0.2s;
+    }
+    #sidebar-resizer:hover, #sidebar-resizer.resizing {
+      background: #00b4d8;
+    }
+    body.has-dock-left #sidebar-resizer {
+      display: block;
+    }
+    body.has-dock-right #sidebar-resizer {
+      display: block;
+    }
+
+    /* Docking Positions */
+    #toolbar.dock-top {
+      position: relative;
+      width: 100%;
+      flex-direction: row;
+      border-width: 0 0 1px 0;
+    }
+    #toolbar.dock-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      flex-direction: row;
+      border-width: 1px 0 0 0;
+    }
+    #toolbar.dock-left {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 260px;
+      min-width: 160px;
+      max-width: 600px;
+      flex-direction: column;
+      align-items: stretch;
+      overflow-y: auto;
+      border-width: 0 1px 0 0;
+    }
+    #toolbar.dock-right {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 260px;
+      min-width: 160px;
+      max-width: 600px;
+      flex-direction: column;
+      align-items: stretch;
+      overflow-y: auto;
+      border-width: 0 0 0 1px;
+    }
+    #toolbar.dock-floating {
+      position: absolute;
+      width: max-content;
+      max-width: 800px;
+      flex-direction: row;
+      border-width: 1px;
+      border-color: #00b4d8;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Floating Drag Handle Header */
+    #toolbar-drag-handle {
+      display: none;
+      width: 100%;
+      background: #0d1b2a;
+      color: #00f5d4;
+      font-size: 10px;
+      font-family: monospace;
+      padding: 4px 8px;
+      cursor: move;
+      margin-bottom: 4px;
+      border: 1px dashed #415a77;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    #toolbar.dock-floating #toolbar-drag-handle {
+      display: block;
+    }
+
     .tool-group {
       display: flex;
       align-items: center;
@@ -39,7 +137,14 @@
       background: #0d1b2a;
       padding: 4px 8px;
       border: 1px solid #415a77;
+      flex-wrap: wrap;
     }
+    #toolbar.dock-left .tool-group,
+    #toolbar.dock-right .tool-group {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
     input[type="text"] {
       background: #1b263b;
       border: 1px solid #778da9;
@@ -49,6 +154,10 @@
       font-family: monospace;
       outline: none;
       width: 140px;
+    }
+    #toolbar.dock-left input[type="text"],
+    #toolbar.dock-right input[type="text"] {
+      width: 100%;
     }
     input[type="text"]:focus {
       border-color: #00b4d8;
@@ -71,6 +180,25 @@
     button:disabled {
       opacity: 0.4;
       cursor: not-allowed;
+    }
+    .help-btn {
+      background: #0077b6;
+      border-color: #00b4d8;
+      color: #fff;
+      font-weight: bold;
+    }
+    .help-btn:hover {
+      background: #00b4d8;
+      color: #0d1b2a;
+    }
+    .danger-btn {
+      background: #7209b7;
+      border-color: #f72585;
+      color: #ff4d6d;
+    }
+    .danger-btn:hover {
+      background: #d90429;
+      color: #fff;
     }
     label {
       display: flex;
@@ -100,6 +228,7 @@
       font-family: monospace;
       outline: none;
     }
+
     #viewport {
       flex: 1;
       position: relative;
@@ -110,6 +239,10 @@
       background-size: 20px 20px;
       overflow: hidden;
     }
+
+    body.has-dock-left #viewport { margin-left: 260px; }
+    body.has-dock-right #viewport { margin-right: 260px; }
+    body.has-dock-bottom #viewport { margin-bottom: 45px; }
 
     /* Selection Box */
     #selection-box {
@@ -211,12 +344,25 @@
       cursor: pointer;
     }
 
+    .line-selected {
+      stroke: #00f5d4 !important;
+      stroke-dasharray: 4, 4;
+      animation: dash 1s linear infinite;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -8;
+      }
+    }
+
+    /* NODE STYLING WITH PARAGRAPH WRAPPING & DRAG-RESIZE HANDLE */
     .node {
       position: absolute;
       background: #1c2541;
       border: 1px solid #48cae4;
       color: #ffffff;
-      padding: 3px 6px;
+      padding: 4px 6px;
       font-family: monospace;
       font-size: 11px;
       white-space: nowrap;
@@ -224,17 +370,60 @@
       border-radius: 0 !important;
       box-shadow: 2px 2px 6px rgba(0,0,0,0.6);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       z-index: 10;
+      box-sizing: border-box;
     }
+    .node.fixed-size {
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-y: auto;
+      display: block;
+      padding-bottom: 12px;
+    }
+
+    /* Custom Scrollbar for Fixed Size Nodes */
+    .node.fixed-size::-webkit-scrollbar {
+      width: 4px;
+    }
+    .node.fixed-size::-webkit-scrollbar-track {
+      background: rgba(13, 27, 42, 0.5);
+    }
+    .node.fixed-size::-webkit-scrollbar-thumb {
+      background: #00b4d8;
+      border-radius: 2px;
+    }
+
     .node.selected {
       border-color: #00f5d4;
       box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.5);
     }
+
+    /* Bottom Right Resizer Corner for Selected Node */
+    .node-resize-handle {
+      display: none;
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 12px;
+      height: 12px;
+      cursor: se-resize;
+      color: #00f5d4;
+      font-size: 10px;
+      line-height: 10px;
+      text-align: right;
+      user-select: none;
+      z-index: 20;
+    }
+    .node.selected .node-resize-handle {
+      display: block;
+    }
+
     .node .node-content {
       color: inherit;
       text-decoration: none;
+      line-height: 1.3;
     }
     .node .node-content.has-url {
       color: #90e0ef;
@@ -244,6 +433,19 @@
       font-size: 9px;
       color: #778da9;
       margin-left: 4px;
+      word-break: break-all;
+    }
+    .node .collapse-btn {
+      color: #00f5d4;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 10px;
+      user-select: none;
+      margin-right: 2px;
+      float: left;
+    }
+    .node .collapse-btn:hover {
+      color: #fff;
     }
     .node .delete-btn {
       display: none;
@@ -251,15 +453,151 @@
       cursor: pointer;
       font-weight: bold;
       padding: 0 2px;
+      float: right;
     }
     .node:hover .delete-btn {
       display: inline;
     }
+
+    .node-edit-input {
+      background: #0d1b2a;
+      border: 1px solid #00f5d4;
+      color: #00f5d4;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 2px 4px;
+      outline: none;
+      resize: both;
+      overflow: auto;
+      width: 100%;
+      height: 100%;
+      min-width: 80px;
+      min-height: 22px;
+      user-select: text;
+    }
+
+    /* SVG Line Label Styling */
+    .line-label-text {
+      font-family: monospace;
+      font-size: 10px;
+      fill: #e0e6ed;
+      pointer-events: all;
+      cursor: pointer;
+    }
+    .line-label-bg {
+      fill: #1b263b;
+      stroke: #415a77;
+      stroke-width: 1px;
+      pointer-events: all;
+      cursor: pointer;
+      rx: 3px;
+      ry: 3px;
+    }
+    .line-label-bg.selected-bg {
+      stroke: #00f5d4;
+      fill: #0d1b2a;
+    }
+
+    /* HELP MODAL STYLES */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(13, 27, 42, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #1b263b;
+      border: 1px solid #00b4d8;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      width: 600px;
+      max-width: 90vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      color: #e0e6ed;
+      font-family: monospace;
+    }
+    .modal-header {
+      background: #0d1b2a;
+      padding: 10px 16px;
+      border-bottom: 1px solid #415a77;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      font-size: 14px;
+      color: #00f5d4;
+      letter-spacing: 1px;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #ff4d6d;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: #fff;
+      background: transparent;
+    }
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .help-section {
+      margin-bottom: 16px;
+    }
+    .help-section h3 {
+      color: #90e0ef;
+      font-size: 12px;
+      border-bottom: 1px solid #415a77;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .help-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 6px 12px;
+    }
+    .help-key {
+      color: #00f5d4;
+      font-weight: bold;
+    }
   </style>
 </head>
-<body>
+<body class="dock-mode-top">
 
-  <div id="toolbar">
+  <div id="toolbar" class="dock-top">
+    <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
+
+    <div class="tool-group">
+      <label>Dock:
+        <select id="dock-position-select">
+          <option value="top" selected>Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="floating">Floating</option>
+        </select>
+      </label>
+    </div>
+
     <div class="tool-group">
       <input type="text" id="node-text" placeholder="Box text or URL..." />
       <button id="add-btn">Add Box</button>
@@ -267,8 +605,13 @@
     </div>
 
     <div class="tool-group">
-      <label><input type="checkbox" id="show-timeline-chk" checked> Timeline Overlay</label>
+      <label><input type="checkbox" id="autosized-chk"> Auto-size Node</label>
+    </div>
+
+    <div class="tool-group">
+      <label><input type="checkbox" id="show-timeline-chk"> Timeline Overlay</label>
       <label><input type="checkbox" id="show-urls-chk"> Show URLs</label>
+      <label><input type="checkbox" id="edit-text-chk"> Edit Text</label>
       <label><input type="checkbox" id="create-line-chk"> Create Line</label>
       <label><input type="checkbox" id="drag-graph-chk"> Drag Graph</label>
     </div>
@@ -282,7 +625,22 @@
           <option value="none">None (--)</option>
         </select>
       </label>
+      <label>Width:
+        <select id="line-width">
+          <option value="1" selected>Thin (1px)</option>
+          <option value="2">Medium (2px)</option>
+          <option value="4">Thick (4px)</option>
+          <option value="6">Extra Thick (6px)</option>
+        </select>
+      </label>
       <label>Color: <input type="color" id="line-color" value="#00b4d8"></label>
+    </div>
+
+    <div class="tool-group" id="line-controls-group" style="display: none; border-color: #00f5d4;">
+      <label>Line Label:
+        <input type="text" id="selected-line-label" placeholder="Enter label..." style="width: 110px;" />
+      </label>
+      <button id="delete-line-btn" class="danger-btn">Delete Line</button>
     </div>
 
     <div class="tool-group">
@@ -291,18 +649,26 @@
     </div>
 
     <div class="tool-group">
-      <button id="export-btn">Export</button>
-      <button id="import-btn">Import</button>
+      <button id="export-btn">Export JSON</button>
+      <button id="export-txt-btn">Export Text</button>
+      <button id="import-btn">Import JSON</button>
+      <button id="import-txt-btn">Import Text</button>
       <input type="file" id="import-file" accept=".json" style="display:none">
+      <input type="file" id="import-txt-file" accept=".txt" style="display:none">
       <button id="clear-btn">Clear</button>
     </div>
+
+    <div class="tool-group">
+      <button id="help-btn" class="help-btn">? Help</button>
+    </div>
   </div>
+
+  <div id="sidebar-resizer"></div>
 
   <div id="viewport">
     <div id="selection-box"></div>
 
-    <!-- Draggable & Resizable Timeline -->
-    <div id="timeline-container">
+    <div id="timeline-container" class="hidden">
       <span class="timeline-title">1-YEAR TIMELINE</span>
       <div class="timeline-axis"></div>
       <div class="timeline-resize-handle">⋮</div>
@@ -310,13 +676,79 @@
 
     <svg id="svg-layer">
       <defs></defs>
+      <g id="lines-group"></g>
+      <g id="labels-group"></g>
     </svg>
+  </div>
+
+  <!-- HELP MODAL -->
+  <div id="help-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Concept Map Guide & Shortcuts</h2>
+        <button id="modal-close-btn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="help-section">
+          <h3>Interactive Node Drag-Resizing & Auto-sizing</h3>
+          <div class="help-grid">
+            <span class="help-key">Resize Selected Node</span>
+            <span>Click any node to select it, then drag the bottom-right corner handle (<b>◢</b>) to give it a custom fixed dimension.</span>
+            <span class="help-key">Auto-size Checkbox</span>
+            <span>Select a node and check <b>Auto-size Node</b> in the toolbar to clear custom dimensions and restore standard dynamic fitting.</span>
+            <span class="help-key">Paragraph Wrapping</span>
+            <span>When custom sized, text inside automatically wraps and displays vertical scrollbars if content overflows.</span>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h3>Menu Docking & Panel Resizing</h3>
+          <div class="help-grid">
+            <span class="help-key">Dock Selector</span>
+            <span>Switch menu docking between <b>Top</b>, <b>Bottom</b>, <b>Left</b>, <b>Right</b>, or <b>Floating</b>.</span>
+            <span class="help-key">Resize Side Panel</span>
+            <span>When docked Left or Right, drag the border resizer bar to shrink or widen the control panel.</span>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h3>Node & Text Operations</h3>
+          <div class="help-grid">
+            <span class="help-key">Double Click Node</span>
+            <span>If <b>Edit Text</b> mode is active: Edit text inline directly in the box.<br>If <b>Edit Text</b> mode is off: Opens URL in a new tab (if a URL exists).</span>
+            <span class="help-key">[-]/[+] Toggle</span>
+            <span>Click to collapse or expand subtrees attached to the node.</span>
+            <span class="help-key">&times; Button</span>
+            <span>Hover over a node and click the red cross to delete it.</span>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h3>Connecting & Selection</h3>
+          <div class="help-grid">
+            <span class="help-key">Create Line</span>
+            <span>Check <b>Create Line</b>, then click a source node and a target node.</span>
+            <span class="help-key">Drag Canvas</span>
+            <span>Click and drag on empty canvas background to box-select multiple nodes.</span>
+            <span class="help-key">Ctrl / Cmd + Click</span>
+            <span>Toggle selection of multiple individual nodes.</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
     const viewport = document.getElementById('viewport');
+    const toolbar = document.getElementById('toolbar');
+    const sidebarResizer = document.getElementById('sidebar-resizer');
+    const toolbarDragHandle = document.getElementById('toolbar-drag-handle');
+    const dockPositionSelect = document.getElementById('dock-position-select');
+    const autosizedChk = document.getElementById('autosized-chk');
     const svgLayer = document.getElementById('svg-layer');
     const svgDefs = svgLayer.querySelector('defs');
+    const linesGroup = document.getElementById('lines-group');
+    const labelsGroup = document.getElementById('labels-group');
     const timelineContainer = document.getElementById('timeline-container');
     const timelineResizeHandle = timelineContainer.querySelector('.timeline-resize-handle');
     const selectionBox = document.getElementById('selection-box');
@@ -326,39 +758,62 @@
     const addBoxesBtn = document.getElementById('add-boxes-btn');
     const showTimelineChk = document.getElementById('show-timeline-chk');
     const showUrlsChk = document.getElementById('show-urls-chk');
+    const editTextChk = document.getElementById('edit-text-chk');
     const createLineChk = document.getElementById('create-line-chk');
     const dragGraphChk = document.getElementById('drag-graph-chk');
     const arrowStyleSelect = document.getElementById('arrow-style');
+    const lineWidthSelect = document.getElementById('line-width');
     const lineColorPicker = document.getElementById('line-color');
+
+    const lineControlsGroup = document.getElementById('line-controls-group');
+    const selectedLineLabelInput = document.getElementById('selected-line-label');
+    const deleteLineBtn = document.getElementById('delete-line-btn');
 
     const undoBtn = document.getElementById('undo-btn');
     const redoBtn = document.getElementById('redo-btn');
     const exportBtn = document.getElementById('export-btn');
+    const exportTxtBtn = document.getElementById('export-txt-btn');
     const importBtn = document.getElementById('import-btn');
+    const importTxtBtn = document.getElementById('import-txt-btn');
     const importFileInput = document.getElementById('import-file');
+    const importTxtFileInput = document.getElementById('import-txt-file');
     const clearBtn = document.getElementById('clear-btn');
+
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
 
     let state = {
       nodes: [],
       lines: [],
-      showTimeline: true,
+      showTimeline: false,
       showUrls: false,
-      timelinePos: { x: 50, y: 50, width: 700 }
+      timelinePos: { x: 50, y: 50, width: 700 },
+      dockPosition: 'top',
+      sidebarWidth: 260,
+      floatingPos: { x: 20, y: 20 }
     };
 
     let historyStack = [];
     let historyIndex = -1;
 
     let selectedNodeIds = new Set();
+    let selectedLineId = null;
     let selectedSourceNode = null;
+    let editingNodeId = null;
+
     let draggingNode = null;
+    let resizingNode = null;
     let draggingTimeline = false;
     let resizingTimeline = false;
+    let draggingToolbar = false;
+    let resizingSidebar = false;
     let isSelectingBox = false;
 
     let dragOffset = { x: 0, y: 0 };
     let initialPositions = new Map();
     let boxSelectStart = { x: 0, y: 0 };
+    let resizeStartDimensions = { width: 0, height: 0, startX: 0, startY: 0 };
 
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -378,7 +833,100 @@
       return { text: input.trim() || 'Node', url: null };
     }
 
-    // --- TIMELINE OVERLAY GENERATION ---
+    // --- SIDEBAR RESIZING HANDLER ---
+    sidebarResizer.onmousedown = (e) => {
+      e.stopPropagation();
+      resizingSidebar = true;
+      sidebarResizer.classList.add('resizing');
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    };
+
+    function applyDockPosition(pos) {
+      toolbar.className = `dock-${pos}`;
+      document.body.className = `has-dock-${pos}`;
+
+      toolbar.style.left = '';
+      toolbar.style.top = '';
+      toolbar.style.width = '';
+
+      if (pos === 'left' || pos === 'right') {
+        const width = state.sidebarWidth || 260;
+        toolbar.style.width = `${width}px`;
+        if (pos === 'left') {
+          viewport.style.marginLeft = `${width}px`;
+          viewport.style.marginRight = '0px';
+          sidebarResizer.style.left = `${width - 3}px`;
+          sidebarResizer.style.right = '';
+        } else {
+          viewport.style.marginRight = `${width}px`;
+          viewport.style.marginLeft = '0px';
+          sidebarResizer.style.right = `${width - 3}px`;
+          sidebarResizer.style.left = '';
+        }
+      } else {
+        viewport.style.marginLeft = '0px';
+        viewport.style.marginRight = '0px';
+      }
+
+      if (pos === 'floating') {
+        toolbar.style.left = (state.floatingPos.x || 20) + 'px';
+        toolbar.style.top = (state.floatingPos.y || 20) + 'px';
+      }
+    }
+
+    dockPositionSelect.onchange = (e) => {
+      state.dockPosition = e.target.value;
+      applyDockPosition(state.dockPosition);
+      saveState();
+    };
+
+    // Toggle Node Auto-sizing
+    autosizedChk.onchange = (e) => {
+      const isAuto = e.target.checked;
+      if (selectedNodeIds.size > 0) {
+        selectedNodeIds.forEach(id => {
+          const n = state.nodes.find(item => item.id === id);
+          if (n) {
+            if (isAuto) {
+              n.size = 'auto';
+              delete n.customWidth;
+              delete n.customHeight;
+            } else {
+              const el = document.querySelector(`[data-id="${n.id}"]`);
+              if (el) {
+                const rect = el.getBoundingClientRect();
+                n.customWidth = Math.round(rect.width);
+                n.customHeight = Math.round(rect.height);
+                n.size = 'custom';
+              }
+            }
+          }
+        });
+        saveState();
+        render();
+      }
+    };
+
+    toolbarDragHandle.onmousedown = (e) => {
+      if (state.dockPosition !== 'floating') return;
+      draggingToolbar = true;
+      dragOffset.x = e.clientX - toolbar.offsetLeft;
+      dragOffset.y = e.clientY - toolbar.offsetTop;
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    };
+
+    function openHelpModal() { helpModal.classList.add('active'); }
+    function closeHelpModal() { helpModal.classList.remove('active'); }
+
+    helpBtn.onclick = openHelpModal;
+    modalCloseBtn.onclick = closeHelpModal;
+    helpModal.onclick = (e) => {
+      if (e.target === helpModal) closeHelpModal();
+    };
+
     function updateTimelineTicks() {
       const now = new Date();
       const currentMonthIndex = now.getMonth();
@@ -413,7 +961,40 @@
       }
     }
 
-    // --- HISTORY CONTROL ---
+    function getHiddenNodeIds() {
+      const hiddenIds = new Set();
+      const childrenMap = new Map();
+
+      state.lines.forEach(line => {
+        let parentId = line.from;
+        let childId = line.to;
+        if (line.arrow === 'start') {
+          parentId = line.to;
+          childId = line.from;
+        }
+        if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+        childrenMap.get(parentId).push(childId);
+      });
+
+      function hideDescendants(parentId) {
+        const children = childrenMap.get(parentId) || [];
+        children.forEach(childId => {
+          if (!hiddenIds.has(childId)) {
+            hiddenIds.add(childId);
+            hideDescendants(childId);
+          }
+        });
+      }
+
+      state.nodes.forEach(node => {
+        if (node.collapsed) {
+          hideDescendants(node.id);
+        }
+      });
+
+      return hiddenIds;
+    }
+
     function saveState() {
       historyStack = historyStack.slice(0, historyIndex + 1);
       historyStack.push(JSON.stringify(state));
@@ -432,6 +1013,8 @@
         historyIndex--;
         state = JSON.parse(historyStack[historyIndex]);
         selectedNodeIds.clear();
+        selectedLineId = null;
+        editingNodeId = null;
         render();
         updateHistoryButtons();
       }
@@ -442,12 +1025,13 @@
         historyIndex++;
         state = JSON.parse(historyStack[historyIndex]);
         selectedNodeIds.clear();
+        selectedLineId = null;
+        editingNodeId = null;
         render();
         updateHistoryButtons();
       }
     }
 
-    // --- NODE CREATION ---
     function createBox() {
       const rawInput = nodeTextInput.value;
       if (!rawInput.trim()) return;
@@ -462,7 +1046,9 @@
         text: parsed.text,
         url: parsed.url,
         x: x,
-        y: y
+        y: y,
+        size: 'auto',
+        collapsed: false
       };
 
       state.nodes.push(node);
@@ -487,7 +1073,9 @@
           text: parsed.text,
           url: parsed.url,
           x: x,
-          y: y
+          y: y,
+          size: 'auto',
+          collapsed: false
         });
       });
 
@@ -498,6 +1086,22 @@
 
     // --- RENDER ENGINE ---
     function render() {
+      dockPositionSelect.value = state.dockPosition || 'top';
+      applyDockPosition(state.dockPosition || 'top');
+
+      // Update Auto-sized checkbox status based on selected nodes
+      if (selectedNodeIds.size > 0) {
+        autosizedChk.disabled = false;
+        const allSelectedAreAuto = Array.from(selectedNodeIds).every(id => {
+          const n = state.nodes.find(item => item.id === id);
+          return n && (n.size === 'auto' || (!n.customWidth && n.size !== 'custom'));
+        });
+        autosizedChk.checked = allSelectedAreAuto;
+      } else {
+        autosizedChk.disabled = true;
+        autosizedChk.checked = false;
+      }
+
       if (state.showTimeline) {
         timelineContainer.classList.remove('hidden');
         timelineContainer.style.left = state.timelinePos.x + 'px';
@@ -512,14 +1116,47 @@
 
       showUrlsChk.checked = !!state.showUrls;
 
+      if (selectedLineId) {
+        const activeLine = state.lines.find(l => l.id === selectedLineId);
+        if (activeLine) {
+          lineControlsGroup.style.display = 'flex';
+          selectedLineLabelInput.value = activeLine.label || "";
+        } else {
+          selectedLineId = null;
+          lineControlsGroup.style.display = 'none';
+        }
+      } else {
+        lineControlsGroup.style.display = 'none';
+      }
+
       document.querySelectorAll('.node').forEach(el => el.remove());
-      svgLayer.querySelectorAll('path').forEach(el => el.remove());
+      linesGroup.innerHTML = '';
+      labelsGroup.innerHTML = '';
+
+      const hiddenNodeIds = getHiddenNodeIds();
+
+      const parentNodeIds = new Set();
+      state.lines.forEach(l => {
+        let parentId = l.from;
+        if (l.arrow === 'start') parentId = l.to;
+        parentNodeIds.add(parentId);
+      });
 
       state.nodes.forEach(node => {
+        if (hiddenNodeIds.has(node.id)) return;
+
         const el = document.createElement('div');
         el.className = 'node';
 
-        if (selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id)) {
+        // Apply Custom Dimensions
+        if (node.customWidth && node.customHeight) {
+          el.classList.add('fixed-size');
+          el.style.width = `${node.customWidth}px`;
+          el.style.height = `${node.customHeight}px`;
+        }
+
+        const isSelected = selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id);
+        if (isSelected) {
           el.classList.add('selected');
         }
 
@@ -527,23 +1164,7 @@
         el.style.top = node.y + 'px';
         el.dataset.id = node.id;
 
-        const contentSpan = document.createElement('span');
-        contentSpan.className = 'node-content';
-        contentSpan.textContent = node.text;
-
-        if (node.url) {
-          contentSpan.classList.add('has-url');
-        }
-
-        el.appendChild(contentSpan);
-
-        if (node.url && state.showUrls) {
-          const urlSpan = document.createElement('span');
-          urlSpan.className = 'node-url-text';
-          urlSpan.textContent = `(${node.url})`;
-          el.appendChild(urlSpan);
-        }
-
+        // Delete button
         const delBtn = document.createElement('span');
         delBtn.className = 'delete-btn';
         delBtn.innerHTML = '&times;';
@@ -553,20 +1174,96 @@
         };
         el.appendChild(delBtn);
 
-        el.ondblclick = (e) => {
-          e.stopPropagation();
-          if (node.url) {
-            window.open(node.url, '_blank');
-          } else {
-            const currentVal = node.url ? `${node.text} ${node.url}` : node.text;
-            const newText = prompt("Edit box text/URL:", currentVal);
-            if (newText !== null && newText.trim() !== "") {
-              const parsed = parseTextAndUrl(newText);
-              node.text = parsed.text;
-              node.url = parsed.url;
+        // Collapse/Expand button
+        if (parentNodeIds.has(node.id)) {
+          const colBtn = document.createElement('span');
+          colBtn.className = 'collapse-btn';
+          colBtn.textContent = node.collapsed ? '[+]' : '[-]';
+          colBtn.onclick = (e) => {
+            e.stopPropagation();
+            node.collapsed = !node.collapsed;
+            saveState();
+            render();
+          };
+          el.appendChild(colBtn);
+        }
+
+        if (editingNodeId === node.id) {
+          const inputEl = document.createElement('textarea');
+          inputEl.className = 'node-edit-input';
+          inputEl.value = node.url ? `${node.text} ${node.url}` : node.text;
+
+          const finishEditing = () => {
+            if (editingNodeId === node.id) {
+              const val = inputEl.value;
+              if (val.trim() !== '') {
+                const parsed = parseTextAndUrl(val);
+                node.text = parsed.text;
+                node.url = parsed.url;
+              }
+              editingNodeId = null;
               saveState();
               render();
             }
+          };
+
+          inputEl.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              finishEditing();
+            }
+          };
+
+          inputEl.onblur = finishEditing;
+          inputEl.onmousedown = (e) => e.stopPropagation();
+
+          el.appendChild(inputEl);
+          setTimeout(() => {
+            inputEl.focus();
+            inputEl.select();
+          }, 0);
+        } else {
+          const contentSpan = document.createElement('span');
+          contentSpan.className = 'node-content';
+          contentSpan.textContent = node.text;
+
+          if (node.url) contentSpan.classList.add('has-url');
+          el.appendChild(contentSpan);
+
+          if (node.url && state.showUrls) {
+            const urlSpan = document.createElement('span');
+            urlSpan.className = 'node-url-text';
+            urlSpan.textContent = ` (${node.url})`;
+            el.appendChild(urlSpan);
+          }
+        }
+
+        // Interactive Bottom-Right Resize Handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'node-resize-handle';
+        resizeHandle.innerHTML = '◢';
+        resizeHandle.onmousedown = (e) => {
+          e.stopPropagation();
+          resizingNode = node;
+          const rect = el.getBoundingClientRect();
+          resizeStartDimensions = {
+            width: rect.width,
+            height: rect.height,
+            startX: e.clientX,
+            startY: e.clientY
+          };
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+        };
+        el.appendChild(resizeHandle);
+
+        el.ondblclick = (e) => {
+          e.stopPropagation();
+          if (editTextChk.checked) {
+            editingNodeId = node.id;
+            render();
+          } else if (node.url) {
+            window.open(node.url, '_blank');
           }
         };
 
@@ -574,13 +1271,19 @@
         viewport.appendChild(el);
       });
 
-      state.lines.forEach(line => renderLine(line));
+      state.lines.forEach(line => {
+        if (!hiddenNodeIds.has(line.from) && !hiddenNodeIds.has(line.to)) {
+          renderLine(line);
+        }
+      });
     }
 
     function renderLine(line) {
       const sourceNode = state.nodes.find(n => n.id === line.from);
       const targetNode = state.nodes.find(n => n.id === line.to);
       if (!sourceNode || !targetNode) return;
+
+      const isSelected = selectedLineId === line.id;
 
       const sourceRect = getNodeRect(sourceNode);
       const targetRect = getNodeRect(targetNode);
@@ -591,13 +1294,19 @@
       const clipP1 = clipLineWithRect(p2, p1, sourceRect);
       const clipP2 = clipLineWithRect(p1, p2, targetRect);
 
+      const pathData = `M ${clipP1.x} ${clipP1.y} L ${clipP2.x} ${clipP2.y}`;
+
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", `M ${clipP1.x} ${clipP1.y} L ${clipP2.x} ${clipP2.y}`);
-      path.setAttribute("stroke", line.color || "#00b4d8");
-      path.setAttribute("stroke-width", "2");
+      path.setAttribute("d", pathData);
+      path.setAttribute("stroke", isSelected ? "#00f5d4" : (line.color || "#00b4d8"));
+      path.setAttribute("stroke-width", `${isSelected ? Math.max((line.width || 1) + 1, 3) : (line.width || 1)}px`);
       path.setAttribute("fill", "none");
 
-      const markerColor = (line.color || "#00b4d8").replace('#', '');
+      if (isSelected) {
+        path.classList.add("line-selected");
+      }
+
+      const markerColor = isSelected ? "00f5d4" : (line.color || "#00b4d8").replace('#', '');
       if (line.arrow === 'end' || line.arrow === 'both') {
         ensureMarker(markerColor, 'end');
         path.setAttribute("marker-end", `url(#arrow-end-${markerColor})`);
@@ -607,16 +1316,57 @@
         path.setAttribute("marker-start", `url(#arrow-start-${markerColor})`);
       }
 
-      path.onclick = (e) => {
+      const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      hitPath.setAttribute("d", pathData);
+      hitPath.setAttribute("stroke", "transparent");
+      hitPath.setAttribute("stroke-width", "14px");
+      hitPath.setAttribute("fill", "none");
+
+      const selectLine = (e) => {
         e.stopPropagation();
-        if (confirm("Delete this line connection?")) {
-          state.lines = state.lines.filter(l => l.id !== line.id);
-          saveState();
-          render();
-        }
+        selectedLineId = line.id;
+        selectedNodeIds.clear();
+        selectedSourceNode = null;
+        render();
+        selectedLineLabelInput.focus();
       };
 
-      svgLayer.appendChild(path);
+      path.onclick = selectLine;
+      hitPath.onclick = selectLine;
+
+      linesGroup.appendChild(path);
+      linesGroup.appendChild(hitPath);
+
+      if (line.label) {
+        const midX = (clipP1.x + clipP2.x) / 2;
+        const midY = (clipP1.y + clipP2.y) / 2;
+
+        const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        textEl.setAttribute("x", midX);
+        textEl.setAttribute("y", midY);
+        textEl.setAttribute("text-anchor", "middle");
+        textEl.setAttribute("dominant-baseline", "central");
+        textEl.setAttribute("class", "line-label-text");
+        textEl.textContent = line.label;
+        textEl.onclick = selectLine;
+
+        labelsGroup.appendChild(textEl);
+
+        setTimeout(() => {
+          try {
+            const bbox = textEl.getBBox();
+            const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bgRect.setAttribute("x", bbox.x - 4);
+            bgRect.setAttribute("y", bbox.y - 2);
+            bgRect.setAttribute("width", bbox.width + 8);
+            bgRect.setAttribute("height", bbox.height + 4);
+            bgRect.setAttribute("class", `line-label-bg ${isSelected ? 'selected-bg' : ''}`);
+            bgRect.onclick = selectLine;
+
+            labelsGroup.insertBefore(bgRect, textEl);
+          } catch (err) {}
+        }, 0);
+      }
     }
 
     function ensureMarker(colorHex, type) {
@@ -687,9 +1437,11 @@
       return { x: p1.x + tMin * dx, y: p1.y + tMin * dy };
     }
 
-    // --- INTERACTION & DRAG ENGINE ---
     function handleMouseDownNode(e, node) {
+      if (editingNodeId === node.id) return;
       e.stopPropagation();
+
+      selectedLineId = null;
 
       if (createLineChk.checked) {
         if (!selectedSourceNode) {
@@ -701,7 +1453,9 @@
             from: selectedSourceNode.id,
             to: node.id,
             arrow: arrowStyleSelect.value,
-            color: lineColorPicker.value
+            width: parseInt(lineWidthSelect.value, 10),
+            color: lineColorPicker.value,
+            label: ""
           });
           selectedSourceNode = null;
           saveState();
@@ -751,9 +1505,10 @@
       window.addEventListener('mouseup', handleMouseUp);
     }
 
-    // CANVAS MULTI-SELECT BOX
     viewport.onmousedown = (e) => {
       if (e.target !== viewport && e.target !== svgLayer) return;
+
+      selectedLineId = null;
 
       if (!e.ctrlKey && !e.metaKey) {
         selectedNodeIds.clear();
@@ -776,7 +1531,6 @@
       window.addEventListener('mouseup', handleMouseUp);
     };
 
-    // TIMELINE DRAG & RESIZE LISTENERS
     timelineContainer.onmousedown = (e) => {
       if (e.target === timelineResizeHandle) return;
       draggingTimeline = true;
@@ -796,6 +1550,42 @@
     };
 
     function handleMouseMove(e) {
+      if (resizingNode) {
+        const deltaX = e.clientX - resizeStartDimensions.startX;
+        const deltaY = e.clientY - resizeStartDimensions.startY;
+
+        const newW = Math.max(80, resizeStartDimensions.width + deltaX);
+        const newH = Math.max(40, resizeStartDimensions.height + deltaY);
+
+        resizingNode.customWidth = Math.round(newW);
+        resizingNode.customHeight = Math.round(newH);
+        resizingNode.size = 'custom';
+
+        render();
+        return;
+      }
+
+      if (resizingSidebar) {
+        let newWidth = 260;
+        if (state.dockPosition === 'left') {
+          newWidth = Math.max(160, Math.min(600, e.clientX));
+        } else if (state.dockPosition === 'right') {
+          newWidth = Math.max(160, Math.min(600, window.innerWidth - e.clientX));
+        }
+        state.sidebarWidth = newWidth;
+        applyDockPosition(state.dockPosition);
+        return;
+      }
+
+      if (draggingToolbar) {
+        const newX = Math.max(0, e.clientX - dragOffset.x);
+        const newY = Math.max(0, e.clientY - dragOffset.y);
+        state.floatingPos = { x: newX, y: newY };
+        toolbar.style.left = newX + 'px';
+        toolbar.style.top = newY + 'px';
+        return;
+      }
+
       if (isSelectingBox) {
         const vpRect = viewport.getBoundingClientRect();
         const currentX = e.clientX - vpRect.left;
@@ -856,6 +1646,22 @@
     }
 
     function handleMouseUp() {
+      if (resizingNode) {
+        resizingNode = null;
+        saveState();
+      }
+
+      if (resizingSidebar) {
+        resizingSidebar = false;
+        sidebarResizer.classList.remove('resizing');
+        saveState();
+      }
+
+      if (draggingToolbar) {
+        draggingToolbar = false;
+        saveState();
+      }
+
       if (isSelectingBox) {
         isSelectingBox = false;
         selectionBox.style.display = 'none';
@@ -898,11 +1704,33 @@
       state.lines = state.lines.filter(l => l.from !== id && l.to !== id);
       selectedNodeIds.delete(id);
       if (selectedSourceNode && selectedSourceNode.id === id) selectedSourceNode = null;
+      if (editingNodeId === id) editingNodeId = null;
       saveState();
       render();
     }
 
-    // --- EVENTS & BUTTON HANDLERS ---
+    selectedLineLabelInput.oninput = (e) => {
+      if (!selectedLineId) return;
+      const activeLine = state.lines.find(l => l.id === selectedLineId);
+      if (activeLine) {
+        activeLine.label = e.target.value;
+        render();
+      }
+    };
+
+    selectedLineLabelInput.onchange = () => {
+      saveState();
+    };
+
+    deleteLineBtn.onclick = () => {
+      if (selectedLineId) {
+        state.lines = state.lines.filter(l => l.id !== selectedLineId);
+        selectedLineId = null;
+        saveState();
+        render();
+      }
+    };
+
     addBtn.onclick = createBox;
     addBoxesBtn.onclick = createBoxes;
 
@@ -944,6 +1772,96 @@
       URL.revokeObjectURL(a.href);
     };
 
+    exportTxtBtn.onclick = () => {
+      if (state.nodes.length === 0) {
+        alert("No nodes to export.");
+        return;
+      }
+
+      const childrenMap = new Map();
+      const parentCountMap = new Map();
+
+      state.nodes.forEach(node => {
+        childrenMap.set(node.id, []);
+        parentCountMap.set(node.id, 0);
+      });
+
+      state.lines.forEach(line => {
+        let parentId = null;
+        let childId = null;
+
+        if (line.arrow === 'end') {
+          parentId = line.from;
+          childId = line.to;
+        } else if (line.arrow === 'start') {
+          parentId = line.to;
+          childId = line.from;
+        } else if (line.arrow === 'none' || line.arrow === 'both') {
+          parentId = line.from;
+          childId = line.to;
+        }
+
+        if (parentId && childId && childrenMap.has(parentId) && childrenMap.has(childId)) {
+          childrenMap.get(parentId).push(childId);
+          parentCountMap.set(childId, parentCountMap.get(childId) + 1);
+        }
+      });
+
+      let rootNodes = state.nodes.filter(n => parentCountMap.get(n.id) === 0);
+      
+      if (rootNodes.length === 0) {
+        rootNodes = [...state.nodes];
+      }
+
+      rootNodes.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+
+      const visitedInTree = new Set();
+      let outputLines = [];
+
+      function printNode(nodeId, indentLevel) {
+        if (visitedInTree.has(nodeId)) return;
+        visitedInTree.add(nodeId);
+
+        const node = state.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        const indent = '    '.repeat(indentLevel);
+        const label = node.url ? `${node.text} ${node.url}` : node.text;
+        outputLines.push(`${indent}${label}`);
+
+        const children = childrenMap.get(nodeId) || [];
+        children.forEach(childId => {
+          printNode(childId, indentLevel + 1);
+        });
+      }
+
+      rootNodes.forEach(root => printNode(root.id, 0));
+
+      state.nodes.forEach(node => {
+        if (!visitedInTree.has(node.id)) {
+          printNode(node.id, 0);
+        }
+      });
+
+      let prefix = "outline";
+      if (state.nodes.length > 0) {
+        const highestNode = state.nodes.reduce((min, n) => n.y < min.y ? n : min, state.nodes[0]);
+        if (highestNode && highestNode.text.trim()) {
+          prefix = highestNode.text.trim().replace(/[^a-z0-9_-]/gi, '_');
+        }
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `${prefix}_indented_${today}.txt`;
+
+      const blob = new Blob([outputLines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
     importBtn.onclick = () => importFileInput.click();
     importFileInput.onchange = (e) => {
       const file = e.target.files[0];
@@ -956,11 +1874,16 @@
             state = {
               nodes: importedState.nodes || [],
               lines: importedState.lines || [],
-              showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : true,
+              showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
               showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
-              timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 }
+              timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
+              dockPosition: importedState.dockPosition || 'top',
+              sidebarWidth: importedState.sidebarWidth || 260,
+              floatingPos: importedState.floatingPos || { x: 20, y: 20 }
             };
             selectedNodeIds.clear();
+            selectedLineId = null;
+            editingNodeId = null;
             saveState();
             render();
           }
@@ -972,11 +1895,124 @@
       importFileInput.value = '';
     };
 
+    importTxtBtn.onclick = () => importTxtFileInput.click();
+    importTxtFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const textContent = evt.target.result;
+        const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+
+        if (lines.length === 0) return;
+
+        const newNodes = [];
+        const newLines = [];
+        const ancestorStack = [];
+
+        const startX = 80;
+        const startY = 140;
+        const levelSpacingX = 180;
+        const nodeSpacingY = 50;
+
+        let currentY = startY;
+
+        lines.forEach(line => {
+          let indentLevel = 0;
+          let i = 0;
+          while (i < line.length) {
+            if (line[i] === '\t') {
+              indentLevel += 1;
+              i++;
+            } else if (line.substr(i, 4) === '    ') {
+              indentLevel += 1;
+              i += 4;
+            } else if (line.substr(i, 2) === '  ') {
+              indentLevel += 1;
+              i += 2;
+            } else {
+              break;
+            }
+          }
+
+          const rawText = line.trim();
+          const parsed = parseTextAndUrl(rawText);
+
+          const posX = startX + (indentLevel * levelSpacingX);
+          const posY = currentY;
+          currentY += nodeSpacingY;
+
+          const node = {
+            id: generateId(),
+            text: parsed.text,
+            url: parsed.url,
+            x: posX,
+            y: posY,
+            size: 'auto',
+            collapsed: false
+          };
+
+          newNodes.push(node);
+
+          ancestorStack[indentLevel] = node;
+          ancestorStack.length = indentLevel + 1;
+
+          if (indentLevel > 0) {
+            let parentNode = ancestorStack[indentLevel - 1];
+            if (!parentNode) {
+              for (let lvl = indentLevel - 1; lvl >= 0; lvl--) {
+                if (ancestorStack[lvl]) {
+                  parentNode = ancestorStack[lvl];
+                  break;
+                }
+              }
+            }
+
+            if (parentNode) {
+              newLines.push({
+                id: generateId(),
+                from: parentNode.id,
+                to: node.id,
+                arrow: 'end',
+                width: parseInt(lineWidthSelect.value, 10),
+                color: lineColorPicker.value,
+                label: ""
+              });
+            }
+          }
+        });
+
+        state.nodes = state.nodes.concat(newNodes);
+        state.lines = state.lines.concat(newLines);
+
+        selectedNodeIds.clear();
+        selectedLineId = null;
+        editingNodeId = null;
+        saveState();
+        render();
+      };
+
+      reader.readAsText(file);
+      importTxtFileInput.value = '';
+    };
+
     clearBtn.onclick = () => {
       if (confirm("Clear all nodes and connections?")) {
-        state = { nodes: [], lines: [], showTimeline: state.showTimeline, showUrls: state.showUrls, timelinePos: state.timelinePos };
+        state = { 
+          nodes: [], 
+          lines: [], 
+          showTimeline: state.showTimeline, 
+          showUrls: state.showUrls, 
+          timelinePos: state.timelinePos,
+          dockPosition: state.dockPosition,
+          sidebarWidth: state.sidebarWidth,
+          floatingPos: state.floatingPos
+        };
         selectedSourceNode = null;
         selectedNodeIds.clear();
+        selectedLineId = null;
+        editingNodeId = null;
         saveState();
         render();
       }
@@ -986,15 +2022,28 @@
     redoBtn.onclick = redo;
 
     window.onkeydown = (e) => {
+      if (e.key === 'Escape') {
+        closeHelpModal();
+        return;
+      }
+
+      const activeEl = document.activeElement;
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (document.activeElement !== nodeTextInput && selectedNodeIds.size > 0) {
-          selectedNodeIds.forEach(id => {
-            state.nodes = state.nodes.filter(n => n.id !== id);
-            state.lines = state.lines.filter(l => l.from !== id && l.to !== id);
-          });
-          selectedNodeIds.clear();
-          saveState();
-          render();
+        if (activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && !activeEl.classList.contains('node-edit-input')) {
+          if (selectedLineId) {
+            state.lines = state.lines.filter(l => l.id !== selectedLineId);
+            selectedLineId = null;
+            saveState();
+            render();
+          } else if (selectedNodeIds.size > 0) {
+            selectedNodeIds.forEach(id => {
+              state.nodes = state.nodes.filter(n => n.id !== id);
+              state.lines = state.lines.filter(l => l.from !== id && l.to !== id);
+            });
+            selectedNodeIds.clear();
+            saveState();
+            render();
+          }
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         if (e.shiftKey) redo();
@@ -1004,7 +2053,6 @@
       }
     };
 
-    // --- INITIALIZATION ---
     saveState();
     render();
   </script>
