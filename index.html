@@ -1897,12 +1897,26 @@
       URL.revokeObjectURL(a.href);
     };
 
+    // --- UPDATED EXPORT TXT SIMPLE ---
     exportTxtSimpleBtn.onclick = () => {
       if (state.nodes.length === 0) {
         alert("No nodes to export.");
         return;
       }
-      const lines = state.nodes.map(n => n.url ? `${n.text} ${n.url}` : n.text);
+
+      const outputLines = [];
+
+      state.nodes.forEach(n => {
+        const label = n.url ? `${n.text} ${n.url}` : n.text;
+        const x = Math.round(n.x);
+        const y = Math.round(n.y);
+        outputLines.push(`${n.id} ${label} ${x} ${y}`);
+      });
+
+      state.lines.forEach(l => {
+        outputLines.push(`-1 ${l.from} ${l.to}`);
+      });
+
       let prefix = "simple_nodes";
       if (state.nodes.length > 0) {
         const highestNode = state.nodes.reduce((min, n) => n.y < min.y ? n : min, state.nodes[0]);
@@ -1912,7 +1926,7 @@
       }
       const today = new Date().toISOString().split('T')[0];
       const fileName = `${prefix}_simple_${today}.txt`;
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([outputLines.join('\n')], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = fileName;
@@ -2043,6 +2057,7 @@
       importFileInput.value = '';
     };
 
+    // --- UPDATED IMPORT TXT SIMPLE ---
     importTxtSimpleBtn.onclick = () => importTxtSimpleFileInput.click();
     importTxtSimpleFileInput.onchange = (e) => {
       const file = e.target.files[0];
@@ -2053,20 +2068,62 @@
         const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
         if (lines.length === 0) return;
 
-        const newNodes = lines.map((line, idx) => {
-          const parsed = parseTextAndUrl(line.trim());
-          return {
-            id: generateId(),
-            text: parsed.text,
-            url: parsed.url,
-            x: 80 + (idx % 8) * 140,
-            y: 140 + Math.floor(idx / 8) * 60,
-            size: 'auto',
-            collapsed: false
-          };
+        const newNodes = [];
+        const newLines = [];
+        const idMap = new Map();
+
+        lines.forEach((line) => {
+          const tokens = line.trim().split(/\s+/);
+          if (tokens.length < 3) return;
+
+          const firstToken = tokens[0];
+
+          if (firstToken === "-1") {
+            const fromId = idMap.get(tokens[1]) || tokens[1];
+            const toId = idMap.get(tokens[2]) || tokens[2];
+            newLines.push({
+              id: generateId(),
+              from: fromId,
+              to: toId,
+              arrow: arrowStyleSelect.value,
+              width: parseInt(lineWidthSelect.value, 10),
+              color: lineColorPicker.value,
+              label: ""
+            });
+          } else {
+            let x = 80 + (newNodes.length % 8) * 140;
+            let y = 140 + Math.floor(newNodes.length / 8) * 60;
+            let contentTokens = tokens.slice(1);
+
+            const possibleY = parseFloat(tokens[tokens.length - 1]);
+            const possibleX = parseFloat(tokens[tokens.length - 2]);
+
+            if (!isNaN(possibleX) && !isNaN(possibleY)) {
+              x = possibleX;
+              y = possibleY;
+              contentTokens = tokens.slice(1, tokens.length - 2);
+            }
+
+            const rawContent = contentTokens.join(" ");
+            const parsed = parseTextAndUrl(rawContent);
+
+            const assignedId = generateId();
+            idMap.set(firstToken, assignedId);
+
+            newNodes.push({
+              id: assignedId,
+              text: parsed.text,
+              url: parsed.url,
+              x: x,
+              y: y,
+              size: 'auto',
+              collapsed: false
+            });
+          }
         });
 
         state.nodes = state.nodes.concat(newNodes);
+        state.lines = state.lines.concat(newLines);
         selectedNodeIds.clear();
         selectedLineId = null;
         editingNodeId = null;
