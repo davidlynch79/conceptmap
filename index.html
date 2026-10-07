@@ -645,12 +645,10 @@
     </div>
 
     <div class="tool-group">
-      <label>Arrow:
+      <label>Type:
         <select id="arrow-style">
-          <option value="end">End (->)</option>
-          <option value="both">Both (<->)</option>
-          <option value="start">Start (<-)</option>
-          <option value="none">None (--)</option>
+          <option value="end">Arrow (->)</option>
+          <option value="none">Line (--)</option>
         </select>
       </label>
       <label>Width:
@@ -768,7 +766,9 @@
             <span class="help-key">Undo / Redo</span>
             <span>Use <b>Ctrl + Z</b> (Cmd + Z) to Undo, and <b>Ctrl + Y</b> or <b>Ctrl + Shift + Z</b> (Cmd + Shift + Z) to Redo.</span>
             <span class="help-key">Create Line</span>
-            <span>Check <b>Create Line</b>, then click a source node and a target node.</span>
+            <span>Check <b>Create Line</b>, choose a <b>Type</b> (Arrow or Line), then click a source node and a target node.</span>
+            <span class="help-key">TXT Simple format</span>
+            <span>Nodes: <b>id label x y</b><br>Arrow: <b>-1 fromId toId</b><br>Line: <b>-2 fromId toId</b></span>
             <span class="help-key">Drag Canvas</span>
             <span>Click and drag on empty canvas background to box-select multiple nodes.</span>
             <span class="help-key">Ctrl / Cmd + Click</span>
@@ -869,6 +869,20 @@
 
     function generateId() {
       return 'id_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Only two connection types exist: 'end' (arrow, from -> to) and 'none' (plain line).
+    function normalizeLines(lines) {
+      return lines.map(l => {
+        const out = Object.assign({}, l);
+        if (out.arrow === 'start') {
+          const t = out.from; out.from = out.to; out.to = t;
+          out.arrow = 'end';
+        } else if (out.arrow !== 'none') {
+          out.arrow = 'end';
+        }
+        return out;
+      });
     }
 
     function parseTextAndUrl(input) {
@@ -2088,7 +2102,8 @@
       });
 
       state.lines.forEach(l => {
-        outputLines.push(`-1 ${l.from} ${l.to}`);
+        const rev = l.arrow === 'start';
+        outputLines.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
       });
 
       let prefix = "simple_nodes";
@@ -2209,7 +2224,7 @@
           if (importedState.nodes && importedState.lines) {
             state = {
               nodes: importedState.nodes || [],
-              lines: importedState.lines || [],
+              lines: normalizeLines(importedState.lines || []),
               showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
               showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
               timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
@@ -2252,14 +2267,14 @@
 
           const firstToken = tokens[0];
 
-          if (firstToken === "-1") {
+          if (firstToken === "-1" || firstToken === "-2") {
             const fromId = idMap.get(tokens[1]) || tokens[1];
             const toId = idMap.get(tokens[2]) || tokens[2];
             newLines.push({
               id: generateId(),
               from: fromId,
               to: toId,
-              arrow: arrowStyleSelect.value,
+              arrow: firstToken === "-2" ? 'none' : 'end',
               width: parseInt(lineWidthSelect.value, 10),
               color: lineColorPicker.value,
               label: ""
