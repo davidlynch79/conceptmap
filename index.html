@@ -497,6 +497,15 @@
       user-select: text;
     }
 
+    /* Node sub-elements follow the node's (slider-controlled) font size */
+    .node .node-url-text { font-size: 0.82em; }
+    .node .collapse-btn { font-size: 0.9em; }
+    .node-edit-input { font-size: inherit; }
+
+    .slider-label { flex-direction: column; align-items: stretch; gap: 2px; }
+    .slider-label input[type="range"] { width: 100%; min-width: 110px; cursor: pointer; accent-color: #00b4d8; }
+    .slider-hint { color: #778da9; font-size: 10px; }
+
     /* SVG Line Label Styling */
     .line-label-text {
       font-family: monospace;
@@ -632,6 +641,15 @@
     </div>
 
     <div class="tool-group">
+      <label class="slider-label">Spacing <span class="slider-hint">&#9664; condense | expand &#9654;</span>
+        <input type="range" id="spread-slider" min="-100" max="100" value="0" step="1">
+      </label>
+      <label class="slider-label">Font <span id="font-size-label" class="slider-hint">11px</span>
+        <input type="range" id="font-slider" min="7" max="32" value="11" step="1">
+      </label>
+    </div>
+
+    <div class="tool-group">
       <label><input type="checkbox" id="autosized-chk"> Auto-size Node</label>
       <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
     </div>
@@ -735,6 +753,10 @@
             <span>Click any node to select it, then drag the bottom-right corner handle (<b>◢</b>) to give it a custom fixed dimension.</span>
             <span class="help-key">Auto-size Checkbox</span>
             <span>Select a node and check <b>Auto-size Node</b> in the toolbar to clear custom dimensions and restore standard dynamic fitting.</span>
+            <span class="help-key">Spacing Slider</span>
+            <span>Drag left to condense the nodes toward the top-left of the layout, right to expand them toward the bottom-right. It springs back to center on release so you can nudge repeatedly (Undo works).</span>
+            <span class="help-key">Font Slider</span>
+            <span>Changes the text size of every node. Box padding and custom box sizes scale with it.</span>
           </div>
         </div>
 
@@ -801,6 +823,9 @@
     const fitBoxBtn = document.getElementById('fit-box-btn');
     const fitSeqBtn = document.getElementById('fit-seq-btn');
     const highlightChainChk = document.getElementById('highlight-chain-chk');
+    const spreadSlider = document.getElementById('spread-slider');
+    const fontSlider = document.getElementById('font-slider');
+    const fontSizeLabel = document.getElementById('font-size-label');
     const showTimelineChk = document.getElementById('show-timeline-chk');
     const showUrlsChk = document.getElementById('show-urls-chk');
     const editTextChk = document.getElementById('edit-text-chk');
@@ -839,7 +864,8 @@
       timelinePos: { x: 50, y: 50, width: 700 },
       dockPosition: 'left',
       sidebarWidth: 260,
-      floatingPos: { x: 20, y: 20 }
+      floatingPos: { x: 20, y: 20 },
+      fontSize: 11
     };
 
     let historyStack = [];
@@ -977,8 +1003,8 @@
               const el = document.querySelector(`[data-id="${n.id}"]`);
               if (el) {
                 const rect = el.getBoundingClientRect();
-                n.customWidth = Math.round(rect.width);
-                n.customHeight = Math.round(rect.height);
+                n.customWidth = Math.round(rect.width / fontScale());
+                n.customHeight = Math.round(rect.height / fontScale());
                 n.size = 'custom';
               }
             }
@@ -1056,6 +1082,46 @@
     }
 
     highlightChainChk.onchange = () => render();
+
+    function fontScale() { return (state.fontSize || 11) / 11; }
+
+    fontSlider.oninput = () => {
+      state.fontSize = parseInt(fontSlider.value, 10);
+      render();
+    };
+    fontSlider.onchange = () => saveState();
+
+    // Condense / expand: scale node positions about the layout's top-left corner.
+    // The slider is relative to where the drag started and springs back to center on release.
+    let spreadSnapshot = null;
+
+    spreadSlider.oninput = () => {
+      if (!spreadSnapshot) {
+        if (state.nodes.length === 0) return;
+        let ax = Infinity, ay = Infinity;
+        state.nodes.forEach(n => { ax = Math.min(ax, n.x); ay = Math.min(ay, n.y); });
+        spreadSnapshot = {
+          ax, ay,
+          pos: new Map(state.nodes.map(n => [n.id, { x: n.x, y: n.y }]))
+        };
+      }
+      const f = Math.pow(3, parseFloat(spreadSlider.value) / 100); // 1/3x ... 3x
+      state.nodes.forEach(n => {
+        const p = spreadSnapshot.pos.get(n.id);
+        if (!p) return;
+        n.x = Math.max(0, Math.round(spreadSnapshot.ax + (p.x - spreadSnapshot.ax) * f));
+        n.y = Math.max(0, Math.round(spreadSnapshot.ay + (p.y - spreadSnapshot.ay) * f));
+      });
+      render();
+    };
+
+    spreadSlider.onchange = () => {
+      if (spreadSnapshot) {
+        spreadSnapshot = null;
+        saveState();
+      }
+      spreadSlider.value = 0;
+    };
 
     function setFitMode(mode) {
       fitMode = mode;
@@ -1349,6 +1415,8 @@
 
     function renderInner() {
       dockPositionSelect.value = state.dockPosition || 'left';
+      fontSlider.value = state.fontSize || 11;
+      fontSizeLabel.textContent = (state.fontSize || 11) + 'px';
       applyDockPosition(state.dockPosition || 'left');
 
       // Update Auto-sized checkbox status based on selected nodes
@@ -1418,12 +1486,15 @@
 
         const el = document.createElement('div');
         el.className = 'node';
+        const fscale = fontScale();
+        el.style.fontSize = (state.fontSize || 11) + 'px';
+        el.style.padding = `${(4 * fscale).toFixed(1)}px ${(6 * fscale).toFixed(1)}px`;
 
         // Apply Custom Dimensions
         if (node.customWidth && node.customHeight) {
           el.classList.add('fixed-size');
-          el.style.width = `${node.customWidth}px`;
-          el.style.height = `${node.customHeight}px`;
+          el.style.width = `${Math.round(node.customWidth * fscale)}px`;
+          el.style.height = `${Math.round(node.customHeight * fscale)}px`;
         }
 
         const isSelected = selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id);
@@ -1845,8 +1916,8 @@
         const newW = Math.max(80, resizeStartDimensions.width + deltaX);
         const newH = Math.max(40, resizeStartDimensions.height + deltaY);
 
-        resizingNode.customWidth = Math.round(newW);
-        resizingNode.customHeight = Math.round(newH);
+        resizingNode.customWidth = Math.round(newW / fontScale());
+        resizingNode.customHeight = Math.round(newH / fontScale());
         resizingNode.size = 'custom';
 
         render();
@@ -2230,7 +2301,8 @@
               timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
               dockPosition: importedState.dockPosition || 'left',
               sidebarWidth: importedState.sidebarWidth || 260,
-              floatingPos: importedState.floatingPos || { x: 20, y: 20 }
+              floatingPos: importedState.floatingPos || { x: 20, y: 20 },
+              fontSize: importedState.fontSize || 11
             };
             selectedNodeIds.clear();
             selectedLineId = null;
@@ -2435,7 +2507,8 @@
           timelinePos: state.timelinePos,
           dockPosition: state.dockPosition,
           sidebarWidth: state.sidebarWidth,
-          floatingPos: state.floatingPos
+          floatingPos: state.floatingPos,
+          fontSize: state.fontSize
         };
         selectedSourceNode = null;
         selectedNodeIds.clear();
@@ -2458,7 +2531,7 @@
 
       const activeEl = document.activeElement;
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && !activeEl.classList.contains('node-edit-input')) {
+        if (activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && activeEl.type !== 'range' && !activeEl.classList.contains('node-edit-input')) {
           if (selectedLineId) {
             state.lines = state.lines.filter(l => l.id !== selectedLineId);
             selectedLineId = null;
