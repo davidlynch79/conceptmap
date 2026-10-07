@@ -247,12 +247,24 @@
         linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
       background-size: 20px 20px;
-      overflow: hidden;
+      background-attachment: local;
+      overflow: auto;
+      scrollbar-color: #415a77 #0d1b2a;
     }
 
     body.has-dock-left #viewport { margin-left: 260px; }
     body.has-dock-right #viewport { margin-right: 260px; }
     body.has-dock-bottom #viewport { margin-bottom: 45px; }
+
+    #viewport::-webkit-scrollbar { width: 12px; height: 12px; }
+    #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
+    #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
+    #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
+    #viewport::-webkit-scrollbar-corner { background: #0d1b2a; }
+
+    .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
+    .legend-up { color: #ffb703; font-weight: bold; }
+    .legend-down { color: #ff5d8f; font-weight: bold; }
 
     /* Selection Box & Fit Box Drawn Rectangle */
     #selection-box {
@@ -615,11 +627,13 @@
 
     <div class="tool-group">
       <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
-      <button id="fit-box-btn" class="action-btn">Fit Box</button>
+      <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
+      <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
     </div>
 
     <div class="tool-group">
       <label><input type="checkbox" id="autosized-chk"> Auto-size Node</label>
+      <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
     </div>
 
     <div class="tool-group">
@@ -711,8 +725,14 @@
           <div class="help-grid">
             <span class="help-key">Fit Screen</span>
             <span>Arranges visible nodes across the screen area in an even grid.</span>
-            <span class="help-key">Fit Box</span>
-            <span>Click <b>Fit Box</b>, then drag a rectangle over the canvas to enclose selected nodes into that area.</span>
+            <span class="help-key">Fit Grid in Box</span>
+            <span>Select nodes, click <b>Fit Grid in Box</b>, then drag a rectangle. Nodes are laid out in a grid that fits inside the rectangle (Esc cancels).</span>
+            <span class="help-key">Fit Sequence in Region</span>
+            <span>Select nodes, click <b>Fit Sequence in Region</b>, then drag a rectangle. Nodes are placed in one diagonal line from the top-left to the bottom-right corner, ordered by arrow direction (otherwise creation order).</span>
+            <span class="help-key">Highlight Chain</span>
+            <span>Click a single node to recolor its arrow chain: amber lines feed into it (upstream), pink lines lead out of it (downstream), all other lines dim. Colors are temporary and never saved.</span>
+            <span class="help-key">Scrolling</span>
+            <span>Scrollbars appear when nodes extend past the canvas; use the mouse wheel or drag the bars.</span>
             <span class="help-key">Resize Selected Node</span>
             <span>Click any node to select it, then drag the bottom-right corner handle (<b>◢</b>) to give it a custom fixed dimension.</span>
             <span class="help-key">Auto-size Checkbox</span>
@@ -779,6 +799,8 @@
     const addBoxesBtn = document.getElementById('add-boxes-btn');
     const fitScreenBtn = document.getElementById('fit-screen-btn');
     const fitBoxBtn = document.getElementById('fit-box-btn');
+    const fitSeqBtn = document.getElementById('fit-seq-btn');
+    const highlightChainChk = document.getElementById('highlight-chain-chk');
     const showTimelineChk = document.getElementById('show-timeline-chk');
     const showUrlsChk = document.getElementById('show-urls-chk');
     const editTextChk = document.getElementById('edit-text-chk');
@@ -836,6 +858,7 @@
     let resizingSidebar = false;
     let isSelectingBox = false;
     let isFittingBox = false;
+    let fitMode = null; // null | 'grid' | 'sequence'
 
     let dragOffset = { x: 0, y: 0 };
     let initialPositions = new Map();
@@ -971,61 +994,180 @@
       if (e.target === helpModal) closeHelpModal();
     };
 
+    const CHAIN_UP_COLOR = '#ffb703';
+    const CHAIN_DOWN_COLOR = '#ff5d8f';
+    const CHAIN_BOTH_COLOR = '#ffffff';
+
+    // Directed [parent, child] pairs for a line. Lines with no arrow are not dependencies.
+    function getDirectedEdges(line) {
+      if (line.arrow === 'end') return [[line.from, line.to]];
+      if (line.arrow === 'start') return [[line.to, line.from]];
+      if (line.arrow === 'both') return [[line.from, line.to], [line.to, line.from]];
+      return [];
+    }
+
+    // Returns the ids of lines upstream (feeding into) and downstream (leading out of) a node.
+    function computeChain(startId) {
+      const up = new Set();
+      const down = new Set();
+
+      const downSeen = new Set([startId]);
+      const downQueue = [startId];
+      while (downQueue.length) {
+        const curr = downQueue.shift();
+        state.lines.forEach(line => {
+          getDirectedEdges(line).forEach(([p, c]) => {
+            if (p === curr) {
+              down.add(line.id);
+              if (!downSeen.has(c)) { downSeen.add(c); downQueue.push(c); }
+            }
+          });
+        });
+      }
+
+      const upSeen = new Set([startId]);
+      const upQueue = [startId];
+      while (upQueue.length) {
+        const curr = upQueue.shift();
+        state.lines.forEach(line => {
+          getDirectedEdges(line).forEach(([p, c]) => {
+            if (c === curr) {
+              up.add(line.id);
+              if (!upSeen.has(p)) { upSeen.add(p); upQueue.push(p); }
+            }
+          });
+        });
+      }
+      return { up, down };
+    }
+
+    highlightChainChk.onchange = () => render();
+
+    function setFitMode(mode) {
+      fitMode = mode;
+      isFittingBox = !!mode;
+      fitBoxBtn.classList.toggle('fit-active', mode === 'grid');
+      fitSeqBtn.classList.toggle('fit-active', mode === 'sequence');
+      viewport.style.cursor = mode ? 'crosshair' : '';
+    }
+
+    function startFit(mode) {
+      if (fitMode === mode) { setFitMode(null); return; }
+      if (selectedNodeIds.size === 0) {
+        alert("Please select at least one node first, then choose a region.");
+        return;
+      }
+      setFitMode(mode);
+    }
+
+    fitBoxBtn.onclick = () => startFit('grid');
+    fitSeqBtn.onclick = () => startFit('sequence');
+
     fitScreenBtn.onclick = () => {
       const hiddenNodeIds = getHiddenNodeIds();
       const visibleNodes = state.nodes.filter(n => !hiddenNodeIds.has(n.id));
-      const count = visibleNodes.length;
-      if (count === 0) return;
+      if (visibleNodes.length === 0) return;
 
-      const vpRect = viewport.getBoundingClientRect();
-      const padding = 60;
-      const availableWidth = vpRect.width - (padding * 2);
-      const availableHeight = vpRect.height - (padding * 2);
-
-      const cols = Math.ceil(Math.sqrt(count));
-      const rows = Math.ceil(count / cols);
-
-      const colSpacing = cols > 1 ? availableWidth / (cols - 1) : 0;
-      const rowSpacing = rows > 1 ? availableHeight / (rows - 1) : 0;
-
-      visibleNodes.forEach((node, index) => {
-        const c = index % cols;
-        const r = Math.floor(index / cols);
-
-        node.x = Math.round(padding + (cols === 1 ? availableWidth / 2 : c * colSpacing));
-        node.y = Math.round(padding + (rows === 1 ? availableHeight / 2 : r * rowSpacing));
+      const padding = 30;
+      arrangeNodesInGrid(visibleNodes, {
+        x: viewport.scrollLeft + padding,
+        y: viewport.scrollTop + padding,
+        width: Math.max(60, viewport.clientWidth - padding * 2),
+        height: Math.max(40, viewport.clientHeight - padding * 2)
       });
 
       saveState();
       render();
     };
 
-    fitBoxBtn.onclick = () => {
-      if (selectedNodeIds.size === 0) {
-        alert("Please select at least one node to fit inside a box.");
-        return;
-      }
-      isFittingBox = true;
-      fitBoxBtn.classList.add('action-btn');
-    };
-
-    function arrangeNodesInRect(nodesToArrange, targetRect) {
-      const count = nodesToArrange.length;
+    // Lay nodes out in a grid whose nodes all sit inside rect (when they are small enough).
+    function arrangeNodesInGrid(nodes, rect) {
+      const count = nodes.length;
       if (count === 0) return;
 
-      const cols = Math.ceil(Math.sqrt(count));
+      const sizes = nodes.map(n => getNodeRect(n));
+      const maxW = Math.max(...sizes.map(sz => sz.width));
+      const maxH = Math.max(...sizes.map(sz => sz.height));
+
+      // Choose the column count that gives the roomiest cells for this box shape.
+      let cols = 1;
+      let bestScale = -Infinity;
+      for (let c = 1; c <= count; c++) {
+        const r = Math.ceil(count / c);
+        const scale = Math.min((rect.width / c) / maxW, (rect.height / r) / maxH);
+        if (scale > bestScale + 1e-9) { bestScale = scale; cols = c; }
+      }
       const rows = Math.ceil(count / cols);
+      const cellW = rect.width / cols;
+      const cellH = rect.height / rows;
 
-      const colSpacing = cols > 1 ? targetRect.width / (cols - 1) : 0;
-      const rowSpacing = rows > 1 ? targetRect.height / (rows - 1) : 0;
-
-      nodesToArrange.forEach((node, index) => {
-        const c = index % cols;
-        const r = Math.floor(index / cols);
-
-        node.x = Math.round(targetRect.x + (cols === 1 ? targetRect.width / 2 : c * colSpacing));
-        node.y = Math.round(targetRect.y + (rows === 1 ? targetRect.height / 2 : r * rowSpacing));
+      nodes.forEach((node, i) => {
+        const c = i % cols;
+        const r = Math.floor(i / cols);
+        const sz = sizes[i];
+        node.x = Math.max(0, Math.round(rect.x + c * cellW + Math.max(0, (cellW - sz.width) / 2)));
+        node.y = Math.max(0, Math.round(rect.y + r * cellH + Math.max(0, (cellH - sz.height) / 2)));
       });
+    }
+
+    // Order nodes so arrow parents come before children (stable; falls back to creation order).
+    function orderForSequence(nodes) {
+      const ids = new Set(nodes.map(n => n.id));
+      const indeg = new Map(nodes.map(n => [n.id, 0]));
+      const out = new Map(nodes.map(n => [n.id, []]));
+
+      state.lines.forEach(line => {
+        if (line.arrow === 'none') return;
+        const p = line.arrow === 'start' ? line.to : line.from;
+        const c = line.arrow === 'start' ? line.from : line.to;
+        if (p !== c && ids.has(p) && ids.has(c)) {
+          out.get(p).push(c);
+          indeg.set(c, indeg.get(c) + 1);
+        }
+      });
+
+      const placed = [];
+      const done = new Set();
+      while (placed.length < nodes.length) {
+        const next = nodes.find(n => !done.has(n.id) && indeg.get(n.id) === 0)
+                  || nodes.find(n => !done.has(n.id));
+        done.add(next.id);
+        placed.push(next);
+        out.get(next.id).forEach(c => indeg.set(c, indeg.get(c) - 1));
+      }
+      return placed;
+    }
+
+    // Place nodes in one straight line from the box's top-left to its bottom-right corner.
+    function arrangeNodesInSequence(nodes, rect) {
+      if (nodes.length === 0) return;
+      const ordered = orderForSequence(nodes);
+      const sizes = ordered.map(n => getNodeRect(n));
+      const maxW = Math.max(...sizes.map(sz => sz.width));
+      const maxH = Math.max(...sizes.map(sz => sz.height));
+      const spanX = Math.max(0, rect.width - maxW);
+      const spanY = Math.max(0, rect.height - maxH);
+
+      ordered.forEach((node, i) => {
+        const t = ordered.length > 1 ? i / (ordered.length - 1) : 0;
+        node.x = Math.max(0, Math.round(rect.x + t * spanX));
+        node.y = Math.max(0, Math.round(rect.y + t * spanY));
+      });
+    }
+
+    // Size the SVG layer to the content so the viewport scrolls (and leaves some breathing room).
+    function updateCanvasExtent() {
+      let maxR = 0, maxB = 0;
+      viewport.querySelectorAll('.node').forEach(el => {
+        maxR = Math.max(maxR, el.offsetLeft + el.offsetWidth);
+        maxB = Math.max(maxB, el.offsetTop + el.offsetHeight);
+      });
+      if (state.showTimeline) {
+        maxR = Math.max(maxR, state.timelinePos.x + state.timelinePos.width);
+        maxB = Math.max(maxB, state.timelinePos.y + 60);
+      }
+      svgLayer.style.width = Math.max(viewport.clientWidth - 16, maxR + 200) + 'px';
+      svgLayer.style.height = Math.max(viewport.clientHeight - 16, maxB + 200) + 'px';
     }
 
     function updateTimelineTicks() {
@@ -1187,6 +1329,11 @@
 
     // --- RENDER ENGINE ---
     function render() {
+      renderInner();
+      updateCanvasExtent();
+    }
+
+    function renderInner() {
       dockPositionSelect.value = state.dockPosition || 'left';
       applyDockPosition(state.dockPosition || 'left');
 
@@ -1240,6 +1387,10 @@
       labelsGroup.innerHTML = '';
 
       const hiddenNodeIds = getHiddenNodeIds();
+
+      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId)
+        ? computeChain(Array.from(selectedNodeIds)[0])
+        : null;
 
       const parentNodeIds = new Set();
       state.lines.forEach(l => {
@@ -1379,17 +1530,30 @@
 
       state.lines.forEach(line => {
         if (!hiddenNodeIds.has(line.from) && !hiddenNodeIds.has(line.to)) {
-          renderLine(line);
+          renderLine(line, chainInfo);
         }
       });
     }
 
-    function renderLine(line) {
+    function renderLine(line, chainInfo) {
       const sourceNode = state.nodes.find(n => n.id === line.from);
       const targetNode = state.nodes.find(n => n.id === line.to);
       if (!sourceNode || !targetNode) return;
 
       const isSelected = selectedLineId === line.id;
+
+      // Temporary chain-highlight styling (never written to state)
+      let effColor = line.color || "#00b4d8";
+      let effWidth = line.width || 1;
+      let dimmed = false;
+      if (chainInfo) {
+        const inUp = chainInfo.up.has(line.id);
+        const inDown = chainInfo.down.has(line.id);
+        if (inUp && inDown) { effColor = CHAIN_BOTH_COLOR; effWidth += 1; }
+        else if (inUp) { effColor = CHAIN_UP_COLOR; effWidth += 1; }
+        else if (inDown) { effColor = CHAIN_DOWN_COLOR; effWidth += 1; }
+        else { dimmed = true; }
+      }
 
       const sourceRect = getNodeRect(sourceNode);
       const targetRect = getNodeRect(targetNode);
@@ -1404,15 +1568,16 @@
 
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", pathData);
-      path.setAttribute("stroke", line.color || "#00b4d8");
-      path.setAttribute("stroke-width", `${isSelected ? Math.max((line.width || 1) + 1, 3) : (line.width || 1)}px`);
+      path.setAttribute("stroke", effColor);
+      if (dimmed) path.setAttribute("opacity", "0.2");
+      path.setAttribute("stroke-width", `${isSelected ? Math.max(effWidth + 1, 3) : effWidth}px`);
       path.setAttribute("fill", "none");
 
       if (isSelected) {
         path.classList.add("line-selected");
       }
 
-      const markerColor = (line.color || "#00b4d8").replace('#', '');
+      const markerColor = effColor.replace('#', '');
       if (line.arrow === 'end' || line.arrow === 'both') {
         ensureMarker(markerColor, 'end');
         path.setAttribute("marker-end", `url(#arrow-end-${markerColor})`);
@@ -1501,8 +1666,8 @@
         const bbox = el.getBoundingClientRect();
         const vpBox = viewport.getBoundingClientRect();
         return {
-          x: bbox.left - vpBox.left,
-          y: bbox.top - vpBox.top,
+          x: bbox.left - vpBox.left + viewport.scrollLeft,
+          y: bbox.top - vpBox.top + viewport.scrollTop,
           width: bbox.width,
           height: bbox.height
         };
@@ -1613,6 +1778,9 @@
 
     viewport.onmousedown = (e) => {
       if (e.target !== viewport && e.target !== svgLayer) return;
+      const vpEdge = viewport.getBoundingClientRect();
+      // ignore presses on the scrollbars themselves
+      if (e.clientX - vpEdge.left >= viewport.clientWidth || e.clientY - vpEdge.top >= viewport.clientHeight) return;
 
       selectedLineId = null;
 
@@ -1624,8 +1792,8 @@
 
       isSelectingBox = true;
       const vpRect = viewport.getBoundingClientRect();
-      boxSelectStart.x = e.clientX - vpRect.left;
-      boxSelectStart.y = e.clientY - vpRect.top;
+      boxSelectStart.x = e.clientX - vpRect.left + viewport.scrollLeft;
+      boxSelectStart.y = e.clientY - vpRect.top + viewport.scrollTop;
 
       selectionBox.style.left = boxSelectStart.x + 'px';
       selectionBox.style.top = boxSelectStart.y + 'px';
@@ -1694,8 +1862,8 @@
 
       if (isSelectingBox) {
         const vpRect = viewport.getBoundingClientRect();
-        const currentX = e.clientX - vpRect.left;
-        const currentY = e.clientY - vpRect.top;
+        const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
+        const currentY = e.clientY - vpRect.top + viewport.scrollTop;
 
         const left = Math.min(boxSelectStart.x, currentX);
         const top = Math.min(boxSelectStart.y, currentY);
@@ -1739,8 +1907,14 @@
 
       if (!draggingNode) return;
 
-      const deltaX = e.clientX - dragOffset.x;
-      const deltaY = e.clientY - dragOffset.y;
+      let deltaX = e.clientX - dragOffset.x;
+      let deltaY = e.clientY - dragOffset.y;
+      let minInitX = Infinity, minInitY = Infinity;
+      initialPositions.forEach(p => { minInitX = Math.min(minInitX, p.x); minInitY = Math.min(minInitY, p.y); });
+      if (minInitX !== Infinity) {
+        deltaX = Math.max(deltaX, -minInitX);
+        deltaY = Math.max(deltaY, -minInitY);
+      }
 
       initialPositions.forEach((initPos, id) => {
         const n = state.nodes.find(item => item.id === id);
@@ -1781,11 +1955,11 @@
           if (rect.width > 20 && rect.height > 20) {
             const hiddenNodeIds = getHiddenNodeIds();
             const nodesToArrange = state.nodes.filter(n => selectedNodeIds.has(n.id) && !hiddenNodeIds.has(n.id));
-            arrangeNodesInRect(nodesToArrange, rect);
+            if (fitMode === 'sequence') arrangeNodesInSequence(nodesToArrange, rect);
+            else arrangeNodesInGrid(nodesToArrange, rect);
             saveState();
           }
-          isFittingBox = false;
-          fitBoxBtn.classList.remove('action-btn');
+          setFitMode(null);
         }
         isSelectingBox = false;
         selectionBox.style.display = 'none';
@@ -2262,6 +2436,7 @@
 
     window.onkeydown = (e) => {
       if (e.key === 'Escape') {
+        setFitMode(null);
         closeHelpModal();
         return;
       }
