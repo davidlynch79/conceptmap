@@ -47,7 +47,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 10px; /* Wider for touch */
+      width: 10px;
       background: #415a77;
       cursor: col-resize;
       z-index: 101;
@@ -118,7 +118,6 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
     }
 
-    /* Floating Drag Handle Header */
     #toolbar-drag-handle {
       display: none;
       width: 100%;
@@ -194,7 +193,7 @@
       background: #415a77;
       border: 1px solid #778da9;
       color: #e0e6ed;
-      padding: 6px 10px; /* Larger touch targets */
+      padding: 6px 10px;
       font-size: 11px;
       font-family: monospace;
       cursor: pointer;
@@ -264,7 +263,6 @@
     body.has-dock-right #viewport { margin-right: 260px; }
     body.has-dock-bottom #viewport { margin-bottom: 40px; }
 
-    /* Touch screen compact overrides */
     body.touch-mode #toolbar.dock-left, 
     body.touch-mode #toolbar.dock-right {
       width: 210px;
@@ -310,7 +308,6 @@
       display: none;
     }
 
-    /* TIMELINE CONTAINER */
     #timeline-container {
       position: absolute;
       top: 50px;
@@ -401,7 +398,6 @@
     }
     @keyframes dash { to { stroke-dashoffset: -8; } }
 
-    /* NODE STYLING */
     .node {
       position: absolute;
       background: #1c2541;
@@ -504,7 +500,6 @@
     .line-label-bg { fill: #1b263b; stroke: #415a77; stroke-width: 1px; pointer-events: all; cursor: pointer; rx: 3px; ry: 3px; }
     .line-label-bg.selected-bg { stroke: #00f5d4; fill: #0d1b2a; }
 
-    /* HELP MODAL */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -700,8 +695,8 @@
         <div class="help-section">
           <h3>Touch and Phone Mode</h3>
           <div class="help-grid">
-            <span class="help-key">Mode Select</span>
-            <span>Use the <b>Interface Mode</b> menu option to force Touch/Phone optimization or Desktop layout, or leave it on Auto-Detect.</span>
+            <span class="help-key">Editing Nodes</span>
+            <span>On touchscreen devices, tap a selected node or enable <b>Edit Text Mode</b> to instantly edit node text. On desktop, double-click a node.</span>
             <span class="help-key">Navigation</span>
             <span>Pan around the viewport by dragging on empty canvas areas. Pinch to zoom on supported touchscreen browsers.</span>
           </div>
@@ -834,12 +829,14 @@
       return 'id_' + Math.random().toString(36).substr(2, 9);
     }
 
-    function updateInputModeUI() {
+    function isTouchActive() {
       const mode = state.inputMode || 'auto';
-      inputModeSelect.value = mode;
-      
-      let isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
-      if (mode === 'touch' || (mode === 'auto' && isTouchDevice)) {
+      const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+      return (mode === 'touch' || (mode === 'auto' && isTouchDevice));
+    }
+
+    function updateInputModeUI() {
+      if (isTouchActive()) {
         document.body.classList.add('touch-mode');
       } else {
         document.body.classList.remove('touch-mode');
@@ -930,9 +927,7 @@
     function applyDockPosition(pos) {
       toolbar.className = `dock-${pos}`;
       document.body.className = `has-dock-${pos}`;
-      if (document.body.classList.contains('touch-mode') || (state.inputMode === 'auto' && navigator.maxTouchPoints > 0)) {
-        document.body.classList.add('touch-mode');
-      }
+      updateInputModeUI();
 
       toolbar.style.left = '';
       toolbar.style.top = '';
@@ -1474,6 +1469,7 @@
         };
         el.appendChild(resizeHandle);
 
+        // Desktop double-click action
         el.ondblclick = (e) => {
           e.stopPropagation();
           if (editTextChk.checked || !node.url) {
@@ -1547,7 +1543,7 @@
       const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       hitPath.setAttribute("d", pathData);
       hitPath.setAttribute("stroke", "transparent");
-      hitPath.setAttribute("stroke-width", "20px"); /* Larger touch target for lines */
+      hitPath.setAttribute("stroke-width", "20px");
       hitPath.setAttribute("fill", "none");
 
       const selectLine = (e) => {
@@ -1643,6 +1639,18 @@
       if (editingNodeId === node.id) return;
       e.stopPropagation();
       selectedLineId = null;
+
+      // TOUCHSCREEN EDIT TRIGGER: If touch mode is active and the node is already selected, tap again to edit text!
+      if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
+        if (editTextChk.checked || !node.url) {
+          editingNodeId = node.id;
+          render();
+          return;
+        } else if (node.url) {
+          window.open(node.url, '_blank');
+          return;
+        }
+      }
 
       if (createLineChk.checked) {
         if (!selectedSourceNode) {
@@ -1865,7 +1873,6 @@
     showTimelineChk.onchange = (e) => { state.showTimeline = e.target.checked; saveState(); render(); };
     showUrlsChk.onchange = (e) => { state.showUrls = e.target.checked; saveState(); render(); };
 
-    /* IO BRIDGE */
     const IO_PAGE = 'conceptmap_io.html';
     let ioWin = null, ioSyncTimer = null;
     const ioBtn = document.getElementById('io-btn');
