@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Map - Import / Export</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      background: #0d1b2a;
+      color: #e0e6ed;
+      min-height: 100vh;
+      padding: 14px;
+      font-size: 12px;
+    }
+    h1 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; margin-bottom: 10px; font-family: monospace; }
+    h2 {
+      font-size: 11px; color: #90e0ef; text-transform: uppercase; font-family: monospace;
+      border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; letter-spacing: 1px;
+    }
+    .panel { background: #1b263b; border: 1px solid #415a77; padding: 10px; margin-bottom: 12px; }
+    #status {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 12px;
+      border: 1px solid #415a77; background: #0d1b2a; font-family: monospace; font-size: 11px;
+    }
+    #status-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff4d6d; flex: none; }
+    #status.connected #status-dot { background: #00f5d4; }
+    #status-text { flex: 1; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    button {
+      background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 6px 10px;
+      font-size: 11px; font-family: monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    button:hover:not(:disabled) { background: #0077b6; color: #fff; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+    .hint { color: #778da9; font-size: 10.5px; line-height: 1.5; margin-bottom: 6px; }
+    label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; margin-bottom: 4px; }
+    input[type="checkbox"] { accent-color: #00b4d8; }
+    #log {
+      background: #0b132b; border: 1px solid #415a77; padding: 6px 8px; height: 110px; overflow-y: auto;
+      font-family: monospace; font-size: 10.5px; color: #90e0ef; white-space: pre-wrap;
+    }
+    .ok { color: #00f5d4; }
+    .err { color: #ff4d6d; }
+    #dropzone {
+      border: 1px dashed #778da9; padding: 14px; text-align: center; color: #778da9;
+      font-family: monospace; font-size: 11px; margin-bottom: 8px;
+    }
+    #dropzone.over { border-color: #00f5d4; color: #00f5d4; background: rgba(0,245,212,0.08); }
+  </style>
+</head>
+<body>
+  <h1>:: IMPORT / EXPORT ::</h1>
+
+  <div id="status">
+    <span id="status-dot"></span>
+    <span id="status-text">Not connected. Open this page from the map's "Import / Export" button.</span>
+    <button id="refresh-btn" title="Request the latest map from the main window">Refresh</button>
+  </div>
+
+  <div class="panel">
+    <h2>Export</h2>
+    <div class="hint">Exports whatever is currently on the map (this page stays in sync as you edit).</div>
+    <div class="btn-row">
+      <button id="export-btn" class="action-btn" disabled>Export JSON</button>
+      <button id="export-txt-simple-btn" class="action-btn" disabled>Export TXT Simple</button>
+      <button id="export-txt-btn" class="action-btn" disabled>Export TXT Indent</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Import</h2>
+    <div id="dropzone">Drop a .json or .txt file here, or use the buttons below</div>
+    <label><input type="checkbox" id="replace-chk"> Replace the map when importing TXT (otherwise TXT is added to it)</label>
+    <div class="hint">JSON import always replaces the map, just as before.</div>
+    <div class="btn-row">
+      <button id="import-btn" disabled>Import JSON</button>
+      <button id="import-txt-simple-btn" disabled>Import TXT Simple</button>
+      <button id="import-txt-btn" disabled>Import TXT Indent</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none">
+    <input type="file" id="import-txt-simple-file" accept=".txt" style="display:none">
+    <input type="file" id="import-txt-file" accept=".txt" style="display:none">
+  </div>
+
+  <div class="panel">
+    <h2>Format Notes</h2>
+    <div class="hint">
+      <b>TXT Simple:</b> one node per line as <code>id text [url] x y</code>, then connections as <code>-1 fromId toId</code> (arrow) or <code>-2 fromId toId</code> (plain line).<br>
+      <b>TXT Indent:</b> an outline; each indent level (tab, 4 spaces, or 2 spaces) becomes a child of the line above it.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let mapState = null;
+    let defaults = { width: 1, color: '#00b4d8', arrow: 'end' };
+    const opener_ = window.opener;
+
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+    const logEl = document.getElementById('log');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const replaceChk = document.getElementById('replace-chk');
+    const dropzone = document.getElementById('dropzone');
+
+    const exportBtn = document.getElementById('export-btn');
+    const exportTxtSimpleBtn = document.getElementById('export-txt-simple-btn');
+    const exportTxtBtn = document.getElementById('export-txt-btn');
+    const importBtn = document.getElementById('import-btn');
+    const importTxtSimpleBtn = document.getElementById('import-txt-simple-btn');
+    const importTxtBtn = document.getElementById('import-txt-btn');
+    const importFileInput = document.getElementById('import-file');
+    const importTxtSimpleFileInput = document.getElementById('import-txt-simple-file');
+    const importTxtFileInput = document.getElementById('import-txt-file');
+
+    function log(msg, cls) {
+      const line = document.createElement('div');
+      if (cls) line.className = cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function generateId() {
+      return 'id_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function parseTextAndUrl(input) {
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const match = input.match(urlRegex);
+      if (match) {
+        const url = match[0];
+        let text = input.replace(url, '').trim();
+        if (!text) text = url;
+        return { text, url };
+      }
+      return { text: input.trim() || 'Node', url: null };
+    }
+
+    function setConnected(connected) {
+      statusEl.classList.toggle('connected', connected);
+      [exportBtn, exportTxtSimpleBtn, exportTxtBtn].forEach(b => b.disabled = !connected || !mapState);
+      [importBtn, importTxtSimpleBtn, importTxtBtn].forEach(b => b.disabled = !connected);
+    }
+
+    function updateStatus() {
+      if (!mapState) return;
+      statusText.textContent = `Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;
+    }
+
+    function sendToMap(msg) {
+      if (!opener_ || opener_.closed) {
+        log('Main map window is closed or unreachable.', 'err');
+        setConnected(false);
+        statusText.textContent = 'Main map window not reachable.';
+        return false;
+      }
+      opener_.postMessage(msg, '*');
+      return true;
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.source !== opener_) return;
+      const d = e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === 'cm-state') {
+        mapState = d.state;
+        if (d.defaults) defaults = d.defaults;
+        setConnected(true);
+        updateStatus();
+      } else if (d.type === 'cm-ack') {
+        log(d.message, d.ok === false ? 'err' : 'ok');
+      }
+    });
+
+    refreshBtn.onclick = () => sendToMap({ type: 'cm-request-state' });
+
+    window.addEventListener('load', () => {
+      if (!opener_) {
+        log('No main window found. Use the map\'s "Import / Export" button to open this page.', 'err');
+        return;
+      }
+      sendToMap({ type: 'cm-io-ready' });
+      setTimeout(() => { if (!mapState) log('No response yet from the map. Try Refresh.', 'err'); }, 1500);
+    });
+
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function filePrefix(fallback) {
+      let prefix = fallback;
+      if (mapState && mapState.nodes.length > 0) {
+        const highest = mapState.nodes.reduce((min, n) => n.y < min.y ? n : min, mapState.nodes[0]);
+        if (highest && highest.text.trim()) prefix = highest.text.trim().replace(/[^a-z0-9_-]/gi, '_');
+      }
+      return prefix;
+    }
+
+    function today() { return new Date().toISOString().split('T')[0]; }
+
+    /* ---------------- EXPORTS ---------------- */
+
+    exportBtn.onclick = () => {
+      if (!mapState) return;
+      download(`${filePrefix('diagram')}_diagram_${today()}.json`, JSON.stringify(mapState, null, 2), 'application/json');
+      log('Exported JSON.', 'ok');
+    };
+
+    exportTxtSimpleBtn.onclick = () => {
+      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
+      const out = [];
+      mapState.nodes.forEach(n => {
+        const label = n.url ? `${n.text} ${n.url}` : n.text;
+        out.push(`${n.id} ${label} ${Math.round(n.x)} ${Math.round(n.y)}`);
+      });
+      mapState.lines.forEach(l => {
+        const rev = l.arrow === 'start';
+        out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
+      });
+      download(`${filePrefix('simple_nodes')}_simple_${today()}.txt`, out.join('\n'), 'text/plain;charset=utf-8');
+      log('Exported TXT Simple.', 'ok');
+    };
+
+    exportTxtBtn.onclick = () => {
+      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
+      const childrenMap = new Map();
+      const parentCountMap = new Map();
+      mapState.nodes.forEach(node => { childrenMap.set(node.id, []); parentCountMap.set(node.id, 0); });
+
+      mapState.lines.forEach(line => {
+        let parentId = null, childId = null;
+        if (line.arrow === 'end') { parentId = line.from; childId = line.to; }
+        else if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
+        else if (line.arrow === 'none' || line.arrow === 'both') { parentId = line.from; childId = line.to; }
+
+        if (parentId && childId && childrenMap.has(parentId) && childrenMap.has(childId)) {
+          childrenMap.get(parentId).push(childId);
+          parentCountMap.set(childId, parentCountMap.get(childId) + 1);
+        }
+      });
+
+      let rootNodes = mapState.nodes.filter(n => parentCountMap.get(n.id) === 0);
+      if (rootNodes.length === 0) rootNodes = [...mapState.nodes];
+      rootNodes.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+
+      const visited = new Set();
+      const outputLines = [];
+
+      function printNode(nodeId, indentLevel) {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+        const node = mapState.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        const indent = '    '.repeat(indentLevel);
+        const label = node.url ? `${node.text} ${node.url}` : node.text;
+        outputLines.push(`${indent}${label}`);
+        (childrenMap.get(nodeId) || []).forEach(childId => printNode(childId, indentLevel + 1));
+      }
+
+      rootNodes.forEach(root => printNode(root.id, 0));
+      mapState.nodes.forEach(node => { if (!visited.has(node.id)) printNode(node.id, 0); });
+
+      download(`${filePrefix('outline')}_indented_${today()}.txt`, outputLines.join('\n'), 'text/plain;charset=utf-8');
+      log('Exported TXT Indent.', 'ok');
+    };
+
+    /* ---------------- IMPORTS ---------------- */
+
+    function importJsonText(text, name) {
+      try {
+        const data = JSON.parse(text);
+        if (!data.nodes || !data.lines) { log(`${name}: JSON is missing "nodes" or "lines".`, 'err'); return; }
+        if (sendToMap({ type: 'cm-import-json', data })) log(`Sent JSON "${name}" to the map...`);
+      } catch (err) {
+        log(`${name}: invalid JSON file structure.`, 'err');
+      }
+    }
+
+    function parseSimpleTxt(textContent) {
+      const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+      const newNodes = [];
+      const newLines = [];
+      const idMap = new Map();
+
+      lines.forEach((line) => {
+        const tokens = line.trim().split(/\s+/);
+        if (tokens.length < 3) return;
+        const firstToken = tokens[0];
+
+        if (firstToken === '-1' || firstToken === '-2') {
+          const fromId = idMap.get(tokens[1]) || tokens[1];
+          const toId = idMap.get(tokens[2]) || tokens[2];
+          newLines.push({
+            id: generateId(), from: fromId, to: toId,
+            arrow: firstToken === '-2' ? 'none' : 'end',
+            width: defaults.width, color: defaults.color, label: ''
+          });
+        } else {
+          let x = 80 + (newNodes.length % 8) * 140;
+          let y = 140 + Math.floor(newNodes.length / 8) * 60;
+          let contentTokens = tokens.slice(1);
+          const possibleY = parseFloat(tokens[tokens.length - 1]);
+          const possibleX = parseFloat(tokens[tokens.length - 2]);
+
+          if (!isNaN(possibleX) && !isNaN(possibleY)) {
+            x = possibleX;
+            y = possibleY;
+            contentTokens = tokens.slice(1, tokens.length - 2);
+          }
+
+          const parsed = parseTextAndUrl(contentTokens.join(' '));
+          const assignedId = generateId();
+          idMap.set(firstToken, assignedId);
+
+          newNodes.push({ id: assignedId, text: parsed.text, url: parsed.url, x, y, size: 'auto', collapsed: false });
+        }
+      });
+      return { nodes: newNodes, lines: newLines };
+    }
+
+    function parseIndentTxt(textContent) {
+      const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+      const newNodes = [];
+      const newLines = [];
+      const ancestorStack = [];
+      const startX = 80, startY = 140, levelSpacingX = 180, nodeSpacingY = 50;
+      let currentY = startY;
+
+      lines.forEach(line => {
+        let indentLevel = 0, i = 0;
+        while (i < line.length) {
+          if (line[i] === '\t') { indentLevel += 1; i++; }
+          else if (line.substr(i, 4) === '    ') { indentLevel += 1; i += 4; }
+          else if (line.substr(i, 2) === '  ') { indentLevel += 1; i += 2; }
+          else break;
+        }
+
+        const parsed = parseTextAndUrl(line.trim());
+        const node = {
+          id: generateId(), text: parsed.text, url: parsed.url,
+          x: startX + (indentLevel * levelSpacingX), y: currentY,
+          size: 'auto', collapsed: false
+        };
+        currentY += nodeSpacingY;
+
+        newNodes.push(node);
+        ancestorStack[indentLevel] = node;
+        ancestorStack.length = indentLevel + 1;
+
+        if (indentLevel > 0) {
+          let parentNode = ancestorStack[indentLevel - 1];
+          if (!parentNode) {
+            for (let lvl = indentLevel - 1; lvl >= 0; lvl--) {
+              if (ancestorStack[lvl]) { parentNode = ancestorStack[lvl]; break; }
+            }
+          }
+          if (parentNode) {
+            newLines.push({
+              id: generateId(), from: parentNode.id, to: node.id, arrow: 'end',
+              width: defaults.width, color: defaults.color, label: ''
+            });
+          }
+        }
+      });
+      return { nodes: newNodes, lines: newLines };
+    }
+
+    function sendGraph(parsed, name) {
+      if (parsed.nodes.length === 0 && parsed.lines.length === 0) {
+        log(`${name}: nothing to import.`, 'err');
+        return;
+      }
+      if (sendToMap({ type: 'cm-import-graph', nodes: parsed.nodes, lines: parsed.lines, replace: replaceChk.checked })) {
+        log(`Sent "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map...`);
+      }
+    }
+
+    function readFile(file, handler) {
+      const reader = new FileReader();
+      reader.onload = (evt) => handler(evt.target.result, file.name);
+      reader.onerror = () => log(`Could not read ${file.name}.`, 'err');
+      reader.readAsText(file);
+    }
+
+    importBtn.onclick = () => importFileInput.click();
+    importFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) readFile(file, importJsonText);
+      importFileInput.value = '';
+    };
+
+    importTxtSimpleBtn.onclick = () => importTxtSimpleFileInput.click();
+    importTxtSimpleFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) readFile(file, (text, name) => sendGraph(parseSimpleTxt(text), name));
+      importTxtSimpleFileInput.value = '';
+    };
+
+    importTxtBtn.onclick = () => importTxtFileInput.click();
+    importTxtFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) readFile(file, (text, name) => sendGraph(parseIndentTxt(text), name));
+      importTxtFileInput.value = '';
+    };
+
+    /* Drag & drop: .json -> JSON import; .txt -> sniffed (simple if it has "-1"/"-2" link lines or "id ... x y" shape) */
+    function looksSimple(text) {
+      return /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text);
+    }
+
+    ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+      e.preventDefault(); dropzone.classList.add('over');
+    }));
+    ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+      e.preventDefault(); dropzone.classList.remove('over');
+    }));
+    dropzone.addEventListener('drop', (e) => {
+      if (!mapState) { log('Not connected to the map.', 'err'); return; }
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      if (/\.json$/i.test(file.name)) {
+        readFile(file, importJsonText);
+      } else {
+        readFile(file, (text, name) => {
+          const simple = looksSimple(text);
+          log(`${name}: detected ${simple ? 'TXT Simple' : 'TXT Indent'} format.`);
+          sendGraph(simple ? parseSimpleTxt(text) : parseIndentTxt(text), name);
+        });
+      }
+    });
+    document.body.addEventListener('dragover', (e) => e.preventDefault());
+    document.body.addEventListener('drop', (e) => e.preventDefault());
+  </script>
+</body>
+</html>

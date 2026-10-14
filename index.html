@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Concept Map - Custom Node Resizing & Auto Toggle</title>
+  <title>Concept Map</title>
   <style>
     * {
       box-sizing: border-box;
@@ -26,13 +26,13 @@
     #toolbar {
       background: #1b263b;
       border: 1px solid #415a77;
-      padding: 6px 12px;
+      padding: 4px 8px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
+      gap: 4px;
       z-index: 100;
-      font-size: 12px;
+      font-size: 11px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
       transition: none;
     }
@@ -80,12 +80,13 @@
       top: 0;
       bottom: 0;
       left: 0;
-      width: 260px;
-      min-width: 160px;
+      width: 240px;
+      min-width: 150px;
       max-width: 600px;
       flex-direction: column;
       align-items: stretch;
       overflow-y: auto;
+      overflow-x: hidden;
       border-width: 0 1px 0 0;
     }
     #toolbar.dock-right {
@@ -93,12 +94,13 @@
       top: 0;
       bottom: 0;
       right: 0;
-      width: 260px;
-      min-width: 160px;
+      width: 240px;
+      min-width: 150px;
       max-width: 600px;
       flex-direction: column;
       align-items: stretch;
       overflow-y: auto;
+      overflow-x: hidden;
       border-width: 0 0 0 1px;
     }
     #toolbar.dock-floating {
@@ -119,9 +121,9 @@
       color: #00f5d4;
       font-size: 10px;
       font-family: monospace;
-      padding: 4px 8px;
+      padding: 3px 6px;
       cursor: move;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       border: 1px dashed #415a77;
       text-align: center;
       letter-spacing: 1px;
@@ -133,9 +135,9 @@
     .tool-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 3px;
       background: #0d1b2a;
-      padding: 4px 8px;
+      padding: 2px 4px;
       border: 1px solid #415a77;
       flex-wrap: wrap;
     }
@@ -143,21 +145,48 @@
     #toolbar.dock-right .tool-group {
       flex-direction: column;
       align-items: stretch;
+      flex-wrap: nowrap;
+      gap: 2px;
+    }
+    #toolbar.dock-left .tool-group *,
+    #toolbar.dock-right .tool-group * {
+      box-sizing: border-box;
+    }
+    #toolbar.dock-left .tool-group button,
+    #toolbar.dock-right .tool-group button,
+    #toolbar.dock-left .tool-group select,
+    #toolbar.dock-right .tool-group input[type="text"] {
+      width: 100%;
+    }
+
+    /* Prevent checkboxes/labels from breaking into two lines in sidebars */
+    #toolbar.dock-left label,
+    #toolbar.dock-right label {
+      white-space: nowrap;
+      width: 100%;
+    }
+
+    /* Inline row formatting for colors & matching elements */
+    .row-inline {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+    }
+    .row-inline * {
+      width: auto !important;
     }
 
     input[type="text"] {
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 4px 6px;
-      font-size: 12px;
+      padding: 2px 4px;
+      font-size: 10.5px;
       font-family: monospace;
       outline: none;
-      width: 140px;
-    }
-    #toolbar.dock-left input[type="text"],
-    #toolbar.dock-right input[type="text"] {
-      width: 100%;
+      width: 130px;
     }
     input[type="text"]:focus {
       border-color: #00b4d8;
@@ -166,8 +195,8 @@
       background: #415a77;
       border: 1px solid #778da9;
       color: #e0e6ed;
-      padding: 4px 8px;
-      font-size: 11px;
+      padding: 2px 5px;
+      font-size: 10px;
       font-family: monospace;
       cursor: pointer;
       text-transform: uppercase;
@@ -215,26 +244,28 @@
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 10px;
       color: #e0e6ed;
     }
     input[type="checkbox"] {
       cursor: pointer;
       accent-color: #00b4d8;
+      margin: 0;
     }
     input[type="color"] {
       border: none;
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       cursor: pointer;
       background: transparent;
+      padding: 0;
     }
     select {
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 3px 4px;
-      font-size: 11px;
+      padding: 2px;
+      font-size: 10px;
       font-family: monospace;
       outline: none;
     }
@@ -252,9 +283,9 @@
       scrollbar-color: #415a77 #0d1b2a;
     }
 
-    body.has-dock-left #viewport { margin-left: 260px; }
-    body.has-dock-right #viewport { margin-right: 260px; }
-    body.has-dock-bottom #viewport { margin-bottom: 45px; }
+    body.has-dock-left #viewport { margin-left: 240px; }
+    body.has-dock-right #viewport { margin-right: 240px; }
+    body.has-dock-bottom #viewport { margin-bottom: 35px; }
 
     #viewport::-webkit-scrollbar { width: 12px; height: 12px; }
     #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
@@ -468,17 +499,6 @@
     .node .collapse-btn:hover {
       color: #fff;
     }
-    .node .delete-btn {
-      display: none;
-      color: #ff4d6d;
-      cursor: pointer;
-      font-weight: bold;
-      padding: 0 2px;
-      float: right;
-    }
-    .node:hover .delete-btn {
-      display: inline;
-    }
 
     .node-edit-input {
       background: #0d1b2a;
@@ -501,30 +521,31 @@
     .node .collapse-btn { font-size: 0.9em; }
     .node-edit-input { font-size: inherit; }
 
-    .slider-label { flex-direction: column; align-items: stretch; gap: 2px; }
-    .slider-label input[type="range"] { width: 100%; min-width: 110px; cursor: pointer; accent-color: #00b4d8; }
-    .slider-hint { color: #778da9; font-size: 10px; }
+    .slider-label { flex-direction: column; align-items: stretch; gap: 2px; width: 100%; }
+    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; }
+    .slider-hint { color: #778da9; font-size: 9px; }
 
     /* Dual Font Slider Styles */
     .dual-slider-container {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
     .dual-slider-inputs {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      width: 100%;
     }
     .dual-slider-inputs input[type="text"] {
-      width: 45px;
+      width: 40px !important;
       text-align: center;
-      padding: 2px;
+      padding: 1px;
     }
     .range-slider-wrapper {
       position: relative;
       width: 100%;
-      height: 20px;
+      height: 16px;
     }
     .range-slider-wrapper input[type="range"] {
       position: absolute;
@@ -541,16 +562,16 @@
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       background: #00b4d8;
       border-radius: 50%;
     }
     .range-slider-wrapper input[type="range"]::-moz-range-thumb {
       pointer-events: auto;
       cursor: pointer;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       background: #00b4d8;
       border-radius: 50%;
     }
@@ -683,6 +704,12 @@
       <button id="add-boxes-btn">Add Boxes</button>
     </div>
 
+    <!-- LOCK / UNLOCK CONTROLS -->
+    <div class="tool-group row-inline">
+      <button id="lock-btn" class="action-btn">Lock View</button>
+      <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
+    </div>
+
     <div class="tool-group">
       <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
       <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
@@ -694,7 +721,6 @@
         <input type="range" id="spread-slider" min="-100" max="100" value="0" step="1">
       </label>
       
-      <!-- Dual Font Slider Group -->
       <div class="slider-label dual-slider-container">
         <span>Linkage Font Range</span>
         <div class="range-slider-wrapper">
@@ -702,10 +728,32 @@
           <input type="range" id="font-slider-max" min="6" max="36" value="24" step="1">
         </div>
         <div class="dual-slider-inputs">
-          <label style="font-size:10px;">1-link px: <input type="text" id="font-min-input" value="10"></label>
-          <label style="font-size:10px;">Max-link px: <input type="text" id="font-max-input" value="24"></label>
+          <label style="font-size:9px;">1-link px: <input type="text" id="font-min-input" value="10"></label>
+          <label style="font-size:9px;">Max-link px: <input type="text" id="font-max-input" value="24"></label>
         </div>
       </div>
+    </div>
+
+    <div class="tool-group">
+      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">DISTANCE-BASED LINE COLORING</span>
+      <div class="row-inline">
+        <label><input type="checkbox" id="color-dist1-chk"> 1 away line</label>
+        <input type="color" id="color-dist1-val" value="#ffb703">
+      </div>
+      <div class="row-inline">
+        <label><input type="checkbox" id="color-dist2-chk"> 2 away line</label>
+        <input type="color" id="color-dist2-val" value="#fb8500">
+      </div>
+      <div class="row-inline">
+        <label><input type="checkbox" id="color-dist3-chk"> 3 away line</label>
+        <input type="color" id="color-dist3-val" value="#ff006e">
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <label class="slider-label">Hide nodes > dist: <span id="max-dist-label" style="color: #00f5d4;">∞</span>
+        <input type="range" id="max-distance-slider" min="1" max="10" value="10" step="1">
+      </label>
     </div>
 
     <div class="tool-group">
@@ -736,12 +784,15 @@
           <option value="6">Extra Thick (6px)</option>
         </select>
       </label>
-      <label>Color: <input type="color" id="line-color" value="#00b4d8"></label>
+      <div class="row-inline">
+        <label>Color:</label>
+        <input type="color" id="line-color" value="#00b4d8">
+      </div>
     </div>
 
     <div class="tool-group" id="line-controls-group" style="display: none; border-color: #00f5d4;">
       <label>Line Label:
-        <input type="text" id="selected-line-label" placeholder="Enter label..." style="width: 110px;" />
+        <input type="text" id="selected-line-label" placeholder="Enter label..." />
       </label>
       <button id="delete-line-btn" class="danger-btn">Delete Line</button>
     </div>
@@ -752,16 +803,8 @@
     </div>
 
     <div class="tool-group">
-      <button id="export-btn">Export JSON</button>
-      <button id="export-txt-simple-btn">Export TXT Simple</button>
-      <button id="export-txt-btn">Export TXT Indent</button>
-      <button id="import-btn">Import JSON</button>
-      <button id="import-txt-simple-btn">Import TXT Simple</button>
-      <button id="import-txt-btn">Import TXT Indent</button>
-      <input type="file" id="import-file" accept=".json" style="display:none">
-      <input type="file" id="import-txt-simple-file" accept=".txt" style="display:none">
-      <input type="file" id="import-txt-file" accept=".txt" style="display:none">
-      <button id="clear-btn">Clear</button>
+      <button id="io-btn" class="action-btn">Import / Export &#8599;</button>
+      <button id="clear-btn" class="danger-btn">Clear</button>
     </div>
 
     <div class="tool-group">
@@ -796,6 +839,29 @@
       </div>
       <div class="modal-body">
         <div class="help-section">
+          <h3>Lock & Unlock Selection/Hidden State</h3>
+          <div class="help-grid">
+            <span class="help-key">Lock / Unlock</span>
+            <span><b>Lock</b> freezes your current node selection and hidden nodes filter. You can still drag individual nodes around. <b>Unlock</b> restores your pre-lock selection and visibility states while preserving any new node coordinates.</span>
+          </div>
+        </div>
+        <div class="help-section">
+          <h3>Distance-Based Line Coloring & Sliding Visibility</h3>
+          <div class="help-grid">
+            <span class="help-key">1, 2, 3 Away Lines</span>
+            <span>Check boxes and pick custom colors to dynamically color lines that are 1, 2, or 3 connection steps away from any selected node(s).</span>
+            <span class="help-key">Disappearing Slider</span>
+            <span>Slide down to limit the max visible distance away from selected nodes (e.g., hiding nodes 5+ steps away). Set to 10 to show everything.</span>
+          </div>
+        </div>
+        <div class="help-section">
+          <h3>Import / Export</h3>
+          <div class="help-grid">
+            <span class="help-key">Import / Export</span>
+            <span>Opens <b>conceptmap_io.html</b> in a separate window (keep both files in the same folder). It exports JSON / TXT Simple / TXT Indent from the live map and imports them back, including drag-and-drop.</span>
+          </div>
+        </div>
+        <div class="help-section">
           <h3>Interactive Node Drag-Resizing & Layout</h3>
           <div class="help-grid">
             <span class="help-key">Fit Screen</span>
@@ -803,57 +869,9 @@
             <span class="help-key">Fit Grid in Box</span>
             <span>Select nodes, click <b>Fit Grid in Box</b>, then drag a rectangle. Nodes are laid out in a grid that fits inside the rectangle (Esc cancels).</span>
             <span class="help-key">Fit Sequence in Region</span>
-            <span>Select nodes, click <b>Fit Sequence in Region</b>, then drag a rectangle. Nodes are placed in one diagonal line from the top-left to the bottom-right corner, ordered by arrow direction (otherwise creation order).</span>
+            <span>Select nodes, click <b>Fit Sequence in Region</b>, then drag a rectangle. Nodes are placed in one diagonal line from top-left to bottom-right, ordered by arrow direction.</span>
             <span class="help-key">Highlight Chain</span>
-            <span>Click a single node to recolor its arrow chain: amber lines feed into it (upstream), pink lines lead out of it (downstream), all other lines dim. Colors are temporary and never saved.</span>
-            <span class="help-key">Scrolling</span>
-            <span>Scrollbars appear when nodes extend past the canvas; use the mouse wheel or drag the bars.</span>
-            <span class="help-key">Resize Selected Node</span>
-            <span>Click any node to select it, then drag the bottom-right corner handle (<b>◢</b>) to give it a custom fixed dimension.</span>
-            <span class="help-key">Auto-size Checkbox</span>
-            <span>Select a node and check <b>Auto-size Node</b> in the toolbar to clear custom dimensions and restore standard dynamic fitting.</span>
-            <span class="help-key">Spacing Slider</span>
-            <span>Drag left to condense the nodes toward the top-left of the layout, right to expand them toward the bottom-right. It springs back to center on release so you can nudge repeatedly (Undo works).</span>
-            <span class="help-key">Linkage Font Range</span>
-            <span>Control the minimum font size (for 1 link) and maximum font size (for the max links configured in the editable textboxes) to visually isolate nodes with heavy connectivity.</span>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <h3>Menu Docking & Panel Resizing</h3>
-          <div class="help-grid">
-            <span class="help-key">Dock Selector</span>
-            <span>Switch menu docking between <b>Top</b>, <b>Bottom</b>, <b>Left</b>, <b>Right</b>, or <b>Floating</b>.</span>
-            <span class="help-key">Resize Side Panel</span>
-            <span>When docked Left or Right, drag the border resizer bar to shrink or widen the control panel.</span>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <h3>Node & Text Operations</h3>
-          <div class="help-grid">
-            <span class="help-key">Double Click Node</span>
-            <span>If <b>Edit Text</b> mode is active: Edit text inline directly in the box.<br>If <b>Edit Text</b> mode is off: Opens URL in a new tab (if a URL exists).</span>
-            <span class="help-key">[-]/[+] Toggle</span>
-            <span>Click to collapse or expand subtrees attached to the node.</span>
-            <span class="help-key">&times; Button</span>
-            <span>Hover over a node and click the red cross to delete it.</span>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <h3>Shortcuts & Selection</h3>
-          <div class="help-grid">
-            <span class="help-key">Undo / Redo</span>
-            <span>Use <b>Ctrl + Z</b> (Cmd + Z) to Undo, and <b>Ctrl + Y</b> or <b>Ctrl + Shift + Z</b> (Cmd + Shift + Z) to Redo.</span>
-            <span class="help-key">Create Line</span>
-            <span>Check <b>Create Line</b>, choose a <b>Type</b> (Arrow or Line), then click a source node and a target node.</span>
-            <span class="help-key">TXT Simple format</span>
-            <span>Nodes: <b>id label x y</b><br>Arrow: <b>-1 fromId toId</b><br>Line: <b>-2 fromId toId</b></span>
-            <span class="help-key">Drag Canvas</span>
-            <span>Click and drag on empty canvas background to box-select multiple nodes.</span>
-            <span class="help-key">Ctrl / Cmd + Click</span>
-            <span>Toggle selection of multiple individual nodes.</span>
+            <span>Click a single node to recolor its arrow chain: amber lines feed into it (upstream), pink lines lead out (downstream), others dim.</span>
           </div>
         </div>
       </div>
@@ -878,17 +896,27 @@
     const nodeTextInput = document.getElementById('node-text');
     const addBtn = document.getElementById('add-btn');
     const addBoxesBtn = document.getElementById('add-boxes-btn');
+    const lockBtn = document.getElementById('lock-btn');
+    const unlockBtn = document.getElementById('unlock-btn');
     const fitScreenBtn = document.getElementById('fit-screen-btn');
     const fitBoxBtn = document.getElementById('fit-box-btn');
     const fitSeqBtn = document.getElementById('fit-seq-btn');
     const highlightChainChk = document.getElementById('highlight-chain-chk');
     const spreadSlider = document.getElementById('spread-slider');
     
-    // Dual Slider Elements
     const fontSliderMin = document.getElementById('font-slider-min');
     const fontSliderMax = document.getElementById('font-slider-max');
     const fontMinInput = document.getElementById('font-min-input');
     const fontMaxInput = document.getElementById('font-max-input');
+
+    const colorDist1Chk = document.getElementById('color-dist1-chk');
+    const colorDist1Val = document.getElementById('color-dist1-val');
+    const colorDist2Chk = document.getElementById('color-dist2-chk');
+    const colorDist2Val = document.getElementById('color-dist2-val');
+    const colorDist3Chk = document.getElementById('color-dist3-chk');
+    const colorDist3Val = document.getElementById('color-dist3-val');
+    const maxDistanceSlider = document.getElementById('max-distance-slider');
+    const maxDistLabel = document.getElementById('max-dist-label');
 
     const showTimelineChk = document.getElementById('show-timeline-chk');
     const showUrlsChk = document.getElementById('show-urls-chk');
@@ -905,15 +933,6 @@
 
     const undoBtn = document.getElementById('undo-btn');
     const redoBtn = document.getElementById('redo-btn');
-    const exportBtn = document.getElementById('export-btn');
-    const exportTxtSimpleBtn = document.getElementById('export-txt-simple-btn');
-    const exportTxtBtn = document.getElementById('export-txt-btn');
-    const importBtn = document.getElementById('import-btn');
-    const importTxtSimpleBtn = document.getElementById('import-txt-simple-btn');
-    const importTxtBtn = document.getElementById('import-txt-btn');
-    const importFileInput = document.getElementById('import-file');
-    const importTxtSimpleFileInput = document.getElementById('import-txt-simple-file');
-    const importTxtFileInput = document.getElementById('import-txt-file');
     const clearBtn = document.getElementById('clear-btn');
 
     const helpBtn = document.getElementById('help-btn');
@@ -927,12 +946,22 @@
       showUrls: false,
       timelinePos: { x: 50, y: 50, width: 700 },
       dockPosition: 'left',
-      sidebarWidth: 260,
+      sidebarWidth: 240,
       floatingPos: { x: 20, y: 20 },
       fontMin: 10,
       fontMax: 24,
-      maxLinksBound: 1 // Default editable maximum links bound reference
+      maxLinksBound: 1,
+      colorDist1: false,
+      colorDist1Hex: '#ffb703',
+      colorDist2: false,
+      colorDist2Hex: '#fb8500',
+      colorDist3: false,
+      colorDist3Hex: '#ff006e',
+      maxDistanceLimit: 10
     };
+
+    let isLocked = false;
+    let lockedStateSnapshot = null;
 
     let historyStack = [];
     let historyIndex = -1;
@@ -1004,6 +1033,56 @@
     lineColorPicker.oninput = (e) => updateSelectedLineProperty('color', e.target.value);
     lineColorPicker.onchange = (e) => updateSelectedLineProperty('color', e.target.value);
 
+    colorDist1Chk.onchange = (e) => { state.colorDist1 = e.target.checked; saveState(); render(); };
+    colorDist1Val.oninput = (e) => { state.colorDist1Hex = e.target.value; render(); };
+    colorDist1Val.onchange = () => { saveState(); };
+
+    colorDist2Chk.onchange = (e) => { state.colorDist2 = e.target.checked; saveState(); render(); };
+    colorDist2Val.oninput = (e) => { state.colorDist2Hex = e.target.value; render(); };
+    colorDist2Val.onchange = () => { saveState(); };
+
+    colorDist3Chk.onchange = (e) => { state.colorDist3 = e.target.checked; saveState(); render(); };
+    colorDist3Val.oninput = (e) => { state.colorDist3Hex = e.target.value; render(); };
+    colorDist3Val.onchange = () => { saveState(); };
+
+    maxDistanceSlider.oninput = (e) => {
+      if (isLocked) return;
+      const val = parseInt(e.target.value, 10);
+      state.maxDistanceLimit = val;
+      maxDistLabel.textContent = val >= 10 ? '∞' : val;
+      render();
+    };
+    maxDistanceSlider.onchange = () => { if (!isLocked) saveState(); };
+
+    lockBtn.onclick = () => {
+      isLocked = true;
+      lockedStateSnapshot = {
+        selectedNodeIds: new Set(selectedNodeIds),
+        hiddenNodeIds: new Set(getHiddenNodeIds()),
+        maxDistanceLimit: state.maxDistanceLimit
+      };
+      lockBtn.disabled = true;
+      unlockBtn.disabled = false;
+      lockBtn.classList.remove('action-btn');
+      lockBtn.style.opacity = '0.5';
+      render();
+    };
+
+    unlockBtn.onclick = () => {
+      if (!isLocked) return;
+      isLocked = false;
+      if (lockedStateSnapshot) {
+        selectedNodeIds = new Set(lockedStateSnapshot.selectedNodeIds);
+        state.maxDistanceLimit = lockedStateSnapshot.maxDistanceLimit;
+        lockedStateSnapshot = null;
+      }
+      unlockBtn.disabled = true;
+      lockBtn.disabled = false;
+      lockBtn.classList.add('action-btn');
+      lockBtn.style.opacity = '1';
+      render();
+    };
+
     sidebarResizer.onmousedown = (e) => {
       e.stopPropagation();
       resizingSidebar = true;
@@ -1021,7 +1100,7 @@
       toolbar.style.width = '';
 
       if (pos === 'left' || pos === 'right') {
-        const width = state.sidebarWidth || 260;
+        const width = state.sidebarWidth || 240;
         toolbar.style.width = `${width}px`;
         if (pos === 'left') {
           viewport.style.marginLeft = `${width}px`;
@@ -1082,7 +1161,6 @@
       draggingToolbar = true;
       dragOffset.x = e.clientX - toolbar.offsetLeft;
       dragOffset.y = e.clientY - toolbar.offsetTop;
-
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     };
@@ -1092,9 +1170,7 @@
 
     helpBtn.onclick = openHelpModal;
     modalCloseBtn.onclick = closeHelpModal;
-    helpModal.onclick = (e) => {
-      if (e.target === helpModal) closeHelpModal();
-    };
+    helpModal.onclick = (e) => { if (e.target === helpModal) closeHelpModal(); };
 
     const CHAIN_UP_COLOR = '#ffb703';
     const CHAIN_DOWN_COLOR = '#ff5d8f';
@@ -1104,7 +1180,39 @@
       if (line.arrow === 'end') return [[line.from, line.to]];
       if (line.arrow === 'start') return [[line.to, line.from]];
       if (line.arrow === 'both') return [[line.from, line.to], [line.to, line.from]];
-      return [];
+      return [[line.from, line.to], [line.to, line.from]];
+    }
+
+    function computeNodeDistances() {
+      const distances = new Map();
+      const lineDistances = new Map();
+      if (selectedNodeIds.size === 0) return { distances, lineDistances };
+
+      const queue = [];
+      selectedNodeIds.forEach(id => {
+        distances.set(id, 0);
+        queue.push(id);
+      });
+
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        const d = distances.get(curr);
+
+        state.lines.forEach(line => {
+          getDirectedEdges(line).forEach(([p, c]) => {
+            if (p === curr) {
+              const curLineDist = lineDistances.get(line.id) !== undefined ? lineDistances.get(line.id) : Infinity;
+              if (d + 1 < curLineDist) lineDistances.set(line.id, d + 1);
+
+              if (!distances.has(c)) {
+                distances.set(c, d + 1);
+                queue.push(c);
+              }
+            }
+          });
+        });
+      }
+      return { distances, lineDistances };
     }
 
     function computeChain(startId) {
@@ -1143,7 +1251,6 @@
 
     highlightChainChk.onchange = () => render();
 
-    // --- CALCULATE NODE LINK COUNTS & DUAL FONT SLIDER LOGIC ---
     function getNodeLinkCounts() {
       const counts = new Map();
       state.nodes.forEach(n => counts.set(n.id, 0));
@@ -1179,13 +1286,9 @@
       return getNodeFont(nodeId) / 11;
     }
 
-    // Dual slider event sync listeners
     fontSliderMin.oninput = (e) => {
       let val = parseInt(e.target.value, 10);
-      if (val > state.fontMax) {
-        val = state.fontMax;
-        e.target.value = val;
-      }
+      if (val > state.fontMax) { val = state.fontMax; e.target.value = val; }
       state.fontMin = val;
       fontMinInput.value = val;
       render();
@@ -1194,10 +1297,7 @@
 
     fontSliderMax.oninput = (e) => {
       let val = parseInt(e.target.value, 10);
-      if (val < state.fontMin) {
-        val = state.fontMin;
-        e.target.value = val;
-      }
+      if (val < state.fontMin) { val = state.fontMin; e.target.value = val; }
       state.fontMax = val;
       fontMaxInput.value = val;
       render();
@@ -1227,7 +1327,6 @@
     };
 
     let spreadSnapshot = null;
-
     spreadSlider.oninput = () => {
       if (!spreadSnapshot) {
         if (state.nodes.length === 0) return;
@@ -1249,10 +1348,7 @@
     };
 
     spreadSlider.onchange = () => {
-      if (spreadSnapshot) {
-        spreadSnapshot = null;
-        saveState();
-      }
+      if (spreadSnapshot) { spreadSnapshot = null; saveState(); }
       spreadSlider.value = 0;
     };
 
@@ -1288,7 +1384,6 @@
         width: Math.max(60, viewport.clientWidth - padding * 2),
         height: Math.max(40, viewport.clientHeight - padding * 2)
       });
-
       saveState();
       render();
     };
@@ -1413,6 +1508,10 @@
     }
 
     function getHiddenNodeIds() {
+      if (isLocked && lockedStateSnapshot) {
+        return lockedStateSnapshot.hiddenNodeIds;
+      }
+
       const hiddenIds = new Set();
       const childrenMap = new Map();
 
@@ -1438,10 +1537,18 @@
       }
 
       state.nodes.forEach(node => {
-        if (node.collapsed) {
-          hideDescendants(node.id);
-        }
+        if (node.collapsed) hideDescendants(node.id);
       });
+
+      if (selectedNodeIds.size > 0 && state.maxDistanceLimit < 10) {
+        const { distances } = computeNodeDistances();
+        state.nodes.forEach(node => {
+          const d = distances.get(node.id);
+          if (d === undefined || d > state.maxDistanceLimit) {
+            hiddenIds.add(node.id);
+          }
+        });
+      }
 
       return hiddenIds;
     }
@@ -1492,7 +1599,7 @@
       const x = 80 + (count % 10) * 20;
       const y = 140 + (count % 10) * 20;
 
-      const node = {
+      state.nodes.push({
         id: generateId(),
         text: parsed.text,
         url: parsed.url,
@@ -1500,9 +1607,7 @@
         y: y,
         size: 'auto',
         collapsed: false
-      };
-
-      state.nodes.push(node);
+      });
       nodeTextInput.value = '';
       saveState();
       render();
@@ -1529,14 +1634,12 @@
           collapsed: false
         });
       });
-
       nodeTextInput.value = '';
       saveState();
       render();
     }
 
     function render() {
-      // Keep dynamic max links bound synced if not manually modified beyond actual max
       const actualMax = getMaxLinks();
       if (!state.maxLinksBound || state.maxLinksBound < actualMax) {
         state.maxLinksBound = Math.max(1, actualMax);
@@ -1546,8 +1649,18 @@
       fontSliderMin.value = state.fontMin || 10;
       fontSliderMax.value = state.fontMax || 24;
 
+      colorDist1Chk.checked = !!state.colorDist1;
+      colorDist1Val.value = state.colorDist1Hex || '#ffb703';
+      colorDist2Chk.checked = !!state.colorDist2;
+      colorDist2Val.value = state.colorDist2Hex || '#fb8500';
+      colorDist3Chk.checked = !!state.colorDist3;
+      colorDist3Val.value = state.colorDist3Hex || '#ff006e';
+      maxDistanceSlider.value = state.maxDistanceLimit !== undefined ? state.maxDistanceLimit : 10;
+      maxDistLabel.textContent = (state.maxDistanceLimit >= 10) ? '∞' : state.maxDistanceLimit;
+
       renderInner();
       updateCanvasExtent();
+      scheduleIoSync();
     }
 
     function renderInner() {
@@ -1601,6 +1714,7 @@
       labelsGroup.innerHTML = '';
 
       const hiddenNodeIds = getHiddenNodeIds();
+      const { lineDistances } = computeNodeDistances();
 
       const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId)
         ? computeChain(Array.from(selectedNodeIds)[0])
@@ -1630,22 +1744,11 @@
         }
 
         const isSelected = selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id);
-        if (isSelected) {
-          el.classList.add('selected');
-        }
+        if (isSelected) el.classList.add('selected');
 
         el.style.left = node.x + 'px';
         el.style.top = node.y + 'px';
         el.dataset.id = node.id;
-
-        const delBtn = document.createElement('span');
-        delBtn.className = 'delete-btn';
-        delBtn.innerHTML = '&times;';
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteNode(node.id);
-        };
-        el.appendChild(delBtn);
 
         if (parentNodeIds.has(node.id)) {
           const colBtn = document.createElement('span');
@@ -1653,6 +1756,7 @@
           colBtn.textContent = node.collapsed ? '[+]' : '[-]';
           colBtn.onclick = (e) => {
             e.stopPropagation();
+            if (isLocked) return;
             node.collapsed = !node.collapsed;
             saveState();
             render();
@@ -1680,20 +1784,13 @@
           };
 
           inputEl.onkeydown = (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              finishEditing();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishEditing(); }
           };
-
           inputEl.onblur = finishEditing;
           inputEl.onmousedown = (e) => e.stopPropagation();
 
           el.appendChild(inputEl);
-          setTimeout(() => {
-            inputEl.focus();
-            inputEl.select();
-          }, 0);
+          setTimeout(() => { inputEl.focus(); inputEl.select(); }, 0);
         } else {
           const contentSpan = document.createElement('span');
           contentSpan.className = 'node-content';
@@ -1717,20 +1814,16 @@
           e.stopPropagation();
           resizingNode = node;
           const rect = el.getBoundingClientRect();
-          resizeStartDimensions = {
-            width: rect.width,
-            height: rect.height,
-            startX: e.clientX,
-            startY: e.clientY
-          };
+          resizeStartDimensions = { width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY };
           window.addEventListener('mousemove', handleMouseMove);
           window.addEventListener('mouseup', handleMouseUp);
         };
         el.appendChild(resizeHandle);
 
+        /* UPDATED DOUBLE-CLICK BEHAVIOR: Webpage vs Canvas Text Edit */
         el.ondblclick = (e) => {
           e.stopPropagation();
-          if (editTextChk.checked) {
+          if (editTextChk.checked || !node.url) {
             editingNodeId = node.id;
             render();
           } else if (node.url) {
@@ -1744,22 +1837,35 @@
 
       state.lines.forEach(line => {
         if (!hiddenNodeIds.has(line.from) && !hiddenNodeIds.has(line.to)) {
-          renderLine(line, chainInfo);
+          renderLine(line, chainInfo, lineDistances);
         }
       });
     }
 
-    function renderLine(line, chainInfo) {
+    function renderLine(line, chainInfo, lineDistances) {
       const sourceNode = state.nodes.find(n => n.id === line.from);
       const targetNode = state.nodes.find(n => n.id === line.to);
       if (!sourceNode || !targetNode) return;
 
       const isSelected = selectedLineId === line.id;
-
       let effColor = line.color || "#00b4d8";
       let effWidth = line.width || 1;
       let dimmed = false;
-      if (chainInfo) {
+
+      const dStep = lineDistances ? lineDistances.get(line.id) : undefined;
+      let distanceColored = false;
+      if (dStep === 1 && state.colorDist1) {
+        effColor = state.colorDist1Hex || '#ffb703';
+        distanceColored = true;
+      } else if (dStep === 2 && state.colorDist2) {
+        effColor = state.colorDist2Hex || '#fb8500';
+        distanceColored = true;
+      } else if (dStep === 3 && state.colorDist3) {
+        effColor = state.colorDist3Hex || '#ff006e';
+        distanceColored = true;
+      }
+
+      if (!distanceColored && chainInfo) {
         const inUp = chainInfo.up.has(line.id);
         const inDown = chainInfo.down.has(line.id);
         if (inUp && inDown) { effColor = CHAIN_BOTH_COLOR; effWidth += 1; }
@@ -1786,9 +1892,7 @@
       path.setAttribute("stroke-width", `${isSelected ? Math.max(effWidth + 1, 3) : effWidth}px`);
       path.setAttribute("fill", "none");
 
-      if (isSelected) {
-        path.classList.add("line-selected");
-      }
+      if (isSelected) path.classList.add("line-selected");
 
       const markerColor = effColor.replace('#', '');
       if (line.arrow === 'end' || line.arrow === 'both') {
@@ -1846,7 +1950,6 @@
             bgRect.setAttribute("height", bbox.height + 4);
             bgRect.setAttribute("class", `line-label-bg ${isSelected ? 'selected-bg' : ''}`);
             bgRect.onclick = selectLine;
-
             labelsGroup.insertBefore(bgRect, textEl);
           } catch (err) {}
         }, 0);
@@ -1924,7 +2027,6 @@
     function handleMouseDownNode(e, node) {
       if (editingNodeId === node.id) return;
       e.stopPropagation();
-
       selectedLineId = null;
 
       if (createLineChk.checked) {
@@ -1951,18 +2053,17 @@
         return;
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        if (selectedNodeIds.has(node.id)) {
-          selectedNodeIds.delete(node.id);
-        } else {
-          selectedNodeIds.add(node.id);
-        }
-        render();
-      } else {
-        if (!selectedNodeIds.has(node.id)) {
-          selectedNodeIds.clear();
-          selectedNodeIds.add(node.id);
+      if (!isLocked) {
+        if (e.ctrlKey || e.metaKey) {
+          if (selectedNodeIds.has(node.id)) selectedNodeIds.delete(node.id);
+          else selectedNodeIds.add(node.id);
           render();
+        } else {
+          if (!selectedNodeIds.has(node.id)) {
+            selectedNodeIds.clear();
+            selectedNodeIds.add(node.id);
+            render();
+          }
         }
       }
 
@@ -1971,13 +2072,17 @@
       dragOffset.y = e.clientY;
 
       initialPositions.clear();
-      let dragSet = new Set(selectedNodeIds);
-
-      if (dragGraphChk.checked) {
-        selectedNodeIds.forEach(id => {
-          const connected = getConnectedComponent(id);
-          connected.forEach(cId => dragSet.add(cId));
-        });
+      let dragSet = new Set();
+      if (isLocked) {
+        dragSet.add(node.id);
+      } else {
+        dragSet = new Set(selectedNodeIds);
+        if (dragGraphChk.checked) {
+          selectedNodeIds.forEach(id => {
+            const connected = getConnectedComponent(id);
+            connected.forEach(cId => dragSet.add(cId));
+          });
+        }
       }
 
       dragSet.forEach(id => {
@@ -1995,8 +2100,7 @@
       if (e.clientX - vpEdge.left >= viewport.clientWidth || e.clientY - vpEdge.top >= viewport.clientHeight) return;
 
       selectedLineId = null;
-
-      if (!e.ctrlKey && !e.metaKey && !isFittingBox) {
+      if (!isLocked && !e.ctrlKey && !e.metaKey && !isFittingBox) {
         selectedNodeIds.clear();
         selectedSourceNode = null;
         render();
@@ -2039,24 +2143,22 @@
       if (resizingNode) {
         const deltaX = e.clientX - resizeStartDimensions.startX;
         const deltaY = e.clientY - resizeStartDimensions.startY;
-
         const newW = Math.max(80, resizeStartDimensions.width + deltaX);
         const newH = Math.max(40, resizeStartDimensions.height + deltaY);
 
         resizingNode.customWidth = Math.round(newW / getNodeFontScale(resizingNode.id));
         resizingNode.customHeight = Math.round(newH / getNodeFontScale(resizingNode.id));
         resizingNode.size = 'custom';
-
         render();
         return;
       }
 
       if (resizingSidebar) {
-        let newWidth = 260;
+        let newWidth = 240;
         if (state.dockPosition === 'left') {
-          newWidth = Math.max(160, Math.min(600, e.clientX));
+          newWidth = Math.max(150, Math.min(600, e.clientX));
         } else if (state.dockPosition === 'right') {
-          newWidth = Math.max(160, Math.min(600, window.innerWidth - e.clientX));
+          newWidth = Math.max(150, Math.min(600, window.innerWidth - e.clientX));
         }
         state.sidebarWidth = newWidth;
         applyDockPosition(state.dockPosition);
@@ -2087,16 +2189,11 @@
         selectionBox.style.width = width + 'px';
         selectionBox.style.height = height + 'px';
 
-        if (!isFittingBox) {
+        if (!isLocked && !isFittingBox) {
           state.nodes.forEach(node => {
             const rect = getNodeRect(node);
-            const intersects = !(rect.x > left + width || 
-                                 rect.x + rect.width < left || 
-                                 rect.y > top + height || 
-                                 rect.y + rect.height < top);
-            if (intersects) {
-              selectedNodeIds.add(node.id);
-            }
+            const intersects = !(rect.x > left + width || rect.x + rect.width < left || rect.y > top + height || rect.y + rect.height < top);
+            if (intersects) selectedNodeIds.add(node.id);
           });
           render();
         }
@@ -2130,34 +2227,18 @@
 
       initialPositions.forEach((initPos, id) => {
         const n = state.nodes.find(item => item.id === id);
-        if (n) {
-          n.x = initPos.x + deltaX;
-          n.y = initPos.y + deltaY;
-        }
+        if (n) { n.x = initPos.x + deltaX; n.y = initPos.y + deltaY; }
       });
-
       render();
     }
 
     function handleMouseUp() {
-      if (resizingNode) {
-        resizingNode = null;
-        saveState();
-      }
-
-      if (resizingSidebar) {
-        resizingSidebar = false;
-        sidebarResizer.classList.remove('resizing');
-        saveState();
-      }
-
-      if (draggingToolbar) {
-        draggingToolbar = false;
-        saveState();
-      }
+      if (resizingNode) { resizingNode = null; saveState(); }
+      if (resizingSidebar) { resizingSidebar = false; sidebarResizer.classList.remove('resizing'); saveState(); }
+      if (draggingToolbar) { draggingToolbar = false; saveState(); }
 
       if (isSelectingBox) {
-        if (isFittingBox) {
+        if (!isLocked && isFittingBox) {
           const rect = {
             x: parseFloat(selectionBox.style.left),
             y: parseFloat(selectionBox.style.top),
@@ -2197,41 +2278,19 @@
       while (queue.length > 0) {
         const curr = queue.shift();
         state.lines.forEach(line => {
-          if (line.from === curr && !visited.has(line.to)) {
-            visited.add(line.to);
-            queue.push(line.to);
-          }
-          if (line.to === curr && !visited.has(line.from)) {
-            visited.add(line.from);
-            queue.push(line.from);
-          }
+          if (line.from === curr && !visited.has(line.to)) { visited.add(line.to); queue.push(line.to); }
+          if (line.to === curr && !visited.has(line.from)) { visited.add(line.from); queue.push(line.from); }
         });
       }
       return visited;
     }
 
-    function deleteNode(id) {
-      state.nodes = state.nodes.filter(n => n.id !== id);
-      state.lines = state.lines.filter(l => l.from !== id && l.to !== id);
-      selectedNodeIds.delete(id);
-      if (selectedSourceNode && selectedSourceNode.id === id) selectedSourceNode = null;
-      if (editingNodeId === id) editingNodeId = null;
-      saveState();
-      render();
-    }
-
     selectedLineLabelInput.oninput = (e) => {
       if (!selectedLineId) return;
       const activeLine = state.lines.find(l => l.id === selectedLineId);
-      if (activeLine) {
-        activeLine.label = e.target.value;
-        render();
-      }
+      if (activeLine) { activeLine.label = e.target.value; render(); }
     };
-
-    selectedLineLabelInput.onchange = () => {
-      saveState();
-    };
+    selectedLineLabelInput.onchange = () => saveState();
 
     deleteLineBtn.onclick = () => {
       if (selectedLineId) {
@@ -2244,387 +2303,120 @@
 
     addBtn.onclick = createBox;
     addBoxesBtn.onclick = createBoxes;
+    nodeTextInput.onkeydown = (e) => { if (e.key === 'Enter') createBox(); };
 
-    nodeTextInput.onkeydown = (e) => {
-      if (e.key === 'Enter') {
-        createBox();
+    showTimelineChk.onchange = (e) => { state.showTimeline = e.target.checked; saveState(); render(); };
+    showUrlsChk.onchange = (e) => { state.showUrls = e.target.checked; saveState(); render(); };
+
+    /* ---------------- IMPORT / EXPORT BRIDGE ---------------- */
+    const IO_PAGE = 'conceptmap_io.html';
+    let ioWin = null;
+    let ioSyncTimer = null;
+
+    const ioBtn = document.getElementById('io-btn');
+
+    function ioPayload() {
+      return {
+        type: 'cm-state',
+        state: state,
+        defaults: {
+          width: parseInt(lineWidthSelect.value, 10),
+          color: lineColorPicker.value,
+          arrow: arrowStyleSelect.value
+        }
+      };
+    }
+
+    function postToIo(msg, target) {
+      const w = target || ioWin;
+      if (w && !w.closed) {
+        try { w.postMessage(msg, '*'); } catch (err) {}
       }
+    }
+
+    function scheduleIoSync() {
+      if (!ioWin || ioWin.closed) return;
+      clearTimeout(ioSyncTimer);
+      ioSyncTimer = setTimeout(() => postToIo(ioPayload()), 250);
+    }
+
+    ioBtn.onclick = () => {
+      if (ioWin && !ioWin.closed) { ioWin.focus(); postToIo(ioPayload()); return; }
+      ioWin = window.open(IO_PAGE, 'conceptmap_io', 'width=560,height=760');
+      if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
     };
 
-    showTimelineChk.onchange = (e) => {
-      state.showTimeline = e.target.checked;
+    function afterExternalChange() {
+      selectedNodeIds.clear();
+      selectedLineId = null;
+      selectedSourceNode = null;
+      editingNodeId = null;
       saveState();
       render();
-    };
+    }
 
-    showUrlsChk.onchange = (e) => {
-      state.showUrls = e.target.checked;
-      saveState();
-      render();
-    };
+    function applyImportedJson(importedState) {
+      state = {
+        nodes: importedState.nodes || [],
+        lines: normalizeLines(importedState.lines || []),
+        showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
+        showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
+        timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
+        dockPosition: importedState.dockPosition || 'left',
+        sidebarWidth: importedState.sidebarWidth || 240,
+        floatingPos: importedState.floatingPos || { x: 20, y: 20 },
+        fontMin: importedState.fontMin || 10,
+        fontMax: importedState.fontMax || 24,
+        maxLinksBound: importedState.maxLinksBound || 1,
+        colorDist1: importedState.colorDist1 || false,
+        colorDist1Hex: importedState.colorDist1Hex || '#ffb703',
+        colorDist2: importedState.colorDist2 || false,
+        colorDist2Hex: importedState.colorDist2Hex || '#fb8500',
+        colorDist3: importedState.colorDist3 || false,
+        colorDist3Hex: importedState.colorDist3Hex || '#ff006e',
+        maxDistanceLimit: importedState.maxDistanceLimit !== undefined ? importedState.maxDistanceLimit : 10
+      };
+      afterExternalChange();
+    }
 
-    exportBtn.onclick = () => {
-      let prefix = "diagram";
-      if (state.nodes.length > 0) {
-        const highestNode = state.nodes.reduce((min, n) => n.y < min.y ? n : min, state.nodes[0]);
-        if (highestNode && highestNode.text.trim()) {
-          prefix = highestNode.text.trim().replace(/[^a-z0-9_-]/gi, '_');
-        }
-      }
+    window.addEventListener('message', (e) => {
+      const d = e.data;
+      if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
 
-      const today = new Date().toISOString().split('T')[0];
-      const fileName = `${prefix}_diagram_${today}.json`;
-
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    };
-
-    exportTxtSimpleBtn.onclick = () => {
-      if (state.nodes.length === 0) {
-        alert("No nodes to export.");
+      if (d.type === 'cm-io-ready') {
+        ioWin = e.source;
+        postToIo(ioPayload(), e.source);
         return;
       }
+      if (e.source !== ioWin) return;
 
-      const outputLines = [];
-
-      state.nodes.forEach(n => {
-        const label = n.url ? `${n.text} ${n.url}` : n.text;
-        const x = Math.round(n.x);
-        const y = Math.round(n.y);
-        outputLines.push(`${n.id} ${label} ${x} ${y}`);
-      });
-
-      state.lines.forEach(l => {
-        const rev = l.arrow === 'start';
-        outputLines.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
-      });
-
-      let prefix = "simple_nodes";
-      if (state.nodes.length > 0) {
-        const highestNode = state.nodes.reduce((min, n) => n.y < min.y ? n : min, state.nodes[0]);
-        if (highestNode && highestNode.text.trim()) {
-          prefix = highestNode.text.trim().replace(/[^a-z0-9_-]/gi, '_');
-        }
-      }
-      const today = new Date().toISOString().split('T')[0];
-      const fileName = `${prefix}_simple_${today}.txt`;
-      const blob = new Blob([outputLines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    };
-
-    exportTxtBtn.onclick = () => {
-      if (state.nodes.length === 0) {
-        alert("No nodes to export.");
-        return;
-      }
-
-      const childrenMap = new Map();
-      const parentCountMap = new Map();
-
-      state.nodes.forEach(node => {
-        childrenMap.set(node.id, []);
-        parentCountMap.set(node.id, 0);
-      });
-
-      state.lines.forEach(line => {
-        let parentId = null;
-        let childId = null;
-
-        if (line.arrow === 'end') {
-          parentId = line.from;
-          childId = line.to;
-        } else if (line.arrow === 'start') {
-          parentId = line.to;
-          childId = line.from;
-        } else if (line.arrow === 'none' || line.arrow === 'both') {
-          parentId = line.from;
-          childId = line.to;
-        }
-
-        if (parentId && childId && childrenMap.has(parentId) && childrenMap.has(childId)) {
-          childrenMap.get(parentId).push(childId);
-          parentCountMap.set(childId, parentCountMap.get(childId) + 1);
-        }
-      });
-
-      let rootNodes = state.nodes.filter(n => parentCountMap.get(n.id) === 0);
-      
-      if (rootNodes.length === 0) {
-        rootNodes = [...state.nodes];
-      }
-
-      rootNodes.sort((a, b) => (a.y - b.y) || (a.x - b.x));
-
-      const visitedInTree = new Set();
-      let outputLines = [];
-
-      function printNode(nodeId, indentLevel) {
-        if (visitedInTree.has(nodeId)) return;
-        visitedInTree.add(nodeId);
-
-        const node = state.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-
-        const indent = '    '.repeat(indentLevel);
-        const label = node.url ? `${node.text} ${node.url}` : node.text;
-        outputLines.push(`${indent}${label}`);
-
-        const children = childrenMap.get(nodeId) || [];
-        children.forEach(childId => {
-          printNode(childId, indentLevel + 1);
-        });
-      }
-
-      rootNodes.forEach(root => printNode(root.id, 0));
-
-      state.nodes.forEach(node => {
-        if (!visitedInTree.has(node.id)) {
-          printNode(node.id, 0);
-        }
-      });
-
-      let prefix = "outline";
-      if (state.nodes.length > 0) {
-        const highestNode = state.nodes.reduce((min, n) => n.y < min.y ? n : min, state.nodes[0]);
-        if (highestNode && highestNode.text.trim()) {
-          prefix = highestNode.text.trim().replace(/[^a-z0-9_-]/gi, '_');
-        }
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      const fileName = `${prefix}_indented_${today}.txt`;
-
-      const blob = new Blob([outputLines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    };
-
-    importBtn.onclick = () => importFileInput.click();
-    importFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
+      if (d.type === 'cm-request-state') {
+        postToIo(ioPayload(), e.source);
+      } else if (d.type === 'cm-import-json') {
         try {
-          const importedState = JSON.parse(evt.target.result);
-          if (importedState.nodes && importedState.lines) {
-            state = {
-              nodes: importedState.nodes || [],
-              lines: normalizeLines(importedState.lines || []),
-              showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
-              showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
-              timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
-              dockPosition: importedState.dockPosition || 'left',
-              sidebarWidth: importedState.sidebarWidth || 260,
-              floatingPos: importedState.floatingPos || { x: 20, y: 20 },
-              fontMin: importedState.fontMin || 10,
-              fontMax: importedState.fontMax || 24,
-              maxLinksBound: importedState.maxLinksBound || 1
-            };
-            selectedNodeIds.clear();
-            selectedLineId = null;
-            editingNodeId = null;
-            saveState();
-            render();
-          }
+          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
+          applyImportedJson(d.data);
+          postToIo({ type: 'cm-ack', ok: true, message: `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.` }, e.source);
         } catch (err) {
-          alert("Invalid JSON file structure.");
+          postToIo({ type: 'cm-ack', ok: false, message: 'Invalid JSON file structure.' }, e.source);
         }
-      };
-      reader.readAsText(file);
-      importFileInput.value = '';
-    };
-
-    importTxtSimpleBtn.onclick = () => importTxtSimpleFileInput.click();
-    importTxtSimpleFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const textContent = evt.target.result;
-        const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length === 0) return;
-
-        const newNodes = [];
-        const newLines = [];
-        const idMap = new Map();
-
-        lines.forEach((line) => {
-          const tokens = line.trim().split(/\s+/);
-          if (tokens.length < 3) return;
-
-          const firstToken = tokens[0];
-
-          if (firstToken === "-1" || firstToken === "-2") {
-            const fromId = idMap.get(tokens[1]) || tokens[1];
-            const toId = idMap.get(tokens[2]) || tokens[2];
-            newLines.push({
-              id: generateId(),
-              from: fromId,
-              to: toId,
-              arrow: firstToken === "-2" ? 'none' : 'end',
-              width: parseInt(lineWidthSelect.value, 10),
-              color: lineColorPicker.value,
-              label: ""
-            });
-          } else {
-            let x = 80 + (newNodes.length % 8) * 140;
-            let y = 140 + Math.floor(newNodes.length / 8) * 60;
-            let contentTokens = tokens.slice(1);
-
-            const possibleY = parseFloat(tokens[tokens.length - 1]);
-            const possibleX = parseFloat(tokens[tokens.length - 2]);
-
-            if (!isNaN(possibleX) && !isNaN(possibleY)) {
-              x = possibleX;
-              y = possibleY;
-              contentTokens = tokens.slice(1, tokens.length - 2);
-            }
-
-            const rawContent = contentTokens.join(" ");
-            const parsed = parseTextAndUrl(rawContent);
-
-            const assignedId = generateId();
-            idMap.set(firstToken, assignedId);
-
-            newNodes.push({
-              id: assignedId,
-              text: parsed.text,
-              url: parsed.url,
-              x: x,
-              y: y,
-              size: 'auto',
-              collapsed: false
-            });
-          }
-        });
-
-        state.nodes = state.nodes.concat(newNodes);
-        state.lines = state.lines.concat(newLines);
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        saveState();
-        render();
-      };
-      reader.readAsText(file);
-      importTxtSimpleFileInput.value = '';
-    };
-
-    importTxtBtn.onclick = () => importTxtFileInput.click();
-    importTxtFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const textContent = evt.target.result;
-        const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-
-        if (lines.length === 0) return;
-
-        const newNodes = [];
-        const newLines = [];
-        const ancestorStack = [];
-
-        const startX = 80;
-        const startY = 140;
-        const levelSpacingX = 180;
-        const nodeSpacingY = 50;
-
-        let currentY = startY;
-
-        lines.forEach(line => {
-          let indentLevel = 0;
-          let i = 0;
-          while (i < line.length) {
-            if (line[i] === '\t') {
-              indentLevel += 1;
-              i++;
-            } else if (line.substr(i, 4) === '    ') {
-              indentLevel += 1;
-              i += 4;
-            } else if (line.substr(i, 2) === '  ') {
-              indentLevel += 1;
-              i += 2;
-            } else {
-              break;
-            }
-          }
-
-          const rawText = line.trim();
-          const parsed = parseTextAndUrl(rawText);
-
-          const posX = startX + (indentLevel * levelSpacingX);
-          const posY = currentY;
-          currentY += nodeSpacingY;
-
-          const node = {
-            id: generateId(),
-            text: parsed.text,
-            url: parsed.url,
-            x: posX,
-            y: posY,
-            size: 'auto',
-            collapsed: false
-          };
-
-          newNodes.push(node);
-
-          ancestorStack[indentLevel] = node;
-          ancestorStack.length = indentLevel + 1;
-
-          if (indentLevel > 0) {
-            let parentNode = ancestorStack[indentLevel - 1];
-            if (!parentNode) {
-              for (let lvl = indentLevel - 1; lvl >= 0; lvl--) {
-                if (ancestorStack[lvl]) {
-                  parentNode = ancestorStack[lvl];
-                  break;
-                }
-              }
-            }
-
-            if (parentNode) {
-              newLines.push({
-                id: generateId(),
-                from: parentNode.id,
-                to: node.id,
-                arrow: 'end',
-                width: parseInt(lineWidthSelect.value, 10),
-                color: lineColorPicker.value,
-                label: ""
-              });
-            }
-          }
-        });
-
-        state.nodes = state.nodes.concat(newNodes);
-        state.lines = state.lines.concat(newLines);
-
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        saveState();
-        render();
-      };
-
-      reader.readAsText(file);
-      importTxtFileInput.value = '';
-    };
+      } else if (d.type === 'cm-import-graph') {
+        const nodes = Array.isArray(d.nodes) ? d.nodes : [];
+        const lines = Array.isArray(d.lines) ? d.lines : [];
+        if (d.replace) {
+          state.nodes = nodes;
+          state.lines = lines;
+        } else {
+          state.nodes = state.nodes.concat(nodes);
+          state.lines = state.lines.concat(lines);
+        }
+        afterExternalChange();
+        postToIo({ type: 'cm-ack', ok: true, message: `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.` }, e.source);
+      }
+    });
 
     clearBtn.onclick = () => {
+      if (isLocked) return;
       if (confirm("Clear all nodes and connections?")) {
         state = { 
           nodes: [], 
@@ -2637,7 +2429,14 @@
           floatingPos: state.floatingPos,
           fontMin: state.fontMin,
           fontMax: state.fontMax,
-          maxLinksBound: state.maxLinksBound
+          maxLinksBound: state.maxLinksBound,
+          colorDist1: state.colorDist1,
+          colorDist1Hex: state.colorDist1Hex,
+          colorDist2: state.colorDist2,
+          colorDist2Hex: state.colorDist2Hex,
+          colorDist3: state.colorDist3,
+          colorDist3Hex: state.colorDist3Hex,
+          maxDistanceLimit: state.maxDistanceLimit
         };
         selectedSourceNode = null;
         selectedNodeIds.clear();
@@ -2652,15 +2451,14 @@
     redoBtn.onclick = redo;
 
     window.onkeydown = (e) => {
-      if (e.key === 'Escape') {
-        setFitMode(null);
-        closeHelpModal();
-        return;
+      if (e.key === 'Escape') { 
+        setFitMode(null); 
+        closeHelpModal(); 
+        return; 
       }
-
       const activeEl = document.activeElement;
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && activeEl.type !== 'range' && activeEl.type !== 'text' && !activeEl.classList.contains('node-edit-input')) {
+        if (!isLocked && activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && activeEl.type !== 'range' && activeEl.type !== 'text' && !activeEl.classList.contains('node-edit-input')) {
           if (selectedLineId) {
             state.lines = state.lines.filter(l => l.id !== selectedLineId);
             selectedLineId = null;
@@ -2676,10 +2474,9 @@
             render();
           }
         }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) redo();
-        else undo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      } else if (!isLocked && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) redo(); else undo();
+      } else if (!isLocked && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
         redo();
       }
     };
