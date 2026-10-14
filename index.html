@@ -24,23 +24,16 @@
       touch-action: none;
     }
 
-    /* MOBILE MENU TOGGLE BUTTON */
-    #mobile-menu-toggle {
-      display: none;
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      z-index: 200;
-      background: #1b263b;
-      border: 1px solid #00b4d8;
-      color: #00f5d4;
-      font-weight: bold;
-      padding: 6px 12px;
-      font-size: 11px;
-      font-family: monospace;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      border-radius: 4px;
+    #toolbar.menu-hidden {
+      display: none !important;
+    }
+
+    body.menu-hidden #viewport {
+      margin: 0 !important;
+    }
+
+    body.menu-hidden #sidebar-resizer {
+      display: none !important;
     }
 
     /* TOOLBAR BASE & GUARANTEED SCROLLBAR STYLES */
@@ -310,9 +303,6 @@
     body.has-dock-right #viewport { margin-right: 280px; }
 
     @media (max-width: 768px) {
-      #mobile-menu-toggle {
-        display: block;
-      }
       body.has-dock-left #viewport, body.has-dock-right #viewport, body.has-dock-bottom #viewport, body.has-dock-top #viewport {
         margin: 0 !important;
       }
@@ -576,13 +566,21 @@
 </head>
 <body class="has-dock-left">
 
-  <!-- MOBILE SLIDE MENU TOGGLE -->
-  <button id="mobile-menu-toggle">☰ Menu</button>
+  <!-- FLOATING TOGGLE WHEN HIDDEN (ONLY MENU BUTTON REMAINS AVAILABLE) -->
+  <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: none;">
+    <button id="floating-menu-btn" class="action-btn">☰ Menu</button>
+  </div>
 
   <div id="toolbar" class="dock-left">
     <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
 
-    <!-- IMPORT / EXPORT AT THE TOP OF THE MENU -->
+    <!-- MENU & HIDE BUTTONS AT THE TOP OF THE PANEL -->
+    <div class="tool-group row-inline">
+      <button id="toolbar-menu-btn" class="action-btn">☰ Menu</button>
+      <button id="toolbar-hide-btn" class="danger-btn">Hide</button>
+    </div>
+
+    <!-- IMPORT / EXPORT -->
     <div class="tool-group">
       <button id="top-io-btn" class="action-btn">Import / Export ↗</button>
     </div>
@@ -750,7 +748,7 @@
           <h3>Drawing Arrows</h3>
           <div class="help-grid">
             <span class="help-key">Proximity Arrow</span>
-            <span>Click and drag anywhere near a node on the canvas and release near another node to connect them with an arrow. If you release in empty space, the arrow disappears.</span>
+            <span>Click and drag near a node (outside its bounds) towards another node to grow and steer a live connection arrow. Release over the target node to create the line.</span>
           </div>
         </div>
       </div>
@@ -773,7 +771,11 @@
     const timelineContainer = document.getElementById('timeline-container');
     const timelineResizeHandle = timelineContainer.querySelector('.timeline-resize-handle');
     const selectionBox = document.getElementById('selection-box');
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    
+    const toolbarMenuBtn = document.getElementById('toolbar-menu-btn');
+    const toolbarHideBtn = document.getElementById('toolbar-hide-btn');
+    const topBarControls = document.getElementById('top-bar-controls');
+    const floatingMenuBtn = document.getElementById('floating-menu-btn');
 
     const nodeTextInput = document.getElementById('node-text');
     const addBtn = document.getElementById('add-btn');
@@ -854,6 +856,11 @@
     let editingNodeId = null;
 
     let draggingNode = null;
+    let isDrivingArrow = false;
+    let driveSourceNode = null;
+    let driveStartClient = { x: 0, y: 0 };
+    let hoveredTargetNodeId = null;
+
     let resizingNode = null;
     let draggingTimeline = false;
     let resizingTimeline = false;
@@ -868,6 +875,7 @@
     let boxSelectStart = { x: 0, y: 0 };
     let resizeStartDimensions = { width: 0, height: 0, startX: 0, startY: 0 };
     let lineDrawStart = null;
+    let menuHidden = false;
 
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -895,9 +903,25 @@
       saveState();
     };
 
-    mobileMenuToggle.onclick = () => {
-      toolbar.classList.toggle('mobile-open');
-    };
+    function showMenu() {
+      menuHidden = false;
+      toolbar.classList.remove('menu-hidden');
+      document.body.classList.remove('menu-hidden');
+      topBarControls.style.display = 'none';
+      toolbar.classList.remove('mobile-open');
+    }
+
+    function hideMenu() {
+      menuHidden = true;
+      toolbar.classList.add('menu-hidden');
+      document.body.classList.add('menu-hidden');
+      topBarControls.style.display = 'flex';
+      toolbar.classList.remove('mobile-open');
+    }
+
+    toolbarMenuBtn.onclick = showMenu;
+    toolbarHideBtn.onclick = hideMenu;
+    floatingMenuBtn.onclick = showMenu;
 
     function parseTextAndUrl(input) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
@@ -976,7 +1000,8 @@
 
     function applyDockPosition(pos) {
       toolbar.className = `dock-${pos}`;
-      document.body.className = `has-dock-${pos}`;
+      if (menuHidden) toolbar.classList.add('menu-hidden');
+      document.body.className = menuHidden ? `has-dock-${pos} menu-hidden` : `has-dock-${pos}`;
       updateInputModeUI();
 
       toolbar.style.left = '';
@@ -1757,7 +1782,40 @@
       const clickX = e.clientX - vpRect.left + viewport.scrollLeft;
       const clickY = e.clientY - vpRect.top + viewport.scrollTop;
 
-      // PROXIMITY LINE DRAGGING: Always active when clicking canvas near nodes
+      // Check if click is near a node (outside its bounds within 50px)
+      let nearbyNode = null;
+      let minNodeDist = Infinity;
+      state.nodes.forEach(node => {
+        const rect = getNodeRect(node);
+        const inside = (clickX >= rect.x && clickX <= rect.x + rect.width && clickY >= rect.y && clickY <= rect.y + rect.height);
+        if (!inside) {
+          // Distance to rect edges/center or closest point on rect
+          const cx = Math.max(rect.x, Math.min(clickX, rect.x + rect.width));
+          const cy = Math.max(rect.y, Math.min(clickY, rect.y + rect.height));
+          const dist = Math.hypot(clickX - cx, clickY - cy);
+          if (dist < 60 && dist < minNodeDist) {
+            minNodeDist = dist;
+            nearbyNode = node;
+          }
+        }
+      });
+
+      if (nearbyNode) {
+        isDrivingArrow = true;
+        driveSourceNode = nearbyNode;
+        driveStartClient = { x: e.clientX, y: e.clientY };
+
+        if (!isLocked) {
+          if (!selectedNodeIds.has(nearbyNode.id)) {
+            selectedNodeIds.clear(); selectedNodeIds.add(nearbyNode.id); render();
+          }
+        }
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return;
+      }
+
       lineDrawStart = { x: clickX, y: clickY };
       liveDragArrow.setAttribute('x1', clickX);
       liveDragArrow.setAttribute('y1', clickY);
@@ -1811,6 +1869,52 @@
       const vpRect = viewport.getBoundingClientRect();
       const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
       const currentY = e.clientY - vpRect.top + viewport.scrollTop;
+
+      if (isDrivingArrow && driveSourceNode) {
+        const sourceRect = getNodeRect(driveSourceNode);
+        const startX = sourceRect.x + sourceRect.width / 2;
+        const startY = sourceRect.y + sourceRect.height / 2;
+
+        const dx = e.clientX - driveStartClient.x;
+        const dy = e.clientY - driveStartClient.y;
+
+        const scale = 1.5;
+        const tipX = startX + dx * scale;
+        const tipY = startY + dy * scale;
+
+        const clipStart = clipLineWithRect({ x: tipX, y: tipY }, { x: startX, y: startY }, sourceRect);
+
+        liveDragArrow.setAttribute('x1', clipStart.x);
+        liveDragArrow.setAttribute('y1', clipStart.y);
+        liveDragArrow.setAttribute('x2', tipX);
+        liveDragArrow.setAttribute('y2', tipY);
+        liveDragArrow.setAttribute('stroke', lineColorPicker.value);
+        const markerColor = lineColorPicker.value.replace('#', '');
+        ensureMarker(markerColor, 'end');
+        liveDragArrow.setAttribute('marker-end', `url(#arrow-end-${markerColor})`);
+        liveDragArrow.style.display = 'block';
+
+        hoveredTargetNodeId = null;
+        state.nodes.forEach(n => {
+          if (n.id === driveSourceNode.id) return;
+          const rect = getNodeRect(n);
+          if (tipX >= rect.x && tipX <= rect.x + rect.width && tipY >= rect.y && tipY <= rect.y + rect.height) {
+            hoveredTargetNodeId = n.id;
+          }
+        });
+
+        viewport.querySelectorAll('.node').forEach(el => {
+          if (el.dataset.id === hoveredTargetNodeId) {
+            el.style.borderColor = '#00f5d4';
+            el.style.boxShadow = '0 0 0 3px rgba(0, 245, 212, 0.7)';
+          } else if (!selectedNodeIds.has(el.dataset.id)) {
+            el.style.borderColor = '';
+            el.style.boxShadow = '';
+          }
+        });
+
+        return;
+      }
 
       if (lineDrawStart) {
         liveDragArrow.setAttribute('x2', currentX);
@@ -1883,6 +1987,33 @@
 
     function handlePointerUp(e) {
       liveDragArrow.style.display = 'none';
+
+      if (isDrivingArrow) {
+        viewport.querySelectorAll('.node').forEach(el => {
+          if (!selectedNodeIds.has(el.dataset.id)) {
+            el.style.borderColor = '';
+            el.style.boxShadow = '';
+          }
+        });
+
+        if (hoveredTargetNodeId && driveSourceNode && hoveredTargetNodeId !== driveSourceNode.id) {
+          state.lines.push({
+            id: generateId(),
+            from: driveSourceNode.id,
+            to: hoveredTargetNodeId,
+            arrow: arrowStyleSelect.value,
+            width: parseInt(lineWidthSelect.value, 10),
+            color: lineColorPicker.value,
+            label: ""
+          });
+          saveState();
+          render();
+        }
+
+        isDrivingArrow = false;
+        driveSourceNode = null;
+        hoveredTargetNodeId = null;
+      }
 
       if (lineDrawStart) {
         const vpRect = viewport.getBoundingClientRect();
