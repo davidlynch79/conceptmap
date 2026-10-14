@@ -568,7 +568,7 @@
 
   <!-- FLOATING TOGGLE WHEN HIDDEN (ALWAYS AVAILABLE AS FALLBACK) -->
   <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: flex;">
-    <button id="floating-menu-btn" class="action-btn">☰ Menu</button>
+    <button id="floating-menu-btn" class="action-btn" type="button">☰ Menu</button>
   </div>
 
   <div id="toolbar" class="dock-left">
@@ -576,13 +576,13 @@
 
     <!-- MENU & HIDE BUTTONS AT THE TOP OF THE PANEL -->
     <div class="tool-group row-inline">
-      <button id="toolbar-menu-btn" class="action-btn">☰ Menu</button>
-      <button id="toolbar-hide-btn" class="danger-btn">Hide</button>
+      <button id="toolbar-menu-btn" class="action-btn" type="button">☰ Menu</button>
+      <button id="toolbar-hide-btn" class="danger-btn" type="button">Hide</button>
     </div>
 
     <!-- IMPORT / EXPORT -->
     <div class="tool-group">
-      <button id="top-io-btn" class="action-btn">Import / Export ↗</button>
+      <button id="top-io-btn" class="action-btn" type="button">Import / Export ↗</button>
     </div>
 
     <div class="tool-group">
@@ -606,19 +606,19 @@
 
     <div class="tool-group">
       <input type="text" id="node-text" placeholder="Box text or URL..." />
-      <button id="add-btn">Add Box</button>
-      <button id="add-boxes-btn">Add Boxes</button>
+      <button id="add-btn" type="button">Add Box</button>
+      <button id="add-boxes-btn" type="button">Add Boxes</button>
     </div>
 
     <div class="tool-group row-inline">
-      <button id="lock-btn" class="action-btn">Lock View</button>
-      <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
+      <button id="lock-btn" class="action-btn" type="button">Lock View</button>
+      <button id="unlock-btn" class="danger-btn" type="button" disabled>Unlock</button>
     </div>
 
     <div class="tool-group">
-      <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
-      <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
-      <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
+      <button id="fit-screen-btn" class="action-btn" type="button">Fit Screen</button>
+      <button id="fit-box-btn" class="action-btn" type="button">Fit Grid in Box</button>
+      <button id="fit-seq-btn" class="action-btn" type="button">Fit Sequence in Region</button>
     </div>
 
     <div class="tool-group">
@@ -699,20 +699,20 @@
       <label>Line Label:
         <input type="text" id="selected-line-label" placeholder="Enter label..." />
       </label>
-      <button id="delete-line-btn" class="danger-btn">Delete Line</button>
+      <button id="delete-line-btn" class="danger-btn" type="button">Delete Line</button>
     </div>
 
     <div class="tool-group">
-      <button id="undo-btn" disabled>Undo</button>
-      <button id="redo-btn" disabled>Redo</button>
+      <button id="undo-btn" type="button" disabled>Undo</button>
+      <button id="redo-btn" type="button" disabled>Redo</button>
     </div>
 
     <div class="tool-group">
-      <button id="clear-btn" class="danger-btn">Clear Map</button>
+      <button id="clear-btn" class="danger-btn" type="button">Clear Map</button>
     </div>
 
     <div class="tool-group">
-      <button id="help-btn" class="help-btn">? Help Guide</button>
+      <button id="help-btn" class="help-btn" type="button">? Help Guide</button>
     </div>
   </div>
 
@@ -741,7 +741,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2>Concept Map Guide</h2>
-        <button id="modal-close-btn" class="modal-close">&times;</button>
+        <button id="modal-close-btn" class="modal-close" type="button">&times;</button>
       </div>
       <div class="modal-body">
         <div class="help-section">
@@ -919,9 +919,32 @@
       toolbar.classList.remove('mobile-open');
     }
 
-    toolbarMenuBtn.onclick = showMenu;
-    toolbarHideBtn.onclick = hideMenu;
-    floatingMenuBtn.onclick = showMenu;
+    // Use pointerup / click cleanly to guarantee firing across all mobile engines (Safari & Opera)
+    function bindMenuToggle(btn) {
+      if (!btn) return;
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showMenu();
+      };
+      btn.onpointerup = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showMenu();
+      };
+    }
+
+    bindMenuToggle(toolbarMenuBtn);
+    bindMenuToggle(floatingMenuBtn);
+
+    toolbarHideBtn.onclick = (e) => {
+      e.preventDefault();
+      hideMenu();
+    };
+    toolbarHideBtn.onpointerup = (e) => {
+      e.preventDefault();
+      hideMenu();
+    };
 
     function parseTextAndUrl(input) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
