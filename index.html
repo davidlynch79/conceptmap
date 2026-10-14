@@ -24,21 +24,56 @@
       touch-action: none;
     }
 
-    /* TOOLBAR BASE & DOCKING STYLES */
+    /* MOBILE MENU TOGGLE BUTTON */
+    #mobile-menu-toggle {
+      display: none;
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 200;
+      background: #1b263b;
+      border: 1px solid #00b4d8;
+      color: #00f5d4;
+      font-weight: bold;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: monospace;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      border-radius: 4px;
+    }
+
+    /* TOOLBAR BASE & GUARANTEED SCROLLBAR STYLES */
     #toolbar {
       background: #1b263b;
       border: 1px solid #415a77;
-      padding: 6px 8px;
+      padding: 8px;
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
+      flex-direction: column;
+      align-items: stretch;
       gap: 6px;
-      z-index: 100;
+      z-index: 150;
       font-size: 11px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-      transition: none;
-      overflow-y: auto;
+      transition: transform 0.3s ease;
+      overflow-y: scroll !important;
+      overflow-x: hidden !important;
       max-height: 100vh;
+      scrollbar-width: thin;
+      scrollbar-color: #00b4d8 #0d1b2a;
+    }
+
+    #toolbar::-webkit-scrollbar {
+      width: 10px !important;
+      display: block !important;
+    }
+    #toolbar::-webkit-scrollbar-track {
+      background: #0d1b2a !important;
+    }
+    #toolbar::-webkit-scrollbar-thumb {
+      background: #00b4d8 !important;
+      border-radius: 5px !important;
+      border: 2px solid #0d1b2a !important;
     }
 
     /* Resizable Panel Splitter Handle */
@@ -50,7 +85,7 @@
       width: 10px;
       background: #415a77;
       cursor: col-resize;
-      z-index: 101;
+      z-index: 151;
       transition: background 0.2s;
     }
     #sidebar-resizer:hover, #sidebar-resizer.resizing {
@@ -66,6 +101,7 @@
       position: relative;
       width: 100%;
       flex-direction: row;
+      flex-wrap: wrap;
       border-width: 0 0 1px 0;
       max-height: 40vh;
     }
@@ -76,6 +112,7 @@
       right: 0;
       width: 100%;
       flex-direction: row;
+      flex-wrap: wrap;
       border-width: 1px 0 0 0;
       max-height: 40vh;
     }
@@ -84,13 +121,9 @@
       top: 0;
       bottom: 0;
       left: 0;
-      width: 260px;
+      width: 280px;
       min-width: 150px;
-      max-width: 80vw;
-      flex-direction: column;
-      align-items: stretch;
-      overflow-y: auto;
-      overflow-x: hidden;
+      max-width: 85vw;
       border-width: 0 1px 0 0;
     }
     #toolbar.dock-right {
@@ -98,13 +131,9 @@
       top: 0;
       bottom: 0;
       right: 0;
-      width: 260px;
+      width: 280px;
       min-width: 150px;
-      max-width: 80vw;
-      flex-direction: column;
-      align-items: stretch;
-      overflow-y: auto;
-      overflow-x: hidden;
+      max-width: 85vw;
       border-width: 0 0 0 1px;
     }
     #toolbar.dock-floating {
@@ -113,6 +142,7 @@
       max-width: 90vw;
       max-height: 80vh;
       flex-direction: row;
+      flex-wrap: wrap;
       border-width: 1px;
       border-color: #00b4d8;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
@@ -138,31 +168,48 @@
 
     .tool-group {
       display: flex;
-      align-items: center;
-      gap: 4px;
+      align-items: stretch;
+      gap: 6px;
       background: #0d1b2a;
-      padding: 4px 6px;
+      padding: 6px;
       border: 1px solid #415a77;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    #toolbar.dock-top .tool-group,
+    #toolbar.dock-bottom .tool-group,
+    #toolbar.dock-floating .tool-group {
+      flex-direction: row;
+      align-items: center;
       flex-wrap: wrap;
     }
-    #toolbar.dock-left .tool-group,
-    #toolbar.dock-right .tool-group {
-      flex-direction: column;
-      align-items: stretch;
-      flex-wrap: nowrap;
-      gap: 4px;
-    }
-    #toolbar.dock-left .tool-group button,
-    #toolbar.dock-right .tool-group button,
-    #toolbar.dock-left .tool-group select,
-    #toolbar.dock-right .tool-group input[type="text"] {
+
+    .tool-group button,
+    .tool-group select,
+    .tool-group input[type="text"] {
       width: 100%;
+      flex: 1;
+    }
+    #toolbar.dock-top .tool-group button,
+    #toolbar.dock-bottom .tool-group button,
+    #toolbar.dock-floating .tool-group button,
+    #toolbar.dock-top .tool-group select,
+    #toolbar.dock-bottom .tool-group select,
+    #toolbar.dock-floating .tool-group select,
+    #toolbar.dock-top .tool-group input[type="text"],
+    #toolbar.dock-bottom .tool-group input[type="text"],
+    #toolbar.dock-floating .tool-group input[type="text"] {
+      width: auto;
     }
 
-    #toolbar.dock-left label,
-    #toolbar.dock-right label {
+    .tool-group label {
       white-space: nowrap;
       width: 100%;
+    }
+    #toolbar.dock-top .tool-group label,
+    #toolbar.dock-bottom .tool-group label,
+    #toolbar.dock-floating .tool-group label {
+      width: auto;
     }
 
     .row-inline {
@@ -180,11 +227,10 @@
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 4px 6px;
+      padding: 6px;
       font-size: 11px;
       font-family: monospace;
       outline: none;
-      width: 130px;
     }
     input[type="text"]:focus {
       border-color: #00b4d8;
@@ -193,7 +239,7 @@
       background: #415a77;
       border: 1px solid #778da9;
       color: #e0e6ed;
-      padding: 6px 10px;
+      padding: 8px 12px;
       font-size: 11px;
       font-family: monospace;
       cursor: pointer;
@@ -216,21 +262,22 @@
     label {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 11.5px;
       color: #e0e6ed;
     }
     input[type="checkbox"] {
       cursor: pointer;
       accent-color: #00b4d8;
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
     }
     input[type="color"] {
       border: none;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       cursor: pointer;
       background: transparent;
       padding: 0;
@@ -239,7 +286,7 @@
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 4px;
+      padding: 6px;
       font-size: 11px;
       font-family: monospace;
       outline: none;
@@ -259,33 +306,31 @@
       touch-action: pan-x pan-y pinch-zoom;
     }
 
-    body.has-dock-left #viewport { margin-left: 260px; }
-    body.has-dock-right #viewport { margin-right: 260px; }
-    body.has-dock-bottom #viewport { margin-bottom: 40px; }
-
-    body.touch-mode #toolbar.dock-left, 
-    body.touch-mode #toolbar.dock-right {
-      width: 210px;
-    }
-    body.touch-mode.has-dock-left #viewport { margin-left: 210px; }
-    body.touch-mode.has-dock-right #viewport { margin-right: 210px; }
+    body.has-dock-left #viewport { margin-left: 280px; }
+    body.has-dock-right #viewport { margin-right: 280px; }
 
     @media (max-width: 768px) {
-      body.has-dock-left #viewport, body.has-dock-right #viewport {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        margin-bottom: 50px !important;
+      #mobile-menu-toggle {
+        display: block;
+      }
+      body.has-dock-left #viewport, body.has-dock-right #viewport, body.has-dock-bottom #viewport, body.has-dock-top #viewport {
+        margin: 0 !important;
       }
       #toolbar.dock-left, #toolbar.dock-right {
         position: absolute;
+        top: 0;
         bottom: 0;
-        top: auto;
         left: 0;
-        right: 0;
-        width: 100% !important;
-        max-height: 45vh;
-        flex-direction: row;
-        flex-wrap: wrap;
+        width: 280px !important;
+        max-width: 85vw;
+        max-height: 100vh;
+        flex-direction: column;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 300;
+      }
+      #toolbar.dock-left.mobile-open, #toolbar.dock-right.mobile-open {
+        transform: translateX(0%);
       }
       #sidebar-resizer { display: none !important; }
     }
@@ -433,8 +478,8 @@
       position: absolute;
       right: 0;
       bottom: 0;
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       cursor: se-resize;
       color: #00f5d4;
       font-size: 12px;
@@ -468,13 +513,13 @@
     }
 
     .slider-label { flex-direction: column; align-items: stretch; gap: 2px; width: 100%; }
-    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 20px; }
+    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 22px; }
     .slider-hint { color: #778da9; font-size: 9px; }
 
     .dual-slider-container { display: flex; flex-direction: column; gap: 2px; }
     .dual-slider-inputs { display: flex; align-items: center; gap: 4px; width: 100%; }
     .dual-slider-inputs input[type="text"] { width: 45px !important; text-align: center; padding: 2px; }
-    .range-slider-wrapper { position: relative; width: 100%; height: 20px; }
+    .range-slider-wrapper { position: relative; width: 100%; height: 22px; }
     .range-slider-wrapper input[type="range"] {
       position: absolute;
       left: 0;
@@ -490,8 +535,8 @@
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       background: #00b4d8;
       border-radius: 50%;
     }
@@ -531,8 +576,16 @@
 </head>
 <body class="has-dock-left">
 
+  <!-- MOBILE SLIDE MENU TOGGLE -->
+  <button id="mobile-menu-toggle">☰ Menu</button>
+
   <div id="toolbar" class="dock-left">
     <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
+
+    <!-- IMPORT / EXPORT AT THE TOP OF THE MENU -->
+    <div class="tool-group">
+      <button id="top-io-btn" class="action-btn">Import / Export ↗</button>
+    </div>
 
     <div class="tool-group">
       <label>Interface Mode:
@@ -619,7 +672,7 @@
       <label><input type="checkbox" id="show-timeline-chk"> Timeline Overlay</label>
       <label><input type="checkbox" id="show-urls-chk"> Show URLs</label>
       <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
-      <label><input type="checkbox" id="create-line-chk"> Create Line Mode</label>
+      <label><input type="checkbox" id="select-region-chk"> Select Region</label>
       <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
     </div>
 
@@ -657,7 +710,6 @@
     </div>
 
     <div class="tool-group">
-      <button id="io-btn" class="action-btn">Import / Export &#8599;</button>
       <button id="clear-btn" class="danger-btn">Clear Map</button>
     </div>
 
@@ -681,6 +733,8 @@
       <defs></defs>
       <g id="lines-group"></g>
       <g id="labels-group"></g>
+      <!-- Live active arrow being dragged -->
+      <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none;" />
     </svg>
   </div>
 
@@ -688,26 +742,15 @@
   <div id="help-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Concept Map Mobile & Touch Guide</h2>
+        <h2>Concept Map Guide</h2>
         <button id="modal-close-btn" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="help-section">
-          <h3>Touch and Phone Mode</h3>
+          <h3>Drawing Arrows</h3>
           <div class="help-grid">
-            <span class="help-key">Editing Nodes</span>
-            <span>On touchscreen devices, tap a selected node or enable <b>Edit Text Mode</b> to instantly edit node text. On desktop, double-click a node.</span>
-            <span class="help-key">Navigation</span>
-            <span>Pan around the viewport by dragging on empty canvas areas. Pinch to zoom on supported touchscreen browsers.</span>
-          </div>
-        </div>
-        <div class="help-section">
-          <h3>Line & Box Manipulation</h3>
-          <div class="help-grid">
-            <span class="help-key">Create Line Mode</span>
-            <span>Enable <b>Create Line Mode</b> checkbox, then tap source node followed by target node.</span>
-            <span class="help-key">Node Resizing</span>
-            <span>Select a node and drag its bottom-right handle to custom resize text blocks.</span>
+            <span class="help-key">Proximity Arrow</span>
+            <span>Click and drag anywhere near a node on the canvas and release near another node to connect them with an arrow. If you release in empty space, the arrow disappears.</span>
           </div>
         </div>
       </div>
@@ -726,9 +769,11 @@
     const svgDefs = svgLayer.querySelector('defs');
     const linesGroup = document.getElementById('lines-group');
     const labelsGroup = document.getElementById('labels-group');
+    const liveDragArrow = document.getElementById('live-drag-arrow');
     const timelineContainer = document.getElementById('timeline-container');
     const timelineResizeHandle = timelineContainer.querySelector('.timeline-resize-handle');
     const selectionBox = document.getElementById('selection-box');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
 
     const nodeTextInput = document.getElementById('node-text');
     const addBtn = document.getElementById('add-btn');
@@ -758,7 +803,7 @@
     const showTimelineChk = document.getElementById('show-timeline-chk');
     const showUrlsChk = document.getElementById('show-urls-chk');
     const editTextChk = document.getElementById('edit-text-chk');
-    const createLineChk = document.getElementById('create-line-chk');
+    const selectRegionChk = document.getElementById('select-region-chk');
     const dragGraphChk = document.getElementById('drag-graph-chk');
     const arrowStyleSelect = document.getElementById('arrow-style');
     const lineWidthSelect = document.getElementById('line-width');
@@ -783,7 +828,7 @@
       showUrls: false,
       timelinePos: { x: 50, y: 50, width: 700 },
       dockPosition: 'left',
-      sidebarWidth: 260,
+      sidebarWidth: 280,
       floatingPos: { x: 20, y: 20 },
       fontMin: 10,
       fontMax: 24,
@@ -822,6 +867,7 @@
     let initialPositions = new Map();
     let boxSelectStart = { x: 0, y: 0 };
     let resizeStartDimensions = { width: 0, height: 0, startX: 0, startY: 0 };
+    let lineDrawStart = null;
 
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -847,6 +893,10 @@
       state.inputMode = e.target.value;
       updateInputModeUI();
       saveState();
+    };
+
+    mobileMenuToggle.onclick = () => {
+      toolbar.classList.toggle('mobile-open');
     };
 
     function parseTextAndUrl(input) {
@@ -934,7 +984,7 @@
       toolbar.style.width = '';
 
       if (pos === 'left' || pos === 'right') {
-        const width = state.sidebarWidth || 260;
+        const width = state.sidebarWidth || 280;
         toolbar.style.width = `${width}px`;
         if (pos === 'left') {
           viewport.style.marginLeft = `${width}px`;
@@ -1469,7 +1519,6 @@
         };
         el.appendChild(resizeHandle);
 
-        // Desktop double-click action
         el.ondblclick = (e) => {
           e.stopPropagation();
           if (editTextChk.checked || !node.url) {
@@ -1543,7 +1592,7 @@
       const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       hitPath.setAttribute("d", pathData);
       hitPath.setAttribute("stroke", "transparent");
-      hitPath.setAttribute("stroke-width", "20px");
+      hitPath.setAttribute("stroke-width", "25px");
       hitPath.setAttribute("fill", "none");
 
       const selectLine = (e) => {
@@ -1635,12 +1684,27 @@
       return { x: p1.x + tMin * dx, y: p1.y + tMin * dy };
     }
 
+    function findClosestNode(x, y, maxDist = 90) {
+      let closest = null;
+      let minDist = Infinity;
+      state.nodes.forEach(node => {
+        const rect = getNodeRect(node);
+        const cx = rect.x + rect.width / 2;
+        const cy = rect.y + rect.height / 2;
+        const dist = Math.hypot(cx - x, cy - y);
+        if (dist < minDist && dist <= maxDist) {
+          minDist = dist;
+          closest = node;
+        }
+      });
+      return closest;
+    }
+
     function handlePointerDownNode(e, node) {
       if (editingNodeId === node.id) return;
       e.stopPropagation();
       selectedLineId = null;
 
-      // TOUCHSCREEN EDIT TRIGGER: If touch mode is active and the node is already selected, tap again to edit text!
       if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
         if (editTextChk.checked || !node.url) {
           editingNodeId = node.id;
@@ -1650,22 +1714,6 @@
           window.open(node.url, '_blank');
           return;
         }
-      }
-
-      if (createLineChk.checked) {
-        if (!selectedSourceNode) {
-          selectedSourceNode = node; render();
-        } else if (selectedSourceNode.id !== node.id) {
-          state.lines.push({
-            id: generateId(), from: selectedSourceNode.id, to: node.id,
-            arrow: arrowStyleSelect.value, width: parseInt(lineWidthSelect.value, 10),
-            color: lineColorPicker.value, label: ""
-          });
-          selectedSourceNode = null; saveState(); render();
-        } else {
-          selectedSourceNode = null; render();
-        }
-        return;
       }
 
       if (!isLocked) {
@@ -1704,17 +1752,35 @@
     viewport.onpointerdown = (e) => {
       if (e.target !== viewport && e.target !== svgLayer) return;
       selectedLineId = null;
+
+      const vpRect = viewport.getBoundingClientRect();
+      const clickX = e.clientX - vpRect.left + viewport.scrollLeft;
+      const clickY = e.clientY - vpRect.top + viewport.scrollTop;
+
+      // PROXIMITY LINE DRAGGING: Always active when clicking canvas near nodes
+      lineDrawStart = { x: clickX, y: clickY };
+      liveDragArrow.setAttribute('x1', clickX);
+      liveDragArrow.setAttribute('y1', clickY);
+      liveDragArrow.setAttribute('x2', clickX);
+      liveDragArrow.setAttribute('y2', clickY);
+      liveDragArrow.style.display = 'block';
+
+      if (!selectRegionChk.checked) {
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return;
+      }
+
       if (!isLocked && !e.ctrlKey && !e.metaKey && !isFittingBox) {
         selectedNodeIds.clear(); selectedSourceNode = null; render();
       }
 
       isSelectingBox = true;
-      const vpRect = viewport.getBoundingClientRect();
-      boxSelectStart.x = e.clientX - vpRect.left + viewport.scrollLeft;
-      boxSelectStart.y = e.clientY - vpRect.top + viewport.scrollTop;
+      boxSelectStart.x = clickX;
+      boxSelectStart.y = clickY;
 
-      selectionBox.style.left = boxSelectStart.x + 'px';
-      selectionBox.style.top = boxSelectStart.y + 'px';
+      selectionBox.style.left = clickX + 'px';
+      selectionBox.style.top = clickY + 'px';
       selectionBox.style.width = '0px';
       selectionBox.style.height = '0px';
       selectionBox.style.display = 'block';
@@ -1742,6 +1808,15 @@
     };
 
     function handlePointerMove(e) {
+      const vpRect = viewport.getBoundingClientRect();
+      const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
+      const currentY = e.clientY - vpRect.top + viewport.scrollTop;
+
+      if (lineDrawStart) {
+        liveDragArrow.setAttribute('x2', currentX);
+        liveDragArrow.setAttribute('y2', currentY);
+      }
+
       if (resizingNode) {
         const deltaX = e.clientX - resizeStartDimensions.startX;
         const deltaY = e.clientY - resizeStartDimensions.startY;
@@ -1754,7 +1829,7 @@
       }
 
       if (resizingSidebar) {
-        let newWidth = 260;
+        let newWidth = 280;
         if (state.dockPosition === 'left') newWidth = Math.max(150, Math.min(600, e.clientX));
         else if (state.dockPosition === 'right') newWidth = Math.max(150, Math.min(600, window.innerWidth - e.clientX));
         state.sidebarWidth = newWidth;
@@ -1768,10 +1843,7 @@
         toolbar.style.left = newX + 'px'; toolbar.style.top = newY + 'px'; return;
       }
 
-      if (isSelectingBox) {
-        const vpRect = viewport.getBoundingClientRect();
-        const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
-        const currentY = e.clientY - vpRect.top + viewport.scrollTop;
+      if (isSelectingBox && selectRegionChk.checked) {
         const left = Math.min(boxSelectStart.x, currentX), top = Math.min(boxSelectStart.y, currentY);
         const width = Math.abs(currentX - boxSelectStart.x), height = Math.abs(currentY - boxSelectStart.y);
 
@@ -1809,7 +1881,32 @@
       render();
     }
 
-    function handlePointerUp() {
+    function handlePointerUp(e) {
+      liveDragArrow.style.display = 'none';
+
+      if (lineDrawStart) {
+        const vpRect = viewport.getBoundingClientRect();
+        const endX = e.clientX - vpRect.left + viewport.scrollLeft;
+        const endY = e.clientY - vpRect.top + viewport.scrollTop;
+        const startNode = findClosestNode(lineDrawStart.x, lineDrawStart.y, 90);
+        const endNode = findClosestNode(endX, endY, 90);
+
+        if (startNode && endNode && startNode.id !== endNode.id) {
+          state.lines.push({
+            id: generateId(),
+            from: startNode.id,
+            to: endNode.id,
+            arrow: arrowStyleSelect.value,
+            width: parseInt(lineWidthSelect.value, 10),
+            color: lineColorPicker.value,
+            label: ""
+          });
+          saveState();
+          render();
+        }
+        lineDrawStart = null;
+      }
+
       if (resizingNode) { resizingNode = null; saveState(); }
       if (resizingSidebar) { resizingSidebar = false; sidebarResizer.classList.remove('resizing'); saveState(); }
       if (draggingToolbar) { draggingToolbar = false; saveState(); }
@@ -1875,7 +1972,7 @@
 
     const IO_PAGE = 'conceptmap_io.html';
     let ioWin = null, ioSyncTimer = null;
-    const ioBtn = document.getElementById('io-btn');
+    const topIoBtn = document.getElementById('top-io-btn');
 
     function ioPayload() {
       return { type: 'cm-state', state: state, defaults: { width: parseInt(lineWidthSelect.value, 10), color: lineColorPicker.value, arrow: arrowStyleSelect.value } };
@@ -1892,7 +1989,7 @@
       ioSyncTimer = setTimeout(() => postToIo(ioPayload()), 250);
     }
 
-    ioBtn.onclick = () => {
+    topIoBtn.onclick = () => {
       if (ioWin && !ioWin.closed) { ioWin.focus(); postToIo(ioPayload()); return; }
       ioWin = window.open(IO_PAGE, 'conceptmap_io', 'width=560,height=760');
       if (!ioWin) alert('Please allow pop-ups to open the Import / Export window.');
