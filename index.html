@@ -265,12 +265,12 @@
       font-size: 11.5px;
       color: #e0e6ed;
     }
-    input[type="checkbox"] {
+    input[type="checkbox"], input[type="radio"] {
       cursor: pointer;
       accent-color: #00b4d8;
-      width: 20px;
-      height: 20px;
-      min-width: 20px;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
     }
     input[type="color"] {
       border: none;
@@ -300,7 +300,6 @@
       overscroll-behavior: none;
     }
 
-    /* Everything on the canvas lives in #world, which is scaled for zoom. */
     #world {
       position: absolute;
       top: 0;
@@ -578,7 +577,6 @@
     .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
     .help-key { color: #00f5d4; font-weight: bold; }
 
-    /* Zoom buttons (phone / touch mode) */
     #zoom-controls {
       display: none;
       position: absolute;
@@ -602,7 +600,6 @@
     }
     #zoom-controls #zoom-reset-btn { font-size: 11px; }
 
-    /* iOS zooms the whole page when a focused field is under 16px */
     body.touch-mode input[type="text"],
     body.touch-mode select,
     body.touch-mode textarea,
@@ -613,7 +610,6 @@
 </head>
 <body class="has-dock-left">
 
-  <!-- FLOATING TOGGLE WHEN HIDDEN (ALWAYS AVAILABLE AS FALLBACK) -->
   <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: flex;">
     <button id="floating-menu-btn" class="action-btn" type="button">☰ Menu</button>
   </div>
@@ -621,15 +617,13 @@
   <div id="toolbar" class="dock-left">
     <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
 
-    <!-- MENU & HIDE BUTTONS AT THE TOP OF THE PANEL -->
     <div class="tool-group row-inline">
       <button id="toolbar-menu-btn" class="action-btn" type="button">☰ Menu</button>
       <button id="toolbar-hide-btn" class="danger-btn" type="button">Hide</button>
     </div>
 
-    <!-- IMPORT / EXPORT -->
     <div class="tool-group">
-      <button id="top-io-btn" class="action-btn" type="button">Import / Export ↗</button>
+      <button id="io-btn" class="action-btn" type="button">Import / Export &#8599;</button>
     </div>
 
     <div class="tool-group">
@@ -649,6 +643,15 @@
           <option value="floating">Floating</option>
         </select>
       </label>
+    </div>
+
+    <div class="tool-group">
+      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">INTERACTION MODE</span>
+      <label><input type="radio" name="interaction-mode" value="all" checked> Do All 4</label>
+      <label><input type="radio" name="interaction-mode" value="drag"> Click and Drag Only</label>
+      <label><input type="radio" name="interaction-mode" value="arrow"> Draw Arrows Only</label>
+      <label><input type="radio" name="interaction-mode" value="edit"> Edit Cell Only</label>
+      <label><input type="radio" name="interaction-mode" value="link"> Goto Link Only</label>
     </div>
 
     <div class="tool-group">
@@ -677,11 +680,11 @@
         <span>Linkage Font Range</span>
         <div class="range-slider-wrapper">
           <input type="range" id="font-slider-min" min="6" max="36" value="10" step="1">
-          <input type="range" id="font-slider-max" min="6" max="36" value="24" step="1">
+          <input type="range" id="font-slider-max" min="6" max="36" value="11" step="1">
         </div>
         <div class="dual-slider-inputs">
           <label style="font-size:9px;">Min: <input type="text" id="font-min-input" value="10"></label>
-          <label style="font-size:9px;">Max: <input type="text" id="font-max-input" value="24"></label>
+          <label style="font-size:9px;">Max: <input type="text" id="font-max-input" value="11"></label>
         </div>
       </div>
     </div>
@@ -709,7 +712,7 @@
     </div>
 
     <div class="tool-group">
-      <label><input type="checkbox" id="autosized-chk"> Auto-size Node</label>
+      <label><input type="checkbox" id="auto-size-all-chk" checked> Auto-size All Nodes</label>
       <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
     </div>
 
@@ -779,7 +782,6 @@
       <defs></defs>
       <g id="lines-group"></g>
       <g id="labels-group"></g>
-      <!-- Live active arrow being dragged -->
       <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none;" />
     </svg>
    </div>
@@ -791,7 +793,6 @@
     <button id="zoom-out-btn" type="button" aria-label="Zoom out">&minus;</button>
   </div>
 
-  <!-- HELP MODAL -->
   <div id="help-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
@@ -829,7 +830,7 @@
     const toolbarDragHandle = document.getElementById('toolbar-drag-handle');
     const dockPositionSelect = document.getElementById('dock-position-select');
     const inputModeSelect = document.getElementById('input-mode-select');
-    const autosizedChk = document.getElementById('autosized-chk');
+    const autoSizeAllChk = document.getElementById('auto-size-all-chk');
     const svgLayer = document.getElementById('svg-layer');
     const svgDefs = svgLayer.querySelector('defs');
     const linesGroup = document.getElementById('lines-group');
@@ -900,7 +901,7 @@
       sidebarWidth: 280,
       floatingPos: { x: 20, y: 20 },
       fontMin: 10,
-      fontMax: 24,
+      fontMax: 11,
       maxLinksBound: 1,
       colorDist1: false,
       colorDist1Hex: '#ffb703',
@@ -909,7 +910,9 @@
       colorDist3: false,
       colorDist3Hex: '#ff006e',
       maxDistanceLimit: 10,
-      inputMode: 'auto'
+      inputMode: 'auto',
+      autoSizeAll: true,
+      interactionMode: 'all'
     };
 
     let isLocked = false;
@@ -944,10 +947,9 @@
     let lineDrawStart = null;
     let menuHidden = false;
 
-    // Zoom + touch gesture state (not part of undo history)
     let zoom = 1;
     const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
-    const activePointers = new Map();   // touch pointers currently down: id -> {x, y}
+    const activePointers = new Map();
     const capturedPointers = new Set();
     let pinching = false, pinchStart = null;
     let panning = false, panStart = null;
@@ -957,6 +959,19 @@
 
     function generateId() {
       return 'id_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function normalizeLines(lines) {
+      return lines.map(l => {
+        const out = Object.assign({}, l);
+        if (out.arrow === 'start') {
+          const t = out.from; out.from = out.to; out.to = t;
+          out.arrow = 'end';
+        } else if (out.arrow !== 'none') {
+          out.arrow = 'end';
+        }
+        return out;
+      });
     }
 
     function isTouchActive() {
@@ -979,11 +994,17 @@
       saveState();
     };
 
+    document.querySelectorAll('input[name="interaction-mode"]').forEach(radio => {
+      radio.onchange = (e) => {
+        if (e.target.checked) {
+          state.interactionMode = e.target.value;
+          saveState();
+        }
+      };
+    });
+
     const narrowQuery = window.matchMedia('(max-width: 768px)');
 
-    // Single source of truth: menuHidden decides everything.
-    // On narrow screens the left/right sidebar is slid off-canvas by CSS and
-    // only appears when it carries .mobile-open, so that class must follow menuHidden.
     function syncMenuUI() {
       toolbar.classList.toggle('menu-hidden', menuHidden);
       document.body.classList.toggle('menu-hidden', menuHidden);
@@ -1001,8 +1022,6 @@
       syncMenuUI();
     }
 
-    // Plain click only: it fires reliably on iOS Safari and Opera. Handling pointerup as well
-    // let the follow-up synthetic click land on whatever button appeared under the finger.
     function bindMenuToggle(btn, handler) {
       if (!btn) return;
       btn.onclick = (e) => {
@@ -1016,7 +1035,6 @@
     bindMenuToggle(floatingMenuBtn, showMenu);
     bindMenuToggle(toolbarHideBtn, hideMenu);
 
-    // Start with the sidebar closed on phones so the canvas is usable and the ☰ button is visible.
     menuHidden = narrowQuery.matches;
     narrowQuery.addEventListener('change', (e) => {
       menuHidden = e.matches;
@@ -1139,30 +1157,17 @@
       saveState();
     };
 
-    autosizedChk.onchange = (e) => {
-      const isAuto = e.target.checked;
-      if (selectedNodeIds.size > 0) {
-        selectedNodeIds.forEach(id => {
-          const n = state.nodes.find(item => item.id === id);
-          if (n) {
-            if (isAuto) {
-              n.size = 'auto';
-              delete n.customWidth;
-              delete n.customHeight;
-            } else {
-              const el = document.querySelector(`[data-id="${n.id}"]`);
-              if (el) {
-                const rect = el.getBoundingClientRect();
-                n.customWidth = Math.round(rect.width / zoom / getNodeFontScale(n.id));
-                n.customHeight = Math.round(rect.height / zoom / getNodeFontScale(n.id));
-                n.size = 'custom';
-              }
-            }
-          }
+    autoSizeAllChk.onchange = (e) => {
+      state.autoSizeAll = e.target.checked;
+      if (state.autoSizeAll) {
+        state.nodes.forEach(n => {
+          n.size = 'auto';
+          delete n.customWidth;
+          delete n.customHeight;
         });
-        saveState();
-        render();
       }
+      saveState();
+      render();
     };
 
     toolbarDragHandle.onpointerdown = (e) => {
@@ -1277,7 +1282,7 @@
       const counts = getNodeLinkCounts();
       const links = counts.get(nodeId) || 0;
       const fMin = state.fontMin || 10;
-      const fMax = state.fontMax || 24;
+      const fMax = state.fontMax || 11;
       const maxB = Math.max(1, state.maxLinksBound || 1);
       if (links <= 1) return fMin;
       if (links >= maxB) return fMax;
@@ -1371,7 +1376,6 @@
         maxR = Math.max(maxR, el.offsetLeft + el.offsetWidth);
         maxB = Math.max(maxB, el.offsetTop + el.offsetHeight);
       });
-      // The world is sized in unscaled units; it must always cover the whole visible viewport.
       world.style.width = Math.max(Math.floor(viewport.clientWidth / zoom), maxR + 200) + 'px';
       world.style.height = Math.max(Math.floor(viewport.clientHeight / zoom), maxB + 200) + 'px';
     }
@@ -1493,11 +1497,23 @@
       const actualMax = getMaxLinks();
       if (!state.maxLinksBound || state.maxLinksBound < actualMax) state.maxLinksBound = Math.max(1, actualMax);
       fontMinInput.value = state.fontMin || 10;
-      fontMaxInput.value = state.maxLinksBound;
+      fontMaxInput.value = state.fontMax || 11;
       fontSliderMin.value = state.fontMin || 10;
-      fontSliderMax.value = state.fontMax || 24;
+      fontSliderMax.value = state.fontMax || 11;
 
       updateInputModeUI();
+
+      autoSizeAllChk.checked = !!state.autoSizeAll;
+      if (state.autoSizeAll) {
+        state.nodes.forEach(n => {
+          n.size = 'auto';
+          delete n.customWidth;
+          delete n.customHeight;
+        });
+      }
+
+      const activeRadio = document.querySelector(`input[name="interaction-mode"][value="${state.interactionMode || 'all'}"]`);
+      if (activeRadio) activeRadio.checked = true;
 
       colorDist1Chk.checked = !!state.colorDist1; colorDist1Val.value = state.colorDist1Hex || '#ffb703';
       colorDist2Chk.checked = !!state.colorDist2; colorDist2Val.value = state.colorDist2Hex || '#fb8500';
@@ -1513,16 +1529,6 @@
     function renderInner() {
       dockPositionSelect.value = state.dockPosition || 'left';
       applyDockPosition(state.dockPosition || 'left');
-
-      if (selectedNodeIds.size > 0) {
-        autosizedChk.disabled = false;
-        autosizedChk.checked = Array.from(selectedNodeIds).every(id => {
-          const n = state.nodes.find(item => item.id === id);
-          return n && (n.size === 'auto' || (!n.customWidth && n.size !== 'custom'));
-        });
-      } else {
-        autosizedChk.disabled = true; autosizedChk.checked = false;
-      }
 
       if (state.showTimeline) {
         timelineContainer.classList.remove('hidden');
@@ -1572,7 +1578,7 @@
         el.style.fontSize = nodeFontSize + 'px';
         el.style.padding = `${(6 * fscale).toFixed(1)}px ${(10 * fscale).toFixed(1)}px`;
 
-        if (node.customWidth && node.customHeight) {
+        if (!state.autoSizeAll && node.customWidth && node.customHeight) {
           el.classList.add('fixed-size');
           el.style.width = `${Math.round(node.customWidth * fscale)}px`;
           el.style.height = `${Math.round(node.customHeight * fscale)}px`;
@@ -1638,6 +1644,7 @@
         resizeHandle.innerHTML = '◢';
         resizeHandle.onpointerdown = (e) => {
           e.stopPropagation();
+          if (state.autoSizeAll) return;
           resizingNode = node;
           const rect = el.getBoundingClientRect();
           resizeStartDimensions = { width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY };
@@ -1648,9 +1655,11 @@
 
         el.ondblclick = (e) => {
           e.stopPropagation();
-          if (editTextChk.checked || !node.url) {
+          const mode = state.interactionMode || 'all';
+          if (mode === 'drag' || mode === 'arrow') return;
+          if (mode === 'edit' || editTextChk.checked || !node.url) {
             editingNodeId = node.id; render();
-          } else if (node.url) {
+          } else if (mode === 'link' || node.url) {
             window.open(node.url, '_blank');
           }
         };
@@ -1769,7 +1778,6 @@
     function getNodeRect(node) {
       const el = document.querySelector(`[data-id="${node.id}"]`);
       if (el) {
-        // Screen rect -> world units (undo the zoom scale; world origin already accounts for scroll)
         const bbox = el.getBoundingClientRect();
         const wBox = world.getBoundingClientRect();
         return {
@@ -1833,8 +1841,29 @@
       e.stopPropagation();
       selectedLineId = null;
 
-      // Tapping an already-selected box edits / opens it, but only on release without movement,
-      // so a selected box can still be dragged (and a second finger can start a pinch).
+      const mode = state.interactionMode || 'all';
+
+      if (mode === 'edit') {
+        editingNodeId = node.id;
+        render();
+        return;
+      }
+      if (mode === 'link') {
+        if (node.url) window.open(node.url, '_blank');
+        return;
+      }
+      if (mode === 'arrow') {
+        isDrivingArrow = true;
+        driveSourceNode = node;
+        driveStartClient = { x: e.clientX, y: e.clientY };
+        selectedNodeIds.clear();
+        selectedNodeIds.add(node.id);
+        render();
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return;
+      }
+
       tapCandidate = null;
       if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
         tapCandidate = { node, x: e.clientX, y: e.clientY };
@@ -1877,11 +1906,13 @@
       if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
       selectedLineId = null;
 
+      const mode = state.interactionMode || 'all';
+      if (mode === 'edit' || mode === 'link') return;
+
       const wp0 = toWorld(e.clientX, e.clientY);
       const clickX = wp0.x;
       const clickY = wp0.y;
 
-      // Check if click is near a node (outside its bounds within 60px)
       let nearbyNode = null;
       let minNodeDist = Infinity;
       state.nodes.forEach(node => {
@@ -1898,7 +1929,7 @@
         }
       });
 
-      if (nearbyNode) {
+      if (mode !== 'drag' && nearbyNode) {
         isDrivingArrow = true;
         driveSourceNode = nearbyNode;
         driveStartClient = { x: e.clientX, y: e.clientY };
@@ -1914,8 +1945,17 @@
         return;
       }
 
-      // Touch: one finger on empty space (away from nodes) pans the canvas
+      if (mode === 'arrow') return;
+
       if (e.pointerType === 'touch' && !selectRegionChk.checked) {
+        panning = true;
+        panStart = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return;
+      }
+
+      if (mode === 'drag') {
         panning = true;
         panStart = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
         window.addEventListener('pointermove', handlePointerMove);
@@ -1998,7 +2038,7 @@
         const dx = e.clientX - driveStartClient.x;
         const dy = e.clientY - driveStartClient.y;
 
-        const scale = 1.5 / zoom;   // keep the arrow tip 1.5x the finger travel on screen at any zoom
+        const scale = 1.5 / zoom;
         const tipX = startX + dx * scale;
         const tipY = startY + dy * scale;
 
@@ -2041,7 +2081,7 @@
         liveDragArrow.setAttribute('y2', currentY);
       }
 
-      if (resizingNode) {
+      if (resizingNode && !state.autoSizeAll) {
         const deltaX = e.clientX - resizeStartDimensions.startX;
         const deltaY = e.clientY - resizeStartDimensions.startY;
         const newW = Math.max(80, (resizeStartDimensions.width + deltaX) / zoom);
@@ -2111,7 +2151,7 @@
         capturedPointers.delete(e.pointerId);
         if (pinching) {
           if (activePointers.size < 2) pinching = false;
-          if (activePointers.size > 0) return;   // keep listening until the last finger lifts
+          if (activePointers.size > 0) return;
         }
       }
       if (e.type === 'pointercancel') tapCandidate = null;
@@ -2200,13 +2240,13 @@
         const c = tapCandidate;
         tapCandidate = null;
         if (e.type === 'pointerup' && Math.hypot(e.clientX - c.x, e.clientY - c.y) < 8) {
-          if (editTextChk.checked || !c.node.url) { editingNodeId = c.node.id; render(); }
-          else if (c.node.url) { window.open(c.node.url, '_blank'); }
+          const mode = state.interactionMode || 'all';
+          if (mode === 'edit' || editTextChk.checked || !c.node.url) { editingNodeId = c.node.id; render(); }
+          else if (mode === 'link' || c.node.url) { window.open(c.node.url, '_blank'); }
         }
       }
 
       if (activePointers.size === 0) window.removeEventListener('pointermove', handlePointerMove);
-      // pointerup / pointercancel stay registered permanently (see touch section below)
     }
 
     function getConnectedComponent(startId) {
@@ -2242,17 +2282,30 @@
     showTimelineChk.onchange = (e) => { state.showTimeline = e.target.checked; saveState(); render(); };
     showUrlsChk.onchange = (e) => { state.showUrls = e.target.checked; saveState(); render(); };
 
+    /* ---------------- IMPORT / EXPORT BRIDGE ---------------- */
     const IO_PAGE = 'conceptmap_io.html';
-    let ioWin = null, ioSyncTimer = null;
-    const topIoBtn = document.getElementById('top-io-btn');
+    let ioWin = null;
+    let ioSyncTimer = null;
+
+    const ioBtn = document.getElementById('io-btn');
 
     function ioPayload() {
-      return { type: 'cm-state', state: state, defaults: { width: parseInt(lineWidthSelect.value, 10), color: lineColorPicker.value, arrow: arrowStyleSelect.value } };
+      return {
+        type: 'cm-state',
+        state: state,
+        defaults: {
+          width: parseInt(lineWidthSelect.value, 10),
+          color: lineColorPicker.value,
+          arrow: arrowStyleSelect.value
+        }
+      };
     }
 
     function postToIo(msg, target) {
       const w = target || ioWin;
-      if (w && !w.closed) { try { w.postMessage(msg, '*'); } catch (err) {} }
+      if (w && !w.closed) {
+        try { w.postMessage(msg, '*'); } catch (err) {}
+      }
     }
 
     function scheduleIoSync() {
@@ -2261,45 +2314,125 @@
       ioSyncTimer = setTimeout(() => postToIo(ioPayload()), 250);
     }
 
-    topIoBtn.onclick = () => {
+    ioBtn.onclick = () => {
       if (ioWin && !ioWin.closed) { ioWin.focus(); postToIo(ioPayload()); return; }
       ioWin = window.open(IO_PAGE, 'conceptmap_io', 'width=560,height=760');
-      if (!ioWin) alert('Please allow pop-ups to open the Import / Export window.');
+      if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
     };
 
     function afterExternalChange() {
-      selectedNodeIds.clear(); selectedLineId = null; selectedSourceNode = null; editingNodeId = null;
-      saveState(); render();
+      selectedNodeIds.clear();
+      selectedLineId = null;
+      selectedSourceNode = null;
+      editingNodeId = null;
+      saveState();
+      render();
+    }
+
+    function applyImportedJson(importedState) {
+      state = {
+        nodes: importedState.nodes || [],
+        lines: normalizeLines(importedState.lines || []),
+        showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
+        showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
+        timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
+        dockPosition: importedState.dockPosition || 'left',
+        sidebarWidth: importedState.sidebarWidth || 280,
+        floatingPos: importedState.floatingPos || { x: 20, y: 20 },
+        fontMin: importedState.fontMin || 10,
+        fontMax: importedState.fontMax || 11,
+        maxLinksBound: importedState.maxLinksBound || 1,
+        colorDist1: importedState.colorDist1 || false,
+        colorDist1Hex: importedState.colorDist1Hex || '#ffb703',
+        colorDist2: importedState.colorDist2 || false,
+        colorDist2Hex: importedState.colorDist2Hex || '#fb8500',
+        colorDist3: importedState.colorDist3 || false,
+        colorDist3Hex: importedState.colorDist3Hex || '#ff006e',
+        maxDistanceLimit: importedState.maxDistanceLimit !== undefined ? importedState.maxDistanceLimit : 10,
+        inputMode: importedState.inputMode || 'auto',
+        autoSizeAll: importedState.autoSizeAll !== undefined ? importedState.autoSizeAll : true,
+        interactionMode: importedState.interactionMode || 'all'
+      };
+      afterExternalChange();
     }
 
     window.addEventListener('message', (e) => {
       const d = e.data;
       if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
-      if (d.type === 'cm-io-ready') { ioWin = e.source; postToIo(ioPayload(), e.source); return; }
+
+      if (d.type === 'cm-io-ready') {
+        ioWin = e.source;
+        postToIo(ioPayload(), e.source);
+        return;
+      }
       if (e.source !== ioWin) return;
-      if (d.type === 'cm-request-state') { postToIo(ioPayload(), e.source); }
-      else if (d.type === 'cm-import-json') {
+
+      if (d.type === 'cm-request-state') {
+        postToIo(ioPayload(), e.source);
+      } else if (d.type === 'cm-import-json') {
         try {
-          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error();
-          state = Object.assign(state, d.data);
-          afterExternalChange();
-        } catch (err) {}
+          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
+          applyImportedJson(d.data);
+          postToIo({ type: 'cm-ack', ok: true, message: `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.` }, e.source);
+        } catch (err) {
+          postToIo({ type: 'cm-ack', ok: false, message: 'Invalid JSON file structure.' }, e.source);
+        }
+      } else if (d.type === 'cm-import-graph') {
+        const nodes = Array.isArray(d.nodes) ? d.nodes : [];
+        const lines = Array.isArray(d.lines) ? d.lines : [];
+        if (d.replace) {
+          state.nodes = nodes;
+          state.lines = lines;
+        } else {
+          state.nodes = state.nodes.concat(nodes);
+          state.lines = state.lines.concat(lines);
+        }
+        afterExternalChange();
+        postToIo({ type: 'cm-ack', ok: true, message: `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.` }, e.source);
+      } else if (d.type === 'cm-state-update' && d.data) {
+        state = Object.assign(state, d.data);
+        afterExternalChange();
       }
     });
 
     clearBtn.onclick = () => {
       if (isLocked) return;
       if (confirm("Clear all nodes and connections?")) {
-        state.nodes = []; state.lines = [];
-        selectedSourceNode = null; selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
-        saveState(); render();
+        state = { 
+          nodes: [], 
+          lines: [], 
+          showTimeline: state.showTimeline, 
+          showUrls: state.showUrls, 
+          timelinePos: state.timelinePos,
+          dockPosition: state.dockPosition,
+          sidebarWidth: state.sidebarWidth,
+          floatingPos: state.floatingPos,
+          fontMin: state.fontMin,
+          fontMax: state.fontMax,
+          maxLinksBound: state.maxLinksBound,
+          colorDist1: state.colorDist1,
+          colorDist1Hex: state.colorDist1Hex,
+          colorDist2: state.colorDist2,
+          colorDist2Hex: state.colorDist2Hex,
+          colorDist3: state.colorDist3,
+          colorDist3Hex: state.colorDist3Hex,
+          maxDistanceLimit: state.maxDistanceLimit,
+          inputMode: state.inputMode,
+          autoSizeAll: state.autoSizeAll,
+          interactionMode: state.interactionMode
+        };
+        selectedSourceNode = null;
+        selectedNodeIds.clear();
+        selectedLineId = null;
+        editingNodeId = null;
+        saveState();
+        render();
       }
     };
 
     undoBtn.onclick = undo;
     redoBtn.onclick = redo;
 
-    // ================= Zoom, pinch and touch handling =================
     const zoomInBtn = document.getElementById('zoom-in-btn');
     const zoomOutBtn = document.getElementById('zoom-out-btn');
     const zoomResetBtn = document.getElementById('zoom-reset-btn');
@@ -2308,14 +2441,11 @@
       zoomResetBtn.textContent = Math.round(zoom * 100) + '%';
     }
 
-    // client (screen) coordinates -> world coordinates
     function toWorld(cx, cy) {
       const r = world.getBoundingClientRect();
       return { x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
     }
 
-    // Zoom so that world point `anchor` stays under screen point (cx, cy).
-    // Defaults to the centre of the viewport and the world point currently under it.
     function setZoom(newZoom, cx, cy, anchor) {
       newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
       const vp = viewport.getBoundingClientRect();
@@ -2333,14 +2463,13 @@
     zoomOutBtn.onclick = () => setZoom(zoom / 1.25);
     zoomResetBtn.onclick = () => setZoom(1);
 
-    // Ctrl/Cmd + wheel (also trackpad pinch on desktop) zooms around the cursor
     viewport.addEventListener('wheel', (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      setZoom(zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+      setZoom(zoom * zoomFactor, e.clientX, e.clientY);
     }, { passive: false });
 
-    // Keep touches that start on the canvas ending up as pointer events rather than a native scroll/zoom
     viewport.addEventListener('touchmove', (e) => {
       if (e.target.closest && e.target.closest('.node-edit-input')) return;
       e.preventDefault();
@@ -2348,8 +2477,6 @@
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
       document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-    // Once a touch drag is under way, route its events to the (permanent) viewport. Nodes are rebuilt
-    // on every render, and a removed element would otherwise silently drop the rest of the gesture.
     function captureTouchPointer(e) {
       if (capturedPointers.has(e.pointerId)) return;
       capturedPointers.add(e.pointerId);
@@ -2377,14 +2504,13 @@
       setZoom(pinchStart.zoom * dist / pinchStart.dist, (a.x + b.x) / 2, (a.y + b.y) / 2, pinchStart.anchor);
     }
 
-    // Capture phase: runs before node / empty-space handlers so a second finger can take over
     viewport.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
       if (activePointers.size >= 2) { e.stopImmediatePropagation(); return; }
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       window.addEventListener('pointermove', handlePointerMove);
       if (activePointers.size === 2) {
-        e.stopImmediatePropagation();   // the second finger never starts a node drag or arrow
+        e.stopImmediatePropagation();
         cancelSingleGestures();
         const pts = [...activePointers.values()];
         const cx = (pts[0].x + pts[1].x) / 2, cy = (pts[0].y + pts[1].y) / 2;
@@ -2398,7 +2524,6 @@
       }
     }, true);
 
-    // Permanent, idle-safe end-of-gesture handling (also covers the browser cancelling a touch)
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
 
