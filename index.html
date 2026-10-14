@@ -17,13 +17,17 @@
       background: #0d1b2a;
       color: #e0e6ed;
       overflow: hidden;
-      height: 100vh;
-      height: 100dvh;
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
-      position: relative;
       touch-action: none;
+      overscroll-behavior: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
     }
+    html { overscroll-behavior: none; }
 
     #toolbar.menu-hidden {
       display: none !important;
@@ -290,14 +294,24 @@
       flex: 1;
       position: relative;
       background-color: #0b132b;
-      background-image: 
+      overflow: auto;
+      scrollbar-color: #415a77 #0d1b2a;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+
+    /* Everything on the canvas lives in #world, which is scaled for zoom. */
+    #world {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 0;
+      background-image:
         linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
       background-size: 20px 20px;
-      background-attachment: local;
-      overflow: auto;
-      scrollbar-color: #415a77 #0d1b2a;
-      touch-action: pan-x pan-y pinch-zoom;
     }
 
     body.has-dock-left #viewport { margin-left: 280px; }
@@ -563,6 +577,38 @@
     .help-section h3 { color: #90e0ef; font-size: 12px; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase; }
     .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
     .help-key { color: #00f5d4; font-weight: bold; }
+
+    /* Zoom buttons (phone / touch mode) */
+    #zoom-controls {
+      display: none;
+      position: absolute;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      z-index: 120;
+      flex-direction: column;
+      gap: 6px;
+    }
+    body.touch-mode #zoom-controls { display: flex; }
+    #zoom-controls button {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      font-size: 22px;
+      line-height: 1;
+      background: rgba(27, 38, 59, 0.92);
+      border: 1px solid #00b4d8;
+      color: #00f5d4;
+      border-radius: 6px;
+    }
+    #zoom-controls #zoom-reset-btn { font-size: 11px; }
+
+    /* iOS zooms the whole page when a focused field is under 16px */
+    body.touch-mode input[type="text"],
+    body.touch-mode select,
+    body.touch-mode textarea,
+    body.touch-mode .node-edit-input {
+      font-size: 16px;
+    }
   </style>
 </head>
 <body class="has-dock-left">
@@ -720,6 +766,7 @@
   <div id="sidebar-resizer"></div>
 
   <div id="viewport">
+   <div id="world">
     <div id="selection-box"></div>
 
     <div id="timeline-container" class="hidden">
@@ -735,6 +782,13 @@
       <!-- Live active arrow being dragged -->
       <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none;" />
     </svg>
+   </div>
+  </div>
+
+  <div id="zoom-controls">
+    <button id="zoom-in-btn" type="button" aria-label="Zoom in">+</button>
+    <button id="zoom-reset-btn" type="button" aria-label="Reset zoom">100%</button>
+    <button id="zoom-out-btn" type="button" aria-label="Zoom out">&minus;</button>
   </div>
 
   <!-- HELP MODAL -->
@@ -752,12 +806,24 @@
             <span>Click and drag near a node (outside its bounds) towards another node to grow and steer a live connection arrow. Release over the target node to create the line.</span>
           </div>
         </div>
+        <div class="help-section">
+          <h3>Touch Gestures</h3>
+          <div class="help-grid">
+            <span class="help-key">Pan</span>
+            <span>Drag one finger on empty space away from any node, or drag two fingers anywhere.</span>
+            <span class="help-key">Zoom</span>
+            <span>Pinch with two fingers, or use the + / &minus; buttons (tap the % to reset to 100%). Ctrl/Cmd + mouse wheel also zooms.</span>
+            <span class="help-key">Edit / open</span>
+            <span>Tap an already-selected box (without dragging) to edit it or open its link.</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     const viewport = document.getElementById('viewport');
+    const world = document.getElementById('world');
     const toolbar = document.getElementById('toolbar');
     const sidebarResizer = document.getElementById('sidebar-resizer');
     const toolbarDragHandle = document.getElementById('toolbar-drag-handle');
@@ -877,6 +943,15 @@
     let resizeStartDimensions = { width: 0, height: 0, startX: 0, startY: 0 };
     let lineDrawStart = null;
     let menuHidden = false;
+
+    // Zoom + touch gesture state (not part of undo history)
+    let zoom = 1;
+    const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
+    const activePointers = new Map();   // touch pointers currently down: id -> {x, y}
+    const capturedPointers = new Set();
+    let pinching = false, pinchStart = null;
+    let panning = false, panStart = null;
+    let tapCandidate = null;
 
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -1078,8 +1153,8 @@
               const el = document.querySelector(`[data-id="${n.id}"]`);
               if (el) {
                 const rect = el.getBoundingClientRect();
-                n.customWidth = Math.round(rect.width / getNodeFontScale(n.id));
-                n.customHeight = Math.round(rect.height / getNodeFontScale(n.id));
+                n.customWidth = Math.round(rect.width / zoom / getNodeFontScale(n.id));
+                n.customHeight = Math.round(rect.height / zoom / getNodeFontScale(n.id));
                 n.size = 'custom';
               }
             }
@@ -1243,11 +1318,12 @@
       const visibleNodes = state.nodes.filter(n => !hiddenNodeIds.has(n.id));
       if (visibleNodes.length === 0) return;
       const padding = 30;
+      const pad = padding / zoom;
       arrangeNodesInGrid(visibleNodes, {
-        x: viewport.scrollLeft + padding,
-        y: viewport.scrollTop + padding,
-        width: Math.max(60, viewport.clientWidth - padding * 2),
-        height: Math.max(40, viewport.clientHeight - padding * 2)
+        x: viewport.scrollLeft / zoom + pad,
+        y: viewport.scrollTop / zoom + pad,
+        width: Math.max(60, viewport.clientWidth / zoom - pad * 2),
+        height: Math.max(40, viewport.clientHeight / zoom - pad * 2)
       });
       saveState();
       render();
@@ -1295,8 +1371,9 @@
         maxR = Math.max(maxR, el.offsetLeft + el.offsetWidth);
         maxB = Math.max(maxB, el.offsetTop + el.offsetHeight);
       });
-      svgLayer.style.width = Math.max(viewport.clientWidth - 16, maxR + 200) + 'px';
-      svgLayer.style.height = Math.max(viewport.clientHeight - 16, maxB + 200) + 'px';
+      // The world is sized in unscaled units; it must always cover the whole visible viewport.
+      world.style.width = Math.max(Math.floor(viewport.clientWidth / zoom), maxR + 200) + 'px';
+      world.style.height = Math.max(Math.floor(viewport.clientHeight / zoom), maxB + 200) + 'px';
     }
 
     function updateTimelineTicks() {
@@ -1579,7 +1656,7 @@
         };
 
         el.onpointerdown = (e) => handlePointerDownNode(e, node);
-        viewport.appendChild(el);
+        world.appendChild(el);
       });
 
       state.lines.forEach(line => {
@@ -1692,13 +1769,14 @@
     function getNodeRect(node) {
       const el = document.querySelector(`[data-id="${node.id}"]`);
       if (el) {
+        // Screen rect -> world units (undo the zoom scale; world origin already accounts for scroll)
         const bbox = el.getBoundingClientRect();
-        const vpBox = viewport.getBoundingClientRect();
+        const wBox = world.getBoundingClientRect();
         return {
-          x: bbox.left - vpBox.left + viewport.scrollLeft,
-          y: bbox.top - vpBox.top + viewport.scrollTop,
-          width: bbox.width,
-          height: bbox.height
+          x: (bbox.left - wBox.left) / zoom,
+          y: (bbox.top - wBox.top) / zoom,
+          width: bbox.width / zoom,
+          height: bbox.height / zoom
         };
       }
       return { x: node.x, y: node.y, width: 60, height: 20 };
@@ -1755,15 +1833,11 @@
       e.stopPropagation();
       selectedLineId = null;
 
+      // Tapping an already-selected box edits / opens it, but only on release without movement,
+      // so a selected box can still be dragged (and a second finger can start a pinch).
+      tapCandidate = null;
       if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
-        if (editTextChk.checked || !node.url) {
-          editingNodeId = node.id;
-          render();
-          return;
-        } else if (node.url) {
-          window.open(node.url, '_blank');
-          return;
-        }
+        tapCandidate = { node, x: e.clientX, y: e.clientY };
       }
 
       if (!isLocked) {
@@ -1800,12 +1874,12 @@
     }
 
     viewport.onpointerdown = (e) => {
-      if (e.target !== viewport && e.target !== svgLayer) return;
+      if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
       selectedLineId = null;
 
-      const vpRect = viewport.getBoundingClientRect();
-      const clickX = e.clientX - vpRect.left + viewport.scrollLeft;
-      const clickY = e.clientY - vpRect.top + viewport.scrollTop;
+      const wp0 = toWorld(e.clientX, e.clientY);
+      const clickX = wp0.x;
+      const clickY = wp0.y;
 
       // Check if click is near a node (outside its bounds within 60px)
       let nearbyNode = null;
@@ -1817,7 +1891,7 @@
           const cx = Math.max(rect.x, Math.min(clickX, rect.x + rect.width));
           const cy = Math.max(rect.y, Math.min(clickY, rect.y + rect.height));
           const dist = Math.hypot(clickX - cx, clickY - cy);
-          if (dist < 60 && dist < minNodeDist) {
+          if (dist < 60 / zoom && dist < minNodeDist) {
             minNodeDist = dist;
             nearbyNode = node;
           }
@@ -1835,6 +1909,15 @@
           }
         }
 
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return;
+      }
+
+      // Touch: one finger on empty space (away from nodes) pans the canvas
+      if (e.pointerType === 'touch' && !selectRegionChk.checked) {
+        panning = true;
+        panStart = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
         return;
@@ -1874,8 +1957,9 @@
     timelineContainer.onpointerdown = (e) => {
       if (e.target === timelineResizeHandle) return;
       draggingTimeline = true;
-      dragOffset.x = e.clientX - state.timelinePos.x;
-      dragOffset.y = e.clientY - state.timelinePos.y;
+      const twp = toWorld(e.clientX, e.clientY);
+      dragOffset.x = twp.x - state.timelinePos.x;
+      dragOffset.y = twp.y - state.timelinePos.y;
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', handlePointerUp);
     };
@@ -1890,9 +1974,21 @@
     };
 
     function handlePointerMove(e) {
-      const vpRect = viewport.getBoundingClientRect();
-      const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
-      const currentY = e.clientY - vpRect.top + viewport.scrollTop;
+      if (e.pointerType === 'touch') {
+        if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinching) { updatePinch(); return; }
+        captureTouchPointer(e);
+      }
+
+      const wpMove = toWorld(e.clientX, e.clientY);
+      const currentX = wpMove.x;
+      const currentY = wpMove.y;
+
+      if (panning && panStart) {
+        viewport.scrollLeft = panStart.left - (e.clientX - panStart.x);
+        viewport.scrollTop = panStart.top - (e.clientY - panStart.y);
+        return;
+      }
 
       if (isDrivingArrow && driveSourceNode) {
         const sourceRect = getNodeRect(driveSourceNode);
@@ -1902,7 +1998,7 @@
         const dx = e.clientX - driveStartClient.x;
         const dy = e.clientY - driveStartClient.y;
 
-        const scale = 1.5;
+        const scale = 1.5 / zoom;   // keep the arrow tip 1.5x the finger travel on screen at any zoom
         const tipX = startX + dx * scale;
         const tipY = startY + dy * scale;
 
@@ -1948,8 +2044,8 @@
       if (resizingNode) {
         const deltaX = e.clientX - resizeStartDimensions.startX;
         const deltaY = e.clientY - resizeStartDimensions.startY;
-        const newW = Math.max(80, resizeStartDimensions.width + deltaX);
-        const newH = Math.max(40, resizeStartDimensions.height + deltaY);
+        const newW = Math.max(80, (resizeStartDimensions.width + deltaX) / zoom);
+        const newH = Math.max(40, (resizeStartDimensions.height + deltaY) / zoom);
         resizingNode.customWidth = Math.round(newW / getNodeFontScale(resizingNode.id));
         resizingNode.customHeight = Math.round(newH / getNodeFontScale(resizingNode.id));
         resizingNode.size = 'custom';
@@ -1990,18 +2086,18 @@
       }
 
       if (resizingTimeline) {
-        state.timelinePos.width = Math.max(300, dragOffset.initialWidth + (e.clientX - dragOffset.x));
+        state.timelinePos.width = Math.max(300, dragOffset.initialWidth + (e.clientX - dragOffset.x) / zoom);
         render(); return;
       }
 
       if (draggingTimeline) {
-        state.timelinePos.x = e.clientX - dragOffset.x;
-        state.timelinePos.y = e.clientY - dragOffset.y;
+        state.timelinePos.x = currentX - dragOffset.x;
+        state.timelinePos.y = currentY - dragOffset.y;
         render(); return;
       }
 
       if (!draggingNode) return;
-      let deltaX = e.clientX - dragOffset.x, deltaY = e.clientY - dragOffset.y;
+      let deltaX = (e.clientX - dragOffset.x) / zoom, deltaY = (e.clientY - dragOffset.y) / zoom;
       initialPositions.forEach((initPos, id) => {
         const n = state.nodes.find(item => item.id === id);
         if (n) { n.x = initPos.x + deltaX; n.y = initPos.y + deltaY; }
@@ -2010,6 +2106,16 @@
     }
 
     function handlePointerUp(e) {
+      if (e.pointerType === 'touch') {
+        activePointers.delete(e.pointerId);
+        capturedPointers.delete(e.pointerId);
+        if (pinching) {
+          if (activePointers.size < 2) pinching = false;
+          if (activePointers.size > 0) return;   // keep listening until the last finger lifts
+        }
+      }
+      if (e.type === 'pointercancel') tapCandidate = null;
+
       liveDragArrow.style.display = 'none';
 
       if (isDrivingArrow) {
@@ -2040,11 +2146,11 @@
       }
 
       if (lineDrawStart) {
-        const vpRect = viewport.getBoundingClientRect();
-        const endX = e.clientX - vpRect.left + viewport.scrollLeft;
-        const endY = e.clientY - vpRect.top + viewport.scrollTop;
-        const startNode = findClosestNode(lineDrawStart.x, lineDrawStart.y, 90);
-        const endNode = findClosestNode(endX, endY, 90);
+        const wpEnd = toWorld(e.clientX, e.clientY);
+        const endX = wpEnd.x;
+        const endY = wpEnd.y;
+        const startNode = findClosestNode(lineDrawStart.x, lineDrawStart.y, 90 / zoom);
+        const endNode = findClosestNode(endX, endY, 90 / zoom);
 
         if (startNode && endNode && startNode.id !== endNode.id) {
           state.lines.push({
@@ -2084,12 +2190,23 @@
         isSelectingBox = false; selectionBox.style.display = 'none'; render();
       }
 
+      panning = false;
+
       if (draggingNode || draggingTimeline || resizingTimeline) {
         draggingNode = null; draggingTimeline = false; resizingTimeline = false; saveState();
       }
 
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+      if (tapCandidate) {
+        const c = tapCandidate;
+        tapCandidate = null;
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - c.x, e.clientY - c.y) < 8) {
+          if (editTextChk.checked || !c.node.url) { editingNodeId = c.node.id; render(); }
+          else if (c.node.url) { window.open(c.node.url, '_blank'); }
+        }
+      }
+
+      if (activePointers.size === 0) window.removeEventListener('pointermove', handlePointerMove);
+      // pointerup / pointercancel stay registered permanently (see touch section below)
     }
 
     function getConnectedComponent(startId) {
@@ -2181,6 +2298,111 @@
 
     undoBtn.onclick = undo;
     redoBtn.onclick = redo;
+
+    // ================= Zoom, pinch and touch handling =================
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+    function updateZoomLabel() {
+      zoomResetBtn.textContent = Math.round(zoom * 100) + '%';
+    }
+
+    // client (screen) coordinates -> world coordinates
+    function toWorld(cx, cy) {
+      const r = world.getBoundingClientRect();
+      return { x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
+    }
+
+    // Zoom so that world point `anchor` stays under screen point (cx, cy).
+    // Defaults to the centre of the viewport and the world point currently under it.
+    function setZoom(newZoom, cx, cy, anchor) {
+      newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+      const vp = viewport.getBoundingClientRect();
+      if (cx === undefined) { cx = vp.left + vp.width / 2; cy = vp.top + vp.height / 2; }
+      const a = anchor || toWorld(cx, cy);
+      zoom = newZoom;
+      world.style.transform = 'scale(' + zoom + ')';
+      updateCanvasExtent();
+      viewport.scrollLeft = a.x * zoom - (cx - vp.left);
+      viewport.scrollTop = a.y * zoom - (cy - vp.top);
+      updateZoomLabel();
+    }
+
+    zoomInBtn.onclick = () => setZoom(zoom * 1.25);
+    zoomOutBtn.onclick = () => setZoom(zoom / 1.25);
+    zoomResetBtn.onclick = () => setZoom(1);
+
+    // Ctrl/Cmd + wheel (also trackpad pinch on desktop) zooms around the cursor
+    viewport.addEventListener('wheel', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      setZoom(zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+    }, { passive: false });
+
+    // Keep touches that start on the canvas ending up as pointer events rather than a native scroll/zoom
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.target.closest && e.target.closest('.node-edit-input')) return;
+      e.preventDefault();
+    }, { passive: false });
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
+      document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+
+    // Once a touch drag is under way, route its events to the (permanent) viewport. Nodes are rebuilt
+    // on every render, and a removed element would otherwise silently drop the rest of the gesture.
+    function captureTouchPointer(e) {
+      if (capturedPointers.has(e.pointerId)) return;
+      capturedPointers.add(e.pointerId);
+      try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+
+    function cancelSingleGestures() {
+      if (draggingNode || resizingNode) saveState();
+      draggingNode = null; resizingNode = null;
+      draggingTimeline = false; resizingTimeline = false;
+      isDrivingArrow = false; driveSourceNode = null; hoveredTargetNodeId = null;
+      lineDrawStart = null; isSelectingBox = false; panning = false; tapCandidate = null;
+      liveDragArrow.style.display = 'none';
+      selectionBox.style.display = 'none';
+      viewport.querySelectorAll('.node').forEach(el => {
+        if (!selectedNodeIds.has(el.dataset.id)) { el.style.borderColor = ''; el.style.boxShadow = ''; }
+      });
+    }
+
+    function updatePinch() {
+      const pts = [...activePointers.values()];
+      if (pts.length < 2 || !pinchStart) return;
+      const a = pts[0], b = pts[1];
+      const dist = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+      setZoom(pinchStart.zoom * dist / pinchStart.dist, (a.x + b.x) / 2, (a.y + b.y) / 2, pinchStart.anchor);
+    }
+
+    // Capture phase: runs before node / empty-space handlers so a second finger can take over
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      if (activePointers.size >= 2) { e.stopImmediatePropagation(); return; }
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      window.addEventListener('pointermove', handlePointerMove);
+      if (activePointers.size === 2) {
+        e.stopImmediatePropagation();   // the second finger never starts a node drag or arrow
+        cancelSingleGestures();
+        const pts = [...activePointers.values()];
+        const cx = (pts[0].x + pts[1].x) / 2, cy = (pts[0].y + pts[1].y) / 2;
+        pinching = true;
+        pinchStart = {
+          dist: Math.max(10, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)),
+          zoom: zoom,
+          anchor: toWorld(cx, cy)
+        };
+        activePointers.forEach((_, id) => captureTouchPointer({ pointerId: id }));
+      }
+    }, true);
+
+    // Permanent, idle-safe end-of-gesture handling (also covers the browser cancelling a touch)
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    updateZoomLabel();
 
     saveState();
     render();
