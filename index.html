@@ -18,6 +18,7 @@
       color: #e0e6ed;
       overflow: hidden;
       height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -903,48 +904,49 @@
       saveState();
     };
 
+    const narrowQuery = window.matchMedia('(max-width: 768px)');
+
+    // Single source of truth: menuHidden decides everything.
+    // On narrow screens the left/right sidebar is slid off-canvas by CSS and
+    // only appears when it carries .mobile-open, so that class must follow menuHidden.
+    function syncMenuUI() {
+      toolbar.classList.toggle('menu-hidden', menuHidden);
+      document.body.classList.toggle('menu-hidden', menuHidden);
+      toolbar.classList.toggle('mobile-open', !menuHidden && narrowQuery.matches);
+      topBarControls.style.display = menuHidden ? 'flex' : 'none';
+    }
+
     function showMenu() {
       menuHidden = false;
-      toolbar.classList.remove('menu-hidden');
-      document.body.classList.remove('menu-hidden');
-      topBarControls.style.display = 'none';
-      toolbar.classList.remove('mobile-open');
+      syncMenuUI();
     }
 
     function hideMenu() {
       menuHidden = true;
-      toolbar.classList.add('menu-hidden');
-      document.body.classList.add('menu-hidden');
-      topBarControls.style.display = 'flex';
-      toolbar.classList.remove('mobile-open');
+      syncMenuUI();
     }
 
-    // Use pointerup / click cleanly to guarantee firing across all mobile engines (Safari & Opera)
-    function bindMenuToggle(btn) {
+    // Plain click only: it fires reliably on iOS Safari and Opera. Handling pointerup as well
+    // let the follow-up synthetic click land on whatever button appeared under the finger.
+    function bindMenuToggle(btn, handler) {
       if (!btn) return;
       btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        showMenu();
-      };
-      btn.onpointerup = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        showMenu();
+        handler();
       };
     }
 
-    bindMenuToggle(toolbarMenuBtn);
-    bindMenuToggle(floatingMenuBtn);
+    bindMenuToggle(toolbarMenuBtn, showMenu);
+    bindMenuToggle(floatingMenuBtn, showMenu);
+    bindMenuToggle(toolbarHideBtn, hideMenu);
 
-    toolbarHideBtn.onclick = (e) => {
-      e.preventDefault();
-      hideMenu();
-    };
-    toolbarHideBtn.onpointerup = (e) => {
-      e.preventDefault();
-      hideMenu();
-    };
+    // Start with the sidebar closed on phones so the canvas is usable and the ☰ button is visible.
+    menuHidden = narrowQuery.matches;
+    narrowQuery.addEventListener('change', (e) => {
+      menuHidden = e.matches;
+      syncMenuUI();
+    });
 
     function parseTextAndUrl(input) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
@@ -1023,8 +1025,8 @@
 
     function applyDockPosition(pos) {
       toolbar.className = `dock-${pos}`;
-      if (menuHidden) toolbar.classList.add('menu-hidden');
-      document.body.className = menuHidden ? `has-dock-${pos} menu-hidden` : `has-dock-${pos}`;
+      document.body.className = `has-dock-${pos}`;
+      syncMenuUI();
       updateInputModeUI();
 
       toolbar.style.left = '';
