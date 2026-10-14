@@ -566,8 +566,8 @@
 </head>
 <body class="has-dock-left">
 
-  <!-- FLOATING TOGGLE WHEN HIDDEN (ONLY MENU BUTTON REMAINS AVAILABLE) -->
-  <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: none;">
+  <!-- FLOATING TOGGLE WHEN HIDDEN (ALWAYS AVAILABLE AS FALLBACK) -->
+  <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: flex;">
     <button id="floating-menu-btn" class="action-btn">☰ Menu</button>
   </div>
 
@@ -1782,14 +1782,13 @@
       const clickX = e.clientX - vpRect.left + viewport.scrollLeft;
       const clickY = e.clientY - vpRect.top + viewport.scrollTop;
 
-      // Check if click is near a node (outside its bounds within 50px)
+      // Check if click is near a node (outside its bounds within 60px)
       let nearbyNode = null;
       let minNodeDist = Infinity;
       state.nodes.forEach(node => {
         const rect = getNodeRect(node);
         const inside = (clickX >= rect.x && clickX <= rect.x + rect.width && clickY >= rect.y && clickY <= rect.y + rect.height);
         if (!inside) {
-          // Distance to rect edges/center or closest point on rect
           const cx = Math.max(rect.x, Math.min(clickX, rect.x + rect.width));
           const cy = Math.max(rect.y, Math.min(clickY, rect.y + rect.height));
           const dist = Math.hypot(clickX - cx, clickY - cy);
