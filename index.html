@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Concept Map</title>
   <style>
     * {
@@ -10,6 +10,7 @@
       margin: 0;
       padding: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
@@ -20,21 +21,24 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      touch-action: none;
     }
 
     /* TOOLBAR BASE & DOCKING STYLES */
     #toolbar {
       background: #1b263b;
       border: 1px solid #415a77;
-      padding: 4px 8px;
+      padding: 6px 8px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       z-index: 100;
       font-size: 11px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
       transition: none;
+      overflow-y: auto;
+      max-height: 100vh;
     }
 
     /* Resizable Panel Splitter Handle */
@@ -43,7 +47,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 6px;
+      width: 10px; /* Wider for touch */
       background: #415a77;
       cursor: col-resize;
       z-index: 101;
@@ -52,9 +56,7 @@
     #sidebar-resizer:hover, #sidebar-resizer.resizing {
       background: #00b4d8;
     }
-    body.has-dock-left #sidebar-resizer {
-      display: block;
-    }
+    body.has-dock-left #sidebar-resizer,
     body.has-dock-right #sidebar-resizer {
       display: block;
     }
@@ -65,6 +67,7 @@
       width: 100%;
       flex-direction: row;
       border-width: 0 0 1px 0;
+      max-height: 40vh;
     }
     #toolbar.dock-bottom {
       position: absolute;
@@ -74,15 +77,16 @@
       width: 100%;
       flex-direction: row;
       border-width: 1px 0 0 0;
+      max-height: 40vh;
     }
     #toolbar.dock-left {
       position: absolute;
       top: 0;
       bottom: 0;
       left: 0;
-      width: 240px;
+      width: 260px;
       min-width: 150px;
-      max-width: 600px;
+      max-width: 80vw;
       flex-direction: column;
       align-items: stretch;
       overflow-y: auto;
@@ -94,9 +98,9 @@
       top: 0;
       bottom: 0;
       right: 0;
-      width: 240px;
+      width: 260px;
       min-width: 150px;
-      max-width: 600px;
+      max-width: 80vw;
       flex-direction: column;
       align-items: stretch;
       overflow-y: auto;
@@ -106,7 +110,8 @@
     #toolbar.dock-floating {
       position: absolute;
       width: max-content;
-      max-width: 800px;
+      max-width: 90vw;
+      max-height: 80vh;
       flex-direction: row;
       border-width: 1px;
       border-color: #00b4d8;
@@ -119,9 +124,9 @@
       width: 100%;
       background: #0d1b2a;
       color: #00f5d4;
-      font-size: 10px;
+      font-size: 11px;
       font-family: monospace;
-      padding: 3px 6px;
+      padding: 8px;
       cursor: move;
       margin-bottom: 2px;
       border: 1px dashed #415a77;
@@ -135,9 +140,9 @@
     .tool-group {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       background: #0d1b2a;
-      padding: 2px 4px;
+      padding: 4px 6px;
       border: 1px solid #415a77;
       flex-wrap: wrap;
     }
@@ -146,11 +151,7 @@
       flex-direction: column;
       align-items: stretch;
       flex-wrap: nowrap;
-      gap: 2px;
-    }
-    #toolbar.dock-left .tool-group *,
-    #toolbar.dock-right .tool-group * {
-      box-sizing: border-box;
+      gap: 4px;
     }
     #toolbar.dock-left .tool-group button,
     #toolbar.dock-right .tool-group button,
@@ -159,14 +160,12 @@
       width: 100%;
     }
 
-    /* Prevent checkboxes/labels from breaking into two lines in sidebars */
     #toolbar.dock-left label,
     #toolbar.dock-right label {
       white-space: nowrap;
       width: 100%;
     }
 
-    /* Inline row formatting for colors & matching elements */
     .row-inline {
       display: flex !important;
       flex-direction: row !important;
@@ -182,8 +181,8 @@
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 2px 4px;
-      font-size: 10.5px;
+      padding: 4px 6px;
+      font-size: 11px;
       font-family: monospace;
       outline: none;
       width: 130px;
@@ -195,12 +194,13 @@
       background: #415a77;
       border: 1px solid #778da9;
       color: #e0e6ed;
-      padding: 2px 5px;
-      font-size: 10px;
+      padding: 6px 10px; /* Larger touch targets */
+      font-size: 11px;
       font-family: monospace;
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      touch-action: manipulation;
     }
     button:hover {
       background: #0077b6;
@@ -210,52 +210,28 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
-    .action-btn {
-      background: #023e8a;
-      border-color: #00b4d8;
-      color: #00f5d4;
-      font-weight: bold;
-    }
-    .action-btn:hover {
-      background: #0077b6;
-      color: #fff;
-    }
-    .help-btn {
-      background: #0077b6;
-      border-color: #00b4d8;
-      color: #fff;
-      font-weight: bold;
-    }
-    .help-btn:hover {
-      background: #00b4d8;
-      color: #0d1b2a;
-    }
-    .danger-btn {
-      background: #7209b7;
-      border-color: #f72585;
-      color: #ff4d6d;
-    }
-    .danger-btn:hover {
-      background: #d90429;
-      color: #fff;
-    }
+    .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+    .help-btn { background: #0077b6; border-color: #00b4d8; color: #fff; font-weight: bold; }
+    .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
+
     label {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       cursor: pointer;
-      font-size: 10px;
+      font-size: 11px;
       color: #e0e6ed;
     }
     input[type="checkbox"] {
       cursor: pointer;
       accent-color: #00b4d8;
-      margin: 0;
+      width: 16px;
+      height: 16px;
     }
     input[type="color"] {
       border: none;
-      width: 18px;
-      height: 18px;
+      width: 24px;
+      height: 24px;
       cursor: pointer;
       background: transparent;
       padding: 0;
@@ -264,8 +240,8 @@
       background: #1b263b;
       border: 1px solid #778da9;
       color: #fff;
-      padding: 2px;
-      font-size: 10px;
+      padding: 4px;
+      font-size: 11px;
       font-family: monospace;
       outline: none;
     }
@@ -281,23 +257,50 @@
       background-attachment: local;
       overflow: auto;
       scrollbar-color: #415a77 #0d1b2a;
+      touch-action: pan-x pan-y pinch-zoom;
     }
 
-    body.has-dock-left #viewport { margin-left: 240px; }
-    body.has-dock-right #viewport { margin-right: 240px; }
-    body.has-dock-bottom #viewport { margin-bottom: 35px; }
+    body.has-dock-left #viewport { margin-left: 260px; }
+    body.has-dock-right #viewport { margin-right: 260px; }
+    body.has-dock-bottom #viewport { margin-bottom: 40px; }
 
-    #viewport::-webkit-scrollbar { width: 12px; height: 12px; }
+    /* Touch screen compact overrides */
+    body.touch-mode #toolbar.dock-left, 
+    body.touch-mode #toolbar.dock-right {
+      width: 210px;
+    }
+    body.touch-mode.has-dock-left #viewport { margin-left: 210px; }
+    body.touch-mode.has-dock-right #viewport { margin-right: 210px; }
+
+    @media (max-width: 768px) {
+      body.has-dock-left #viewport, body.has-dock-right #viewport {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-bottom: 50px !important;
+      }
+      #toolbar.dock-left, #toolbar.dock-right {
+        position: absolute;
+        bottom: 0;
+        top: auto;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        max-height: 45vh;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      #sidebar-resizer { display: none !important; }
+    }
+
+    #viewport::-webkit-scrollbar { width: 14px; height: 14px; }
     #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
     #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
     #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
-    #viewport::-webkit-scrollbar-corner { background: #0d1b2a; }
 
     .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
     .legend-up { color: #ffb703; font-weight: bold; }
     .legend-down { color: #ff5d8f; font-weight: bold; }
 
-    /* Selection Box & Fit Box Drawn Rectangle */
     #selection-box {
       position: absolute;
       border: 1px dashed #00f5d4;
@@ -307,14 +310,14 @@
       display: none;
     }
 
-    /* Draggable & Resizable Timeline Container */
+    /* TIMELINE CONTAINER */
     #timeline-container {
       position: absolute;
       top: 50px;
       left: 50px;
       width: 700px;
       height: 55px;
-      background: rgba(27, 38, 59, 0.7);
+      background: rgba(27, 38, 59, 0.85);
       border: 1px dashed #778da9;
       z-index: 1;
       cursor: move;
@@ -323,10 +326,9 @@
       justify-content: flex-end;
       padding: 4px 10px 4px 4px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      touch-action: none;
     }
-    #timeline-container.hidden {
-      display: none;
-    }
+    #timeline-container.hidden { display: none; }
     .timeline-title {
       position: absolute;
       top: 2px;
@@ -369,7 +371,7 @@
       right: 0;
       top: 0;
       bottom: 0;
-      width: 10px;
+      width: 16px;
       background: rgba(65, 90, 119, 0.6);
       border-left: 1px solid #778da9;
       cursor: e-resize;
@@ -378,9 +380,6 @@
       justify-content: center;
       font-size: 10px;
       color: #e0e6ed;
-    }
-    .timeline-resize-handle:hover {
-      background: #00b4d8;
     }
 
     #svg-layer {
@@ -396,25 +395,19 @@
       pointer-events: stroke;
       cursor: pointer;
     }
-
     .line-selected {
       stroke-dasharray: 4, 4;
       animation: dash 1s linear infinite;
     }
+    @keyframes dash { to { stroke-dashoffset: -8; } }
 
-    @keyframes dash {
-      to {
-        stroke-dashoffset: -8;
-      }
-    }
-
-    /* NODE STYLING WITH PARAGRAPH WRAPPING & DRAG-RESIZE HANDLE */
+    /* NODE STYLING */
     .node {
       position: absolute;
       background: #1c2541;
       border: 1px solid #48cae4;
       color: #ffffff;
-      padding: 4px 6px;
+      padding: 6px 10px;
       font-family: monospace;
       font-size: 11px;
       white-space: nowrap;
@@ -426,79 +419,40 @@
       gap: 6px;
       z-index: 10;
       box-sizing: border-box;
+      touch-action: none;
     }
     .node.fixed-size {
       white-space: normal;
       word-wrap: break-word;
       overflow-y: auto;
       display: block;
-      padding-bottom: 12px;
+      padding-bottom: 14px;
     }
-
-    /* Custom Scrollbar for Fixed Size Nodes */
-    .node.fixed-size::-webkit-scrollbar {
-      width: 4px;
-    }
-    .node.fixed-size::-webkit-scrollbar-track {
-      background: rgba(13, 27, 42, 0.5);
-    }
-    .node.fixed-size::-webkit-scrollbar-thumb {
-      background: #00b4d8;
-      border-radius: 2px;
-    }
-
     .node.selected {
       border-color: #00f5d4;
       box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.5);
     }
-
-    /* Bottom Right Resizer Corner for Selected Node */
     .node-resize-handle {
       display: none;
       position: absolute;
       right: 0;
       bottom: 0;
-      width: 12px;
-      height: 12px;
+      width: 18px;
+      height: 18px;
       cursor: se-resize;
       color: #00f5d4;
-      font-size: 10px;
-      line-height: 10px;
+      font-size: 12px;
+      line-height: 14px;
       text-align: right;
       user-select: none;
       z-index: 20;
     }
-    .node.selected .node-resize-handle {
-      display: block;
-    }
+    .node.selected .node-resize-handle { display: block; }
 
-    .node .node-content {
-      color: inherit;
-      text-decoration: none;
-      line-height: 1.3;
-    }
-    .node .node-content.has-url {
-      color: #90e0ef;
-      text-decoration: underline;
-    }
-    .node .node-url-text {
-      font-size: 9px;
-      color: #778da9;
-      margin-left: 4px;
-      word-break: break-all;
-    }
-    .node .collapse-btn {
-      color: #00f5d4;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 10px;
-      user-select: none;
-      margin-right: 2px;
-      float: left;
-    }
-    .node .collapse-btn:hover {
-      color: #fff;
-    }
+    .node .node-content { color: inherit; text-decoration: none; line-height: 1.3; }
+    .node .node-content.has-url { color: #90e0ef; text-decoration: underline; }
+    .node .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
+    .node .collapse-btn { color: #00f5d4; font-weight: bold; cursor: pointer; font-size: 11px; user-select: none; margin-right: 2px; }
 
     .node-edit-input {
       background: #0d1b2a;
@@ -506,47 +460,25 @@
       color: #00f5d4;
       font-family: monospace;
       font-size: 11px;
-      padding: 2px 4px;
+      padding: 4px;
       outline: none;
       resize: both;
       overflow: auto;
       width: 100%;
       height: 100%;
       min-width: 80px;
-      min-height: 22px;
+      min-height: 24px;
       user-select: text;
     }
 
-    .node .node-url-text { font-size: 0.82em; }
-    .node .collapse-btn { font-size: 0.9em; }
-    .node-edit-input { font-size: inherit; }
-
     .slider-label { flex-direction: column; align-items: stretch; gap: 2px; width: 100%; }
-    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; }
+    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 20px; }
     .slider-hint { color: #778da9; font-size: 9px; }
 
-    /* Dual Font Slider Styles */
-    .dual-slider-container {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .dual-slider-inputs {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      width: 100%;
-    }
-    .dual-slider-inputs input[type="text"] {
-      width: 40px !important;
-      text-align: center;
-      padding: 1px;
-    }
-    .range-slider-wrapper {
-      position: relative;
-      width: 100%;
-      height: 16px;
-    }
+    .dual-slider-container { display: flex; flex-direction: column; gap: 2px; }
+    .dual-slider-inputs { display: flex; align-items: center; gap: 4px; width: 100%; }
+    .dual-slider-inputs input[type="text"] { width: 45px !important; text-align: center; padding: 2px; }
+    .range-slider-wrapper { position: relative; width: 100%; height: 20px; }
     .range-slider-wrapper input[type="range"] {
       position: absolute;
       left: 0;
@@ -562,123 +494,44 @@
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      width: 10px;
-      height: 10px;
-      background: #00b4d8;
-      border-radius: 50%;
-    }
-    .range-slider-wrapper input[type="range"]::-moz-range-thumb {
-      pointer-events: auto;
-      cursor: pointer;
-      width: 10px;
-      height: 10px;
+      width: 16px;
+      height: 16px;
       background: #00b4d8;
       border-radius: 50%;
     }
 
-    /* SVG Line Label Styling */
-    .line-label-text {
-      font-family: monospace;
-      font-size: 10px;
-      fill: #e0e6ed;
-      pointer-events: all;
-      cursor: pointer;
-    }
-    .line-label-bg {
-      fill: #1b263b;
-      stroke: #415a77;
-      stroke-width: 1px;
-      pointer-events: all;
-      cursor: pointer;
-      rx: 3px;
-      ry: 3px;
-    }
-    .line-label-bg.selected-bg {
-      stroke: #00f5d4;
-      fill: #0d1b2a;
-    }
+    .line-label-text { font-family: monospace; font-size: 10px; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
+    .line-label-bg { fill: #1b263b; stroke: #415a77; stroke-width: 1px; pointer-events: all; cursor: pointer; rx: 3px; ry: 3px; }
+    .line-label-bg.selected-bg { stroke: #00f5d4; fill: #0d1b2a; }
 
-    /* HELP MODAL STYLES */
+    /* HELP MODAL */
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(13, 27, 42, 0.85);
       backdrop-filter: blur(4px);
       z-index: 1000;
       justify-content: center;
       align-items: center;
     }
-    .modal-overlay.active {
-      display: flex;
-    }
+    .modal-overlay.active { display: flex; }
     .modal-content {
       background: #1b263b;
       border: 1px solid #00b4d8;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      width: 600px;
-      max-width: 90vw;
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      color: #e0e6ed;
-      font-family: monospace;
+      width: 600px; max-width: 90vw; max-height: 85vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      color: #e0e6ed; font-family: monospace;
     }
-    .modal-header {
-      background: #0d1b2a;
-      padding: 10px 16px;
-      border-bottom: 1px solid #415a77;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .modal-header h2 {
-      font-size: 14px;
-      color: #00f5d4;
-      letter-spacing: 1px;
-    }
-    .modal-close {
-      background: transparent;
-      border: none;
-      color: #ff4d6d;
-      font-size: 18px;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .modal-close:hover {
-      color: #fff;
-      background: transparent;
-    }
-    .modal-body {
-      padding: 16px;
-      overflow-y: auto;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-    .help-section {
-      margin-bottom: 16px;
-    }
-    .help-section h3 {
-      color: #90e0ef;
-      font-size: 12px;
-      border-bottom: 1px solid #415a77;
-      padding-bottom: 4px;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
-    .help-grid {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 6px 12px;
-    }
-    .help-key {
-      color: #00f5d4;
-      font-weight: bold;
-    }
+    .modal-header { background: #0d1b2a; padding: 10px 16px; border-bottom: 1px solid #415a77; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h2 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; }
+    .modal-close { background: transparent; border: none; color: #ff4d6d; font-size: 20px; cursor: pointer; }
+    .modal-body { padding: 16px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
+    .help-section { margin-bottom: 16px; }
+    .help-section h3 { color: #90e0ef; font-size: 12px; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase; }
+    .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
+    .help-key { color: #00f5d4; font-weight: bold; }
   </style>
 </head>
 <body class="has-dock-left">
@@ -687,7 +540,14 @@
     <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
 
     <div class="tool-group">
-      <label>Dock:
+      <label>Interface Mode:
+        <select id="input-mode-select">
+          <option value="auto">Auto-Detect</option>
+          <option value="desktop">Desktop Mode</option>
+          <option value="touch">Touch / Phone Mode</option>
+        </select>
+      </label>
+      <label>Dock Position:
         <select id="dock-position-select">
           <option value="top">Top</option>
           <option value="bottom">Bottom</option>
@@ -704,7 +564,6 @@
       <button id="add-boxes-btn">Add Boxes</button>
     </div>
 
-    <!-- LOCK / UNLOCK CONTROLS -->
     <div class="tool-group row-inline">
       <button id="lock-btn" class="action-btn">Lock View</button>
       <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
@@ -728,8 +587,8 @@
           <input type="range" id="font-slider-max" min="6" max="36" value="24" step="1">
         </div>
         <div class="dual-slider-inputs">
-          <label style="font-size:9px;">1-link px: <input type="text" id="font-min-input" value="10"></label>
-          <label style="font-size:9px;">Max-link px: <input type="text" id="font-max-input" value="24"></label>
+          <label style="font-size:9px;">Min: <input type="text" id="font-min-input" value="10"></label>
+          <label style="font-size:9px;">Max: <input type="text" id="font-max-input" value="24"></label>
         </div>
       </div>
     </div>
@@ -764,9 +623,9 @@
     <div class="tool-group">
       <label><input type="checkbox" id="show-timeline-chk"> Timeline Overlay</label>
       <label><input type="checkbox" id="show-urls-chk"> Show URLs</label>
-      <label><input type="checkbox" id="edit-text-chk"> Edit Text</label>
-      <label><input type="checkbox" id="create-line-chk"> Create Line</label>
-      <label><input type="checkbox" id="drag-graph-chk"> Drag Graph</label>
+      <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
+      <label><input type="checkbox" id="create-line-chk"> Create Line Mode</label>
+      <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
     </div>
 
     <div class="tool-group">
@@ -804,11 +663,11 @@
 
     <div class="tool-group">
       <button id="io-btn" class="action-btn">Import / Export &#8599;</button>
-      <button id="clear-btn" class="danger-btn">Clear</button>
+      <button id="clear-btn" class="danger-btn">Clear Map</button>
     </div>
 
     <div class="tool-group">
-      <button id="help-btn" class="help-btn">? Help</button>
+      <button id="help-btn" class="help-btn">? Help Guide</button>
     </div>
   </div>
 
@@ -834,44 +693,26 @@
   <div id="help-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Concept Map Guide & Shortcuts</h2>
+        <h2>Concept Map Mobile & Touch Guide</h2>
         <button id="modal-close-btn" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="help-section">
-          <h3>Lock & Unlock Selection/Hidden State</h3>
+          <h3>Touch and Phone Mode</h3>
           <div class="help-grid">
-            <span class="help-key">Lock / Unlock</span>
-            <span><b>Lock</b> freezes your current node selection and hidden nodes filter. You can still drag individual nodes around. <b>Unlock</b> restores your pre-lock selection and visibility states while preserving any new node coordinates.</span>
+            <span class="help-key">Mode Select</span>
+            <span>Use the <b>Interface Mode</b> menu option to force Touch/Phone optimization or Desktop layout, or leave it on Auto-Detect.</span>
+            <span class="help-key">Navigation</span>
+            <span>Pan around the viewport by dragging on empty canvas areas. Pinch to zoom on supported touchscreen browsers.</span>
           </div>
         </div>
         <div class="help-section">
-          <h3>Distance-Based Line Coloring & Sliding Visibility</h3>
+          <h3>Line & Box Manipulation</h3>
           <div class="help-grid">
-            <span class="help-key">1, 2, 3 Away Lines</span>
-            <span>Check boxes and pick custom colors to dynamically color lines that are 1, 2, or 3 connection steps away from any selected node(s).</span>
-            <span class="help-key">Disappearing Slider</span>
-            <span>Slide down to limit the max visible distance away from selected nodes (e.g., hiding nodes 5+ steps away). Set to 10 to show everything.</span>
-          </div>
-        </div>
-        <div class="help-section">
-          <h3>Import / Export</h3>
-          <div class="help-grid">
-            <span class="help-key">Import / Export</span>
-            <span>Opens <b>conceptmap_io.html</b> in a separate window (keep both files in the same folder). It exports JSON / TXT Simple / TXT Indent from the live map and imports them back, including drag-and-drop.</span>
-          </div>
-        </div>
-        <div class="help-section">
-          <h3>Interactive Node Drag-Resizing & Layout</h3>
-          <div class="help-grid">
-            <span class="help-key">Fit Screen</span>
-            <span>Arranges visible nodes across the screen area in an even grid.</span>
-            <span class="help-key">Fit Grid in Box</span>
-            <span>Select nodes, click <b>Fit Grid in Box</b>, then drag a rectangle. Nodes are laid out in a grid that fits inside the rectangle (Esc cancels).</span>
-            <span class="help-key">Fit Sequence in Region</span>
-            <span>Select nodes, click <b>Fit Sequence in Region</b>, then drag a rectangle. Nodes are placed in one diagonal line from top-left to bottom-right, ordered by arrow direction.</span>
-            <span class="help-key">Highlight Chain</span>
-            <span>Click a single node to recolor its arrow chain: amber lines feed into it (upstream), pink lines lead out (downstream), others dim.</span>
+            <span class="help-key">Create Line Mode</span>
+            <span>Enable <b>Create Line Mode</b> checkbox, then tap source node followed by target node.</span>
+            <span class="help-key">Node Resizing</span>
+            <span>Select a node and drag its bottom-right handle to custom resize text blocks.</span>
           </div>
         </div>
       </div>
@@ -884,6 +725,7 @@
     const sidebarResizer = document.getElementById('sidebar-resizer');
     const toolbarDragHandle = document.getElementById('toolbar-drag-handle');
     const dockPositionSelect = document.getElementById('dock-position-select');
+    const inputModeSelect = document.getElementById('input-mode-select');
     const autosizedChk = document.getElementById('autosized-chk');
     const svgLayer = document.getElementById('svg-layer');
     const svgDefs = svgLayer.querySelector('defs');
@@ -946,7 +788,7 @@
       showUrls: false,
       timelinePos: { x: 50, y: 50, width: 700 },
       dockPosition: 'left',
-      sidebarWidth: 240,
+      sidebarWidth: 260,
       floatingPos: { x: 20, y: 20 },
       fontMin: 10,
       fontMax: 24,
@@ -957,12 +799,12 @@
       colorDist2Hex: '#fb8500',
       colorDist3: false,
       colorDist3Hex: '#ff006e',
-      maxDistanceLimit: 10
+      maxDistanceLimit: 10,
+      inputMode: 'auto'
     };
 
     let isLocked = false;
     let lockedStateSnapshot = null;
-
     let historyStack = [];
     let historyIndex = -1;
 
@@ -992,18 +834,23 @@
       return 'id_' + Math.random().toString(36).substr(2, 9);
     }
 
-    function normalizeLines(lines) {
-      return lines.map(l => {
-        const out = Object.assign({}, l);
-        if (out.arrow === 'start') {
-          const t = out.from; out.from = out.to; out.to = t;
-          out.arrow = 'end';
-        } else if (out.arrow !== 'none') {
-          out.arrow = 'end';
-        }
-        return out;
-      });
+    function updateInputModeUI() {
+      const mode = state.inputMode || 'auto';
+      inputModeSelect.value = mode;
+      
+      let isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+      if (mode === 'touch' || (mode === 'auto' && isTouchDevice)) {
+        document.body.classList.add('touch-mode');
+      } else {
+        document.body.classList.remove('touch-mode');
+      }
     }
+
+    inputModeSelect.onchange = (e) => {
+      state.inputMode = e.target.value;
+      updateInputModeUI();
+      saveState();
+    };
 
     function parseTextAndUrl(input) {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
@@ -1031,19 +878,13 @@
     arrowStyleSelect.onchange = (e) => updateSelectedLineProperty('arrow', e.target.value);
     lineWidthSelect.onchange = (e) => updateSelectedLineProperty('width', parseInt(e.target.value, 10));
     lineColorPicker.oninput = (e) => updateSelectedLineProperty('color', e.target.value);
-    lineColorPicker.onchange = (e) => updateSelectedLineProperty('color', e.target.value);
 
     colorDist1Chk.onchange = (e) => { state.colorDist1 = e.target.checked; saveState(); render(); };
     colorDist1Val.oninput = (e) => { state.colorDist1Hex = e.target.value; render(); };
-    colorDist1Val.onchange = () => { saveState(); };
-
     colorDist2Chk.onchange = (e) => { state.colorDist2 = e.target.checked; saveState(); render(); };
     colorDist2Val.oninput = (e) => { state.colorDist2Hex = e.target.value; render(); };
-    colorDist2Val.onchange = () => { saveState(); };
-
     colorDist3Chk.onchange = (e) => { state.colorDist3 = e.target.checked; saveState(); render(); };
     colorDist3Val.oninput = (e) => { state.colorDist3Hex = e.target.value; render(); };
-    colorDist3Val.onchange = () => { saveState(); };
 
     maxDistanceSlider.oninput = (e) => {
       if (isLocked) return;
@@ -1052,7 +893,6 @@
       maxDistLabel.textContent = val >= 10 ? '∞' : val;
       render();
     };
-    maxDistanceSlider.onchange = () => { if (!isLocked) saveState(); };
 
     lockBtn.onclick = () => {
       isLocked = true;
@@ -1063,8 +903,6 @@
       };
       lockBtn.disabled = true;
       unlockBtn.disabled = false;
-      lockBtn.classList.remove('action-btn');
-      lockBtn.style.opacity = '0.5';
       render();
     };
 
@@ -1078,29 +916,30 @@
       }
       unlockBtn.disabled = true;
       lockBtn.disabled = false;
-      lockBtn.classList.add('action-btn');
-      lockBtn.style.opacity = '1';
       render();
     };
 
-    sidebarResizer.onmousedown = (e) => {
+    sidebarResizer.onpointerdown = (e) => {
       e.stopPropagation();
       resizingSidebar = true;
       sidebarResizer.classList.add('resizing');
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     };
 
     function applyDockPosition(pos) {
       toolbar.className = `dock-${pos}`;
       document.body.className = `has-dock-${pos}`;
+      if (document.body.classList.contains('touch-mode') || (state.inputMode === 'auto' && navigator.maxTouchPoints > 0)) {
+        document.body.classList.add('touch-mode');
+      }
 
       toolbar.style.left = '';
       toolbar.style.top = '';
       toolbar.style.width = '';
 
       if (pos === 'left' || pos === 'right') {
-        const width = state.sidebarWidth || 240;
+        const width = state.sidebarWidth || 260;
         toolbar.style.width = `${width}px`;
         if (pos === 'left') {
           viewport.style.marginLeft = `${width}px`;
@@ -1156,18 +995,17 @@
       }
     };
 
-    toolbarDragHandle.onmousedown = (e) => {
+    toolbarDragHandle.onpointerdown = (e) => {
       if (state.dockPosition !== 'floating') return;
       draggingToolbar = true;
       dragOffset.x = e.clientX - toolbar.offsetLeft;
       dragOffset.y = e.clientY - toolbar.offsetTop;
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     };
 
     function openHelpModal() { helpModal.classList.add('active'); }
     function closeHelpModal() { helpModal.classList.remove('active'); }
-
     helpBtn.onclick = openHelpModal;
     modalCloseBtn.onclick = closeHelpModal;
     helpModal.onclick = (e) => { if (e.target === helpModal) closeHelpModal(); };
@@ -1179,7 +1017,6 @@
     function getDirectedEdges(line) {
       if (line.arrow === 'end') return [[line.from, line.to]];
       if (line.arrow === 'start') return [[line.to, line.from]];
-      if (line.arrow === 'both') return [[line.from, line.to], [line.to, line.from]];
       return [[line.from, line.to], [line.to, line.from]];
     }
 
@@ -1218,7 +1055,6 @@
     function computeChain(startId) {
       const up = new Set();
       const down = new Set();
-
       const downSeen = new Set([startId]);
       const downQueue = [startId];
       while (downQueue.length) {
@@ -1232,7 +1068,6 @@
           });
         });
       }
-
       const upSeen = new Set([startId]);
       const upQueue = [startId];
       while (upQueue.length) {
@@ -1274,82 +1109,27 @@
       const fMin = state.fontMin || 10;
       const fMax = state.fontMax || 24;
       const maxB = Math.max(1, state.maxLinksBound || 1);
-
       if (links <= 1) return fMin;
       if (links >= maxB) return fMax;
-
       const ratio = (links - 1) / (maxB - 1);
       return Math.round(fMin + ratio * (fMax - fMin));
     }
 
-    function getNodeFontScale(nodeId) {
-      return getNodeFont(nodeId) / 11;
-    }
+    function getNodeFontScale(nodeId) { return getNodeFont(nodeId) / 11; }
 
     fontSliderMin.oninput = (e) => {
       let val = parseInt(e.target.value, 10);
-      if (val > state.fontMax) { val = state.fontMax; e.target.value = val; }
-      state.fontMin = val;
-      fontMinInput.value = val;
-      render();
-    };
-    fontSliderMin.onchange = () => saveState();
-
-    fontSliderMax.oninput = (e) => {
-      let val = parseInt(e.target.value, 10);
-      if (val < state.fontMin) { val = state.fontMin; e.target.value = val; }
-      state.fontMax = val;
-      fontMaxInput.value = val;
-      render();
-    };
-    fontSliderMax.onchange = () => saveState();
-
-    fontMinInput.onchange = (e) => {
-      let val = parseInt(e.target.value, 10);
-      if (isNaN(val)) val = 6;
       if (val > state.fontMax) val = state.fontMax;
       state.fontMin = val;
       fontMinInput.value = val;
-      fontSliderMin.value = val;
-      saveState();
       render();
     };
-
-    fontMaxInput.onchange = (e) => {
+    fontSliderMax.oninput = (e) => {
       let val = parseInt(e.target.value, 10);
-      if (isNaN(val)) val = 6;
       if (val < state.fontMin) val = state.fontMin;
       state.fontMax = val;
       fontMaxInput.value = val;
-      fontSliderMax.value = val;
-      saveState();
       render();
-    };
-
-    let spreadSnapshot = null;
-    spreadSlider.oninput = () => {
-      if (!spreadSnapshot) {
-        if (state.nodes.length === 0) return;
-        let ax = Infinity, ay = Infinity;
-        state.nodes.forEach(n => { ax = Math.min(ax, n.x); ay = Math.min(ay, n.y); });
-        spreadSnapshot = {
-          ax, ay,
-          pos: new Map(state.nodes.map(n => [n.id, { x: n.x, y: n.y }]))
-        };
-      }
-      const f = Math.pow(3, parseFloat(spreadSlider.value) / 100);
-      state.nodes.forEach(n => {
-        const p = spreadSnapshot.pos.get(n.id);
-        if (!p) return;
-        n.x = Math.max(0, Math.round(spreadSnapshot.ax + (p.x - spreadSnapshot.ax) * f));
-        n.y = Math.max(0, Math.round(spreadSnapshot.ay + (p.y - spreadSnapshot.ay) * f));
-      });
-      render();
-    };
-
-    spreadSlider.onchange = () => {
-      if (spreadSnapshot) { spreadSnapshot = null; saveState(); }
-      spreadSlider.value = 0;
     };
 
     function setFitMode(mode) {
@@ -1360,23 +1140,13 @@
       viewport.style.cursor = mode ? 'crosshair' : '';
     }
 
-    function startFit(mode) {
-      if (fitMode === mode) { setFitMode(null); return; }
-      if (selectedNodeIds.size === 0) {
-        alert("Please select at least one node first, then choose a region.");
-        return;
-      }
-      setFitMode(mode);
-    }
-
-    fitBoxBtn.onclick = () => startFit('grid');
-    fitSeqBtn.onclick = () => startFit('sequence');
+    fitBoxBtn.onclick = () => { if (selectedNodeIds.size === 0) { alert("Select at least one node first."); return; } setFitMode(fitMode === 'grid' ? null : 'grid'); };
+    fitSeqBtn.onclick = () => { if (selectedNodeIds.size === 0) { alert("Select at least one node first."); return; } setFitMode(fitMode === 'sequence' ? null : 'sequence'); };
 
     fitScreenBtn.onclick = () => {
       const hiddenNodeIds = getHiddenNodeIds();
       const visibleNodes = state.nodes.filter(n => !hiddenNodeIds.has(n.id));
       if (visibleNodes.length === 0) return;
-
       const padding = 30;
       arrangeNodesInGrid(visibleNodes, {
         x: viewport.scrollLeft + padding,
@@ -1391,13 +1161,10 @@
     function arrangeNodesInGrid(nodes, rect) {
       const count = nodes.length;
       if (count === 0) return;
-
       const sizes = nodes.map(n => getNodeRect(n));
       const maxW = Math.max(...sizes.map(sz => sz.width));
       const maxH = Math.max(...sizes.map(sz => sz.height));
-
-      let cols = 1;
-      let bestScale = -Infinity;
+      let cols = 1, bestScale = -Infinity;
       for (let c = 1; c <= count; c++) {
         const r = Math.ceil(count / c);
         const scale = Math.min((rect.width / c) / maxW, (rect.height / r) / maxH);
@@ -1406,54 +1173,22 @@
       const rows = Math.ceil(count / cols);
       const cellW = rect.width / cols;
       const cellH = rect.height / rows;
-
       nodes.forEach((node, i) => {
-        const c = i % cols;
-        const r = Math.floor(i / cols);
-        const sz = sizes[i];
+        const c = i % cols, r = Math.floor(i / cols), sz = sizes[i];
         node.x = Math.max(0, Math.round(rect.x + c * cellW + Math.max(0, (cellW - sz.width) / 2)));
         node.y = Math.max(0, Math.round(rect.y + r * cellH + Math.max(0, (cellH - sz.height) / 2)));
       });
     }
 
-    function orderForSequence(nodes) {
-      const ids = new Set(nodes.map(n => n.id));
-      const indeg = new Map(nodes.map(n => [n.id, 0]));
-      const out = new Map(nodes.map(n => [n.id, []]));
-
-      state.lines.forEach(line => {
-        if (line.arrow === 'none') return;
-        const p = line.arrow === 'start' ? line.to : line.from;
-        const c = line.arrow === 'start' ? line.from : line.to;
-        if (p !== c && ids.has(p) && ids.has(c)) {
-          out.get(p).push(c);
-          indeg.set(c, indeg.get(c) + 1);
-        }
-      });
-
-      const placed = [];
-      const done = new Set();
-      while (placed.length < nodes.length) {
-        const next = nodes.find(n => !done.has(n.id) && indeg.get(n.id) === 0)
-                  || nodes.find(n => !done.has(n.id));
-        done.add(next.id);
-        placed.push(next);
-        out.get(next.id).forEach(c => indeg.set(c, indeg.get(c) - 1));
-      }
-      return placed;
-    }
-
     function arrangeNodesInSequence(nodes, rect) {
       if (nodes.length === 0) return;
-      const ordered = orderForSequence(nodes);
-      const sizes = ordered.map(n => getNodeRect(n));
+      const sizes = nodes.map(n => getNodeRect(n));
       const maxW = Math.max(...sizes.map(sz => sz.width));
       const maxH = Math.max(...sizes.map(sz => sz.height));
       const spanX = Math.max(0, rect.width - maxW);
       const spanY = Math.max(0, rect.height - maxH);
-
-      ordered.forEach((node, i) => {
-        const t = ordered.length > 1 ? i / (ordered.length - 1) : 0;
+      nodes.forEach((node, i) => {
+        const t = nodes.length > 1 ? i / (nodes.length - 1) : 0;
         node.x = Math.max(0, Math.round(rect.x + t * spanX));
         node.y = Math.max(0, Math.round(rect.y + t * spanY));
       });
@@ -1465,10 +1200,6 @@
         maxR = Math.max(maxR, el.offsetLeft + el.offsetWidth);
         maxB = Math.max(maxB, el.offsetTop + el.offsetHeight);
       });
-      if (state.showTimeline) {
-        maxR = Math.max(maxR, state.timelinePos.x + state.timelinePos.width);
-        maxB = Math.max(maxB, state.timelinePos.y + 60);
-      }
       svgLayer.style.width = Math.max(viewport.clientWidth - 16, maxR + 200) + 'px';
       svgLayer.style.height = Math.max(viewport.clientHeight - 16, maxB + 200) + 'px';
     }
@@ -1478,16 +1209,12 @@
       const currentMonthIndex = now.getMonth();
       const currentYearShort = String(now.getFullYear()).slice(-2);
       const nextYearShort = String(now.getFullYear() + 1).slice(-2);
-
       timelineContainer.querySelectorAll('.timeline-tick, .timeline-label').forEach(e => e.remove());
-
-      const paddingLeft = 10;
-      const paddingRight = 15;
+      const paddingLeft = 10, paddingRight = 15;
       const usableWidth = state.timelinePos.width - paddingLeft - paddingRight;
 
       for (let i = 0; i <= 12; i++) {
         const xPos = paddingLeft + (i / 12) * usableWidth;
-
         const tick = document.createElement('div');
         tick.className = 'timeline-tick';
         tick.style.left = xPos + 'px';
@@ -1497,59 +1224,37 @@
           const label = document.createElement('div');
           label.className = 'timeline-label';
           label.style.left = (xPos + (usableWidth / 24)) + 'px';
-
           const monthIdx = (currentMonthIndex + i) % 12;
           const yearVal = (currentMonthIndex + i >= 12) ? nextYearShort : currentYearShort;
           label.textContent = `${MONTHS[monthIdx]} '${yearVal}`;
-
           timelineContainer.appendChild(label);
         }
       }
     }
 
     function getHiddenNodeIds() {
-      if (isLocked && lockedStateSnapshot) {
-        return lockedStateSnapshot.hiddenNodeIds;
-      }
-
+      if (isLocked && lockedStateSnapshot) return lockedStateSnapshot.hiddenNodeIds;
       const hiddenIds = new Set();
       const childrenMap = new Map();
-
       state.lines.forEach(line => {
-        let parentId = line.from;
-        let childId = line.to;
-        if (line.arrow === 'start') {
-          parentId = line.to;
-          childId = line.from;
-        }
+        let parentId = line.from, childId = line.to;
+        if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
         if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
         childrenMap.get(parentId).push(childId);
       });
-
       function hideDescendants(parentId) {
-        const children = childrenMap.get(parentId) || [];
-        children.forEach(childId => {
-          if (!hiddenIds.has(childId)) {
-            hiddenIds.add(childId);
-            hideDescendants(childId);
-          }
+        (childrenMap.get(parentId) || []).forEach(childId => {
+          if (!hiddenIds.has(childId)) { hiddenIds.add(childId); hideDescendants(childId); }
         });
       }
-
-      state.nodes.forEach(node => {
-        if (node.collapsed) hideDescendants(node.id);
-      });
-
+      state.nodes.forEach(node => { if (node.collapsed) hideDescendants(node.id); });
       if (selectedNodeIds.size > 0 && state.maxDistanceLimit < 10) {
         const { distances } = computeNodeDistances();
         state.nodes.forEach(node => {
           const d = distances.get(node.id);
-          if (d === undefined || d > state.maxDistanceLimit) {
-            hiddenIds.add(node.id);
-          }
+          if (d === undefined || d > state.maxDistanceLimit) hiddenIds.add(node.id);
         });
       }
-
       return hiddenIds;
     }
 
@@ -1570,11 +1275,8 @@
       if (historyIndex > 0) {
         historyIndex--;
         state = JSON.parse(historyStack[historyIndex]);
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        render();
-        updateHistoryButtons();
+        selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
+        render(); updateHistoryButtons();
       }
     }
 
@@ -1582,79 +1284,52 @@
       if (historyIndex < historyStack.length - 1) {
         historyIndex++;
         state = JSON.parse(historyStack[historyIndex]);
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        render();
-        updateHistoryButtons();
+        selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
+        render(); updateHistoryButtons();
       }
     }
 
     function createBox() {
       const rawInput = nodeTextInput.value;
       if (!rawInput.trim()) return;
-
       const parsed = parseTextAndUrl(rawInput);
       const count = state.nodes.length;
-      const x = 80 + (count % 10) * 20;
-      const y = 140 + (count % 10) * 20;
-
       state.nodes.push({
-        id: generateId(),
-        text: parsed.text,
-        url: parsed.url,
-        x: x,
-        y: y,
-        size: 'auto',
-        collapsed: false
+        id: generateId(), text: parsed.text, url: parsed.url,
+        x: 80 + (count % 10) * 20, y: 140 + (count % 10) * 20, size: 'auto', collapsed: false
       });
       nodeTextInput.value = '';
-      saveState();
-      render();
+      saveState(); render();
     }
 
     function createBoxes() {
       const rawInput = nodeTextInput.value.trim();
       if (!rawInput) return;
-
-      const words = rawInput.split(/\s+/).filter(w => w.length > 0);
-      words.forEach(word => {
+      rawInput.split(/\s+/).filter(w => w.length > 0).forEach(word => {
         const parsed = parseTextAndUrl(word);
         const count = state.nodes.length;
-        const x = 80 + (count % 10) * 20;
-        const y = 140 + (count % 10) * 20;
-
         state.nodes.push({
-          id: generateId(),
-          text: parsed.text,
-          url: parsed.url,
-          x: x,
-          y: y,
-          size: 'auto',
-          collapsed: false
+          id: generateId(), text: parsed.text, url: parsed.url,
+          x: 80 + (count % 10) * 20, y: 140 + (count % 10) * 20, size: 'auto', collapsed: false
         });
       });
       nodeTextInput.value = '';
-      saveState();
-      render();
+      saveState(); render();
     }
 
     function render() {
       const actualMax = getMaxLinks();
-      if (!state.maxLinksBound || state.maxLinksBound < actualMax) {
-        state.maxLinksBound = Math.max(1, actualMax);
-      }
+      if (!state.maxLinksBound || state.maxLinksBound < actualMax) state.maxLinksBound = Math.max(1, actualMax);
       fontMinInput.value = state.fontMin || 10;
       fontMaxInput.value = state.maxLinksBound;
       fontSliderMin.value = state.fontMin || 10;
       fontSliderMax.value = state.fontMax || 24;
 
-      colorDist1Chk.checked = !!state.colorDist1;
-      colorDist1Val.value = state.colorDist1Hex || '#ffb703';
-      colorDist2Chk.checked = !!state.colorDist2;
-      colorDist2Val.value = state.colorDist2Hex || '#fb8500';
-      colorDist3Chk.checked = !!state.colorDist3;
-      colorDist3Val.value = state.colorDist3Hex || '#ff006e';
+      updateInputModeUI();
+
+      colorDist1Chk.checked = !!state.colorDist1; colorDist1Val.value = state.colorDist1Hex || '#ffb703';
+      colorDist2Chk.checked = !!state.colorDist2; colorDist2Val.value = state.colorDist2Hex || '#fb8500';
+      colorDist3Chk.checked = !!state.colorDist3; colorDist3Val.value = state.colorDist3Hex || '#ff006e';
       maxDistanceSlider.value = state.maxDistanceLimit !== undefined ? state.maxDistanceLimit : 10;
       maxDistLabel.textContent = (state.maxDistanceLimit >= 10) ? '∞' : state.maxDistanceLimit;
 
@@ -1669,14 +1344,12 @@
 
       if (selectedNodeIds.size > 0) {
         autosizedChk.disabled = false;
-        const allSelectedAreAuto = Array.from(selectedNodeIds).every(id => {
+        autosizedChk.checked = Array.from(selectedNodeIds).every(id => {
           const n = state.nodes.find(item => item.id === id);
           return n && (n.size === 'auto' || (!n.customWidth && n.size !== 'custom'));
         });
-        autosizedChk.checked = allSelectedAreAuto;
       } else {
-        autosizedChk.disabled = true;
-        autosizedChk.checked = false;
+        autosizedChk.disabled = true; autosizedChk.checked = false;
       }
 
       if (state.showTimeline) {
@@ -1702,40 +1375,30 @@
           if (activeLine.width) lineWidthSelect.value = activeLine.width.toString();
           if (activeLine.color) lineColorPicker.value = activeLine.color;
         } else {
-          selectedLineId = null;
-          lineControlsGroup.style.display = 'none';
+          selectedLineId = null; lineControlsGroup.style.display = 'none';
         }
       } else {
         lineControlsGroup.style.display = 'none';
       }
 
       document.querySelectorAll('.node').forEach(el => el.remove());
-      linesGroup.innerHTML = '';
-      labelsGroup.innerHTML = '';
+      linesGroup.innerHTML = ''; labelsGroup.innerHTML = '';
 
       const hiddenNodeIds = getHiddenNodeIds();
       const { lineDistances } = computeNodeDistances();
-
-      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId)
-        ? computeChain(Array.from(selectedNodeIds)[0])
-        : null;
+      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId) ? computeChain(Array.from(selectedNodeIds)[0]) : null;
 
       const parentNodeIds = new Set();
-      state.lines.forEach(l => {
-        let parentId = l.from;
-        if (l.arrow === 'start') parentId = l.to;
-        parentNodeIds.add(parentId);
-      });
+      state.lines.forEach(l => { parentNodeIds.add(l.arrow === 'start' ? l.to : l.from); });
 
       state.nodes.forEach(node => {
         if (hiddenNodeIds.has(node.id)) return;
-
         const el = document.createElement('div');
         el.className = 'node';
         const nodeFontSize = getNodeFont(node.id);
         const fscale = getNodeFontScale(node.id);
         el.style.fontSize = nodeFontSize + 'px';
-        el.style.padding = `${(4 * fscale).toFixed(1)}px ${(6 * fscale).toFixed(1)}px`;
+        el.style.padding = `${(6 * fscale).toFixed(1)}px ${(10 * fscale).toFixed(1)}px`;
 
         if (node.customWidth && node.customHeight) {
           el.classList.add('fixed-size');
@@ -1743,8 +1406,9 @@
           el.style.height = `${Math.round(node.customHeight * fscale)}px`;
         }
 
-        const isSelected = selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id);
-        if (isSelected) el.classList.add('selected');
+        if (selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id)) {
+          el.classList.add('selected');
+        }
 
         el.style.left = node.x + 'px';
         el.style.top = node.y + 'px';
@@ -1758,8 +1422,7 @@
             e.stopPropagation();
             if (isLocked) return;
             node.collapsed = !node.collapsed;
-            saveState();
-            render();
+            saveState(); render();
           };
           el.appendChild(colBtn);
         }
@@ -1768,34 +1431,25 @@
           const inputEl = document.createElement('textarea');
           inputEl.className = 'node-edit-input';
           inputEl.value = node.url ? `${node.text} ${node.url}` : node.text;
-
           const finishEditing = () => {
             if (editingNodeId === node.id) {
               const val = inputEl.value;
               if (val.trim() !== '') {
                 const parsed = parseTextAndUrl(val);
-                node.text = parsed.text;
-                node.url = parsed.url;
+                node.text = parsed.text; node.url = parsed.url;
               }
-              editingNodeId = null;
-              saveState();
-              render();
+              editingNodeId = null; saveState(); render();
             }
           };
-
-          inputEl.onkeydown = (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishEditing(); }
-          };
+          inputEl.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishEditing(); } };
           inputEl.onblur = finishEditing;
-          inputEl.onmousedown = (e) => e.stopPropagation();
-
+          inputEl.onpointerdown = (e) => e.stopPropagation();
           el.appendChild(inputEl);
           setTimeout(() => { inputEl.focus(); inputEl.select(); }, 0);
         } else {
           const contentSpan = document.createElement('span');
           contentSpan.className = 'node-content';
           contentSpan.textContent = node.text;
-
           if (node.url) contentSpan.classList.add('has-url');
           el.appendChild(contentSpan);
 
@@ -1810,28 +1464,26 @@
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'node-resize-handle';
         resizeHandle.innerHTML = '◢';
-        resizeHandle.onmousedown = (e) => {
+        resizeHandle.onpointerdown = (e) => {
           e.stopPropagation();
           resizingNode = node;
           const rect = el.getBoundingClientRect();
           resizeStartDimensions = { width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY };
-          window.addEventListener('mousemove', handleMouseMove);
-          window.addEventListener('mouseup', handleMouseUp);
+          window.addEventListener('pointermove', handlePointerMove);
+          window.addEventListener('pointerup', handlePointerUp);
         };
         el.appendChild(resizeHandle);
 
-        /* UPDATED DOUBLE-CLICK BEHAVIOR: Webpage vs Canvas Text Edit */
         el.ondblclick = (e) => {
           e.stopPropagation();
           if (editTextChk.checked || !node.url) {
-            editingNodeId = node.id;
-            render();
+            editingNodeId = node.id; render();
           } else if (node.url) {
             window.open(node.url, '_blank');
           }
         };
 
-        el.onmousedown = (e) => handleMouseDownNode(e, node);
+        el.onpointerdown = (e) => handlePointerDownNode(e, node);
         viewport.appendChild(el);
       });
 
@@ -1854,20 +1506,12 @@
 
       const dStep = lineDistances ? lineDistances.get(line.id) : undefined;
       let distanceColored = false;
-      if (dStep === 1 && state.colorDist1) {
-        effColor = state.colorDist1Hex || '#ffb703';
-        distanceColored = true;
-      } else if (dStep === 2 && state.colorDist2) {
-        effColor = state.colorDist2Hex || '#fb8500';
-        distanceColored = true;
-      } else if (dStep === 3 && state.colorDist3) {
-        effColor = state.colorDist3Hex || '#ff006e';
-        distanceColored = true;
-      }
+      if (dStep === 1 && state.colorDist1) { effColor = state.colorDist1Hex || '#ffb703'; distanceColored = true; }
+      else if (dStep === 2 && state.colorDist2) { effColor = state.colorDist2Hex || '#fb8500'; distanceColored = true; }
+      else if (dStep === 3 && state.colorDist3) { effColor = state.colorDist3Hex || '#ff006e'; distanceColored = true; }
 
       if (!distanceColored && chainInfo) {
-        const inUp = chainInfo.up.has(line.id);
-        const inDown = chainInfo.down.has(line.id);
+        const inUp = chainInfo.up.has(line.id), inDown = chainInfo.down.has(line.id);
         if (inUp && inDown) { effColor = CHAIN_BOTH_COLOR; effWidth += 1; }
         else if (inUp) { effColor = CHAIN_UP_COLOR; effWidth += 1; }
         else if (inDown) { effColor = CHAIN_DOWN_COLOR; effWidth += 1; }
@@ -1876,13 +1520,10 @@
 
       const sourceRect = getNodeRect(sourceNode);
       const targetRect = getNodeRect(targetNode);
-
       const p1 = { x: sourceRect.x + sourceRect.width / 2, y: sourceRect.y + sourceRect.height / 2 };
       const p2 = { x: targetRect.x + targetRect.width / 2, y: targetRect.y + targetRect.height / 2 };
-
       const clipP1 = clipLineWithRect(p2, p1, sourceRect);
       const clipP2 = clipLineWithRect(p1, p2, targetRect);
-
       const pathData = `M ${clipP1.x} ${clipP1.y} L ${clipP2.x} ${clipP2.y}`;
 
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -1891,7 +1532,6 @@
       if (dimmed) path.setAttribute("opacity", "0.2");
       path.setAttribute("stroke-width", `${isSelected ? Math.max(effWidth + 1, 3) : effWidth}px`);
       path.setAttribute("fill", "none");
-
       if (isSelected) path.classList.add("line-selected");
 
       const markerColor = effColor.replace('#', '');
@@ -1907,20 +1547,17 @@
       const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       hitPath.setAttribute("d", pathData);
       hitPath.setAttribute("stroke", "transparent");
-      hitPath.setAttribute("stroke-width", "14px");
+      hitPath.setAttribute("stroke-width", "20px"); /* Larger touch target for lines */
       hitPath.setAttribute("fill", "none");
 
       const selectLine = (e) => {
         e.stopPropagation();
-        selectedLineId = line.id;
-        selectedNodeIds.clear();
-        selectedSourceNode = null;
-        render();
-        selectedLineLabelInput.focus();
+        selectedLineId = line.id; selectedNodeIds.clear(); selectedSourceNode = null;
+        render(); selectedLineLabelInput.focus();
       };
 
-      path.onclick = selectLine;
-      hitPath.onclick = selectLine;
+      path.onpointerdown = selectLine;
+      hitPath.onpointerdown = selectLine;
 
       linesGroup.appendChild(path);
       linesGroup.appendChild(hitPath);
@@ -1928,31 +1565,13 @@
       if (line.label) {
         const midX = (clipP1.x + clipP2.x) / 2;
         const midY = (clipP1.y + clipP2.y) / 2;
-
         const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        textEl.setAttribute("x", midX);
-        textEl.setAttribute("y", midY);
-        textEl.setAttribute("text-anchor", "middle");
-        textEl.setAttribute("dominant-baseline", "central");
+        textEl.setAttribute("x", midX); textEl.setAttribute("y", midY);
+        textEl.setAttribute("text-anchor", "middle"); textEl.setAttribute("dominant-baseline", "central");
         textEl.setAttribute("class", "line-label-text");
         textEl.textContent = line.label;
-        textEl.onclick = selectLine;
-
+        textEl.onpointerdown = selectLine;
         labelsGroup.appendChild(textEl);
-
-        setTimeout(() => {
-          try {
-            const bbox = textEl.getBBox();
-            const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            bgRect.setAttribute("x", bbox.x - 4);
-            bgRect.setAttribute("y", bbox.y - 2);
-            bgRect.setAttribute("width", bbox.width + 8);
-            bgRect.setAttribute("height", bbox.height + 4);
-            bgRect.setAttribute("class", `line-label-bg ${isSelected ? 'selected-bg' : ''}`);
-            bgRect.onclick = selectLine;
-            labelsGroup.insertBefore(bgRect, textEl);
-          } catch (err) {}
-        }, 0);
       }
     }
 
@@ -1967,7 +1586,6 @@
         marker.setAttribute("markerWidth", "6");
         marker.setAttribute("markerHeight", "6");
         marker.setAttribute("orient", "auto");
-
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", type === 'end' ? "M 0 1 L 10 5 L 0 9 z" : "M 10 1 L 0 5 L 10 9 z");
         path.setAttribute("fill", `#${colorHex}`);
@@ -1992,10 +1610,8 @@
     }
 
     function clipLineWithRect(p1, p2, rect) {
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
       let tMin = 1;
-
       if (dx !== 0) {
         const tLeft = (rect.x - p1.x) / dx;
         if (tLeft >= 0 && tLeft <= 1) {
@@ -2020,35 +1636,26 @@
           if (x >= rect.x && x <= rect.x + rect.width) tMin = Math.min(tMin, tBottom);
         }
       }
-
       return { x: p1.x + tMin * dx, y: p1.y + tMin * dy };
     }
 
-    function handleMouseDownNode(e, node) {
+    function handlePointerDownNode(e, node) {
       if (editingNodeId === node.id) return;
       e.stopPropagation();
       selectedLineId = null;
 
       if (createLineChk.checked) {
         if (!selectedSourceNode) {
-          selectedSourceNode = node;
-          render();
+          selectedSourceNode = node; render();
         } else if (selectedSourceNode.id !== node.id) {
           state.lines.push({
-            id: generateId(),
-            from: selectedSourceNode.id,
-            to: node.id,
-            arrow: arrowStyleSelect.value,
-            width: parseInt(lineWidthSelect.value, 10),
-            color: lineColorPicker.value,
-            label: ""
+            id: generateId(), from: selectedSourceNode.id, to: node.id,
+            arrow: arrowStyleSelect.value, width: parseInt(lineWidthSelect.value, 10),
+            color: lineColorPicker.value, label: ""
           });
-          selectedSourceNode = null;
-          saveState();
-          render();
+          selectedSourceNode = null; saveState(); render();
         } else {
-          selectedSourceNode = null;
-          render();
+          selectedSourceNode = null; render();
         }
         return;
       }
@@ -2060,17 +1667,13 @@
           render();
         } else {
           if (!selectedNodeIds.has(node.id)) {
-            selectedNodeIds.clear();
-            selectedNodeIds.add(node.id);
-            render();
+            selectedNodeIds.clear(); selectedNodeIds.add(node.id); render();
           }
         }
       }
 
       draggingNode = node;
-      dragOffset.x = e.clientX;
-      dragOffset.y = e.clientY;
-
+      dragOffset.x = e.clientX; dragOffset.y = e.clientY;
       initialPositions.clear();
       let dragSet = new Set();
       if (isLocked) {
@@ -2078,32 +1681,23 @@
       } else {
         dragSet = new Set(selectedNodeIds);
         if (dragGraphChk.checked) {
-          selectedNodeIds.forEach(id => {
-            const connected = getConnectedComponent(id);
-            connected.forEach(cId => dragSet.add(cId));
-          });
+          selectedNodeIds.forEach(id => getConnectedComponent(id).forEach(cId => dragSet.add(cId)));
         }
       }
-
       dragSet.forEach(id => {
         const n = state.nodes.find(item => item.id === id);
         if (n) initialPositions.set(id, { x: n.x, y: n.y });
       });
 
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     }
 
-    viewport.onmousedown = (e) => {
+    viewport.onpointerdown = (e) => {
       if (e.target !== viewport && e.target !== svgLayer) return;
-      const vpEdge = viewport.getBoundingClientRect();
-      if (e.clientX - vpEdge.left >= viewport.clientWidth || e.clientY - vpEdge.top >= viewport.clientHeight) return;
-
       selectedLineId = null;
       if (!isLocked && !e.ctrlKey && !e.metaKey && !isFittingBox) {
-        selectedNodeIds.clear();
-        selectedSourceNode = null;
-        render();
+        selectedNodeIds.clear(); selectedSourceNode = null; render();
       }
 
       isSelectingBox = true;
@@ -2117,77 +1711,64 @@
       selectionBox.style.height = '0px';
       selectionBox.style.display = 'block';
 
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     };
 
-    timelineContainer.onmousedown = (e) => {
+    timelineContainer.onpointerdown = (e) => {
       if (e.target === timelineResizeHandle) return;
       draggingTimeline = true;
       dragOffset.x = e.clientX - state.timelinePos.x;
       dragOffset.y = e.clientY - state.timelinePos.y;
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     };
 
-    timelineResizeHandle.onmousedown = (e) => {
+    timelineResizeHandle.onpointerdown = (e) => {
       e.stopPropagation();
       resizingTimeline = true;
       dragOffset.x = e.clientX;
       dragOffset.initialWidth = state.timelinePos.width;
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     };
 
-    function handleMouseMove(e) {
+    function handlePointerMove(e) {
       if (resizingNode) {
         const deltaX = e.clientX - resizeStartDimensions.startX;
         const deltaY = e.clientY - resizeStartDimensions.startY;
         const newW = Math.max(80, resizeStartDimensions.width + deltaX);
         const newH = Math.max(40, resizeStartDimensions.height + deltaY);
-
         resizingNode.customWidth = Math.round(newW / getNodeFontScale(resizingNode.id));
         resizingNode.customHeight = Math.round(newH / getNodeFontScale(resizingNode.id));
         resizingNode.size = 'custom';
-        render();
-        return;
+        render(); return;
       }
 
       if (resizingSidebar) {
-        let newWidth = 240;
-        if (state.dockPosition === 'left') {
-          newWidth = Math.max(150, Math.min(600, e.clientX));
-        } else if (state.dockPosition === 'right') {
-          newWidth = Math.max(150, Math.min(600, window.innerWidth - e.clientX));
-        }
+        let newWidth = 260;
+        if (state.dockPosition === 'left') newWidth = Math.max(150, Math.min(600, e.clientX));
+        else if (state.dockPosition === 'right') newWidth = Math.max(150, Math.min(600, window.innerWidth - e.clientX));
         state.sidebarWidth = newWidth;
-        applyDockPosition(state.dockPosition);
-        return;
+        applyDockPosition(state.dockPosition); return;
       }
 
       if (draggingToolbar) {
         const newX = Math.max(0, e.clientX - dragOffset.x);
         const newY = Math.max(0, e.clientY - dragOffset.y);
         state.floatingPos = { x: newX, y: newY };
-        toolbar.style.left = newX + 'px';
-        toolbar.style.top = newY + 'px';
-        return;
+        toolbar.style.left = newX + 'px'; toolbar.style.top = newY + 'px'; return;
       }
 
       if (isSelectingBox) {
         const vpRect = viewport.getBoundingClientRect();
         const currentX = e.clientX - vpRect.left + viewport.scrollLeft;
         const currentY = e.clientY - vpRect.top + viewport.scrollTop;
+        const left = Math.min(boxSelectStart.x, currentX), top = Math.min(boxSelectStart.y, currentY);
+        const width = Math.abs(currentX - boxSelectStart.x), height = Math.abs(currentY - boxSelectStart.y);
 
-        const left = Math.min(boxSelectStart.x, currentX);
-        const top = Math.min(boxSelectStart.y, currentY);
-        const width = Math.abs(currentX - boxSelectStart.x);
-        const height = Math.abs(currentY - boxSelectStart.y);
-
-        selectionBox.style.left = left + 'px';
-        selectionBox.style.top = top + 'px';
-        selectionBox.style.width = width + 'px';
-        selectionBox.style.height = height + 'px';
+        selectionBox.style.left = left + 'px'; selectionBox.style.top = top + 'px';
+        selectionBox.style.width = width + 'px'; selectionBox.style.height = height + 'px';
 
         if (!isLocked && !isFittingBox) {
           state.nodes.forEach(node => {
@@ -2201,30 +1782,18 @@
       }
 
       if (resizingTimeline) {
-        const deltaX = e.clientX - dragOffset.x;
-        state.timelinePos.width = Math.max(300, dragOffset.initialWidth + deltaX);
-        render();
-        return;
+        state.timelinePos.width = Math.max(300, dragOffset.initialWidth + (e.clientX - dragOffset.x));
+        render(); return;
       }
 
       if (draggingTimeline) {
         state.timelinePos.x = e.clientX - dragOffset.x;
         state.timelinePos.y = e.clientY - dragOffset.y;
-        render();
-        return;
+        render(); return;
       }
 
       if (!draggingNode) return;
-
-      let deltaX = e.clientX - dragOffset.x;
-      let deltaY = e.clientY - dragOffset.y;
-      let minInitX = Infinity, minInitY = Infinity;
-      initialPositions.forEach(p => { minInitX = Math.min(minInitX, p.x); minInitY = Math.min(minInitY, p.y); });
-      if (minInitX !== Infinity) {
-        deltaX = Math.max(deltaX, -minInitX);
-        deltaY = Math.max(deltaY, -minInitY);
-      }
-
+      let deltaX = e.clientX - dragOffset.x, deltaY = e.clientY - dragOffset.y;
       initialPositions.forEach((initPos, id) => {
         const n = state.nodes.find(item => item.id === id);
         if (n) { n.x = initPos.x + deltaX; n.y = initPos.y + deltaY; }
@@ -2232,7 +1801,7 @@
       render();
     }
 
-    function handleMouseUp() {
+    function handlePointerUp() {
       if (resizingNode) { resizingNode = null; saveState(); }
       if (resizingSidebar) { resizingSidebar = false; sidebarResizer.classList.remove('resizing'); saveState(); }
       if (draggingToolbar) { draggingToolbar = false; saveState(); }
@@ -2240,10 +1809,8 @@
       if (isSelectingBox) {
         if (!isLocked && isFittingBox) {
           const rect = {
-            x: parseFloat(selectionBox.style.left),
-            y: parseFloat(selectionBox.style.top),
-            width: parseFloat(selectionBox.style.width),
-            height: parseFloat(selectionBox.style.height)
+            x: parseFloat(selectionBox.style.left), y: parseFloat(selectionBox.style.top),
+            width: parseFloat(selectionBox.style.width), height: parseFloat(selectionBox.style.height)
           };
           if (rect.width > 20 && rect.height > 20) {
             const hiddenNodeIds = getHiddenNodeIds();
@@ -2254,27 +1821,19 @@
           }
           setFitMode(null);
         }
-        isSelectingBox = false;
-        selectionBox.style.display = 'none';
-        render();
+        isSelectingBox = false; selectionBox.style.display = 'none'; render();
       }
 
       if (draggingNode || draggingTimeline || resizingTimeline) {
-        draggingNode = null;
-        draggingTimeline = false;
-        resizingTimeline = false;
-        saveState();
+        draggingNode = null; draggingTimeline = false; resizingTimeline = false; saveState();
       }
 
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
     }
 
     function getConnectedComponent(startId) {
-      const visited = new Set();
-      const queue = [startId];
-      visited.add(startId);
-
+      const visited = new Set([startId]), queue = [startId];
       while (queue.length > 0) {
         const curr = queue.shift();
         state.lines.forEach(line => {
@@ -2295,9 +1854,7 @@
     deleteLineBtn.onclick = () => {
       if (selectedLineId) {
         state.lines = state.lines.filter(l => l.id !== selectedLineId);
-        selectedLineId = null;
-        saveState();
-        render();
+        selectedLineId = null; saveState(); render();
       }
     };
 
@@ -2308,30 +1865,18 @@
     showTimelineChk.onchange = (e) => { state.showTimeline = e.target.checked; saveState(); render(); };
     showUrlsChk.onchange = (e) => { state.showUrls = e.target.checked; saveState(); render(); };
 
-    /* ---------------- IMPORT / EXPORT BRIDGE ---------------- */
+    /* IO BRIDGE */
     const IO_PAGE = 'conceptmap_io.html';
-    let ioWin = null;
-    let ioSyncTimer = null;
-
+    let ioWin = null, ioSyncTimer = null;
     const ioBtn = document.getElementById('io-btn');
 
     function ioPayload() {
-      return {
-        type: 'cm-state',
-        state: state,
-        defaults: {
-          width: parseInt(lineWidthSelect.value, 10),
-          color: lineColorPicker.value,
-          arrow: arrowStyleSelect.value
-        }
-      };
+      return { type: 'cm-state', state: state, defaults: { width: parseInt(lineWidthSelect.value, 10), color: lineColorPicker.value, arrow: arrowStyleSelect.value } };
     }
 
     function postToIo(msg, target) {
       const w = target || ioWin;
-      if (w && !w.closed) {
-        try { w.postMessage(msg, '*'); } catch (err) {}
-      }
+      if (w && !w.closed) { try { w.postMessage(msg, '*'); } catch (err) {} }
     }
 
     function scheduleIoSync() {
@@ -2343,143 +1888,40 @@
     ioBtn.onclick = () => {
       if (ioWin && !ioWin.closed) { ioWin.focus(); postToIo(ioPayload()); return; }
       ioWin = window.open(IO_PAGE, 'conceptmap_io', 'width=560,height=760');
-      if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
+      if (!ioWin) alert('Please allow pop-ups to open the Import / Export window.');
     };
 
     function afterExternalChange() {
-      selectedNodeIds.clear();
-      selectedLineId = null;
-      selectedSourceNode = null;
-      editingNodeId = null;
-      saveState();
-      render();
-    }
-
-    function applyImportedJson(importedState) {
-      state = {
-        nodes: importedState.nodes || [],
-        lines: normalizeLines(importedState.lines || []),
-        showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
-        showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
-        timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
-        dockPosition: importedState.dockPosition || 'left',
-        sidebarWidth: importedState.sidebarWidth || 240,
-        floatingPos: importedState.floatingPos || { x: 20, y: 20 },
-        fontMin: importedState.fontMin || 10,
-        fontMax: importedState.fontMax || 24,
-        maxLinksBound: importedState.maxLinksBound || 1,
-        colorDist1: importedState.colorDist1 || false,
-        colorDist1Hex: importedState.colorDist1Hex || '#ffb703',
-        colorDist2: importedState.colorDist2 || false,
-        colorDist2Hex: importedState.colorDist2Hex || '#fb8500',
-        colorDist3: importedState.colorDist3 || false,
-        colorDist3Hex: importedState.colorDist3Hex || '#ff006e',
-        maxDistanceLimit: importedState.maxDistanceLimit !== undefined ? importedState.maxDistanceLimit : 10
-      };
-      afterExternalChange();
+      selectedNodeIds.clear(); selectedLineId = null; selectedSourceNode = null; editingNodeId = null;
+      saveState(); render();
     }
 
     window.addEventListener('message', (e) => {
       const d = e.data;
       if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
-
-      if (d.type === 'cm-io-ready') {
-        ioWin = e.source;
-        postToIo(ioPayload(), e.source);
-        return;
-      }
+      if (d.type === 'cm-io-ready') { ioWin = e.source; postToIo(ioPayload(), e.source); return; }
       if (e.source !== ioWin) return;
-
-      if (d.type === 'cm-request-state') {
-        postToIo(ioPayload(), e.source);
-      } else if (d.type === 'cm-import-json') {
+      if (d.type === 'cm-request-state') { postToIo(ioPayload(), e.source); }
+      else if (d.type === 'cm-import-json') {
         try {
-          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
-          applyImportedJson(d.data);
-          postToIo({ type: 'cm-ack', ok: true, message: `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.` }, e.source);
-        } catch (err) {
-          postToIo({ type: 'cm-ack', ok: false, message: 'Invalid JSON file structure.' }, e.source);
-        }
-      } else if (d.type === 'cm-import-graph') {
-        const nodes = Array.isArray(d.nodes) ? d.nodes : [];
-        const lines = Array.isArray(d.lines) ? d.lines : [];
-        if (d.replace) {
-          state.nodes = nodes;
-          state.lines = lines;
-        } else {
-          state.nodes = state.nodes.concat(nodes);
-          state.lines = state.lines.concat(lines);
-        }
-        afterExternalChange();
-        postToIo({ type: 'cm-ack', ok: true, message: `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.` }, e.source);
+          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error();
+          state = Object.assign(state, d.data);
+          afterExternalChange();
+        } catch (err) {}
       }
     });
 
     clearBtn.onclick = () => {
       if (isLocked) return;
       if (confirm("Clear all nodes and connections?")) {
-        state = { 
-          nodes: [], 
-          lines: [], 
-          showTimeline: state.showTimeline, 
-          showUrls: state.showUrls, 
-          timelinePos: state.timelinePos,
-          dockPosition: state.dockPosition,
-          sidebarWidth: state.sidebarWidth,
-          floatingPos: state.floatingPos,
-          fontMin: state.fontMin,
-          fontMax: state.fontMax,
-          maxLinksBound: state.maxLinksBound,
-          colorDist1: state.colorDist1,
-          colorDist1Hex: state.colorDist1Hex,
-          colorDist2: state.colorDist2,
-          colorDist2Hex: state.colorDist2Hex,
-          colorDist3: state.colorDist3,
-          colorDist3Hex: state.colorDist3Hex,
-          maxDistanceLimit: state.maxDistanceLimit
-        };
-        selectedSourceNode = null;
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        saveState();
-        render();
+        state.nodes = []; state.lines = [];
+        selectedSourceNode = null; selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
+        saveState(); render();
       }
     };
 
     undoBtn.onclick = undo;
     redoBtn.onclick = redo;
-
-    window.onkeydown = (e) => {
-      if (e.key === 'Escape') { 
-        setFitMode(null); 
-        closeHelpModal(); 
-        return; 
-      }
-      const activeEl = document.activeElement;
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (!isLocked && activeEl !== nodeTextInput && activeEl !== selectedLineLabelInput && activeEl.type !== 'range' && activeEl.type !== 'text' && !activeEl.classList.contains('node-edit-input')) {
-          if (selectedLineId) {
-            state.lines = state.lines.filter(l => l.id !== selectedLineId);
-            selectedLineId = null;
-            saveState();
-            render();
-          } else if (selectedNodeIds.size > 0) {
-            selectedNodeIds.forEach(id => {
-              state.nodes = state.nodes.filter(n => n.id !== id);
-              state.lines = state.lines.filter(l => l.from !== id && l.to !== id);
-            });
-            selectedNodeIds.clear();
-            saveState();
-            render();
-          }
-        }
-      } else if (!isLocked && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) redo(); else undo();
-      } else if (!isLocked && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        redo();
-      }
-    };
 
     saveState();
     render();
