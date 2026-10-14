@@ -654,6 +654,25 @@
       <label><input type="radio" name="interaction-mode" value="link"> Goto Link Only</label>
     </div>
 
+    <div class="tool-group" id="touch-tuning-group">
+      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">TOUCH TUNING (ANTI-STICKY)</span>
+      <label class="slider-label">Drag starts after: <span id="tt-thresh-label" style="color:#00f5d4;">8px</span>
+        <input type="range" id="tt-thresh" min="0" max="30" step="1" value="8">
+        <span class="slider-hint">higher = ignores finger jitter</span>
+      </label>
+      <label class="slider-label">Node touch padding: <span id="tt-pad-label" style="color:#00f5d4;">22px</span>
+        <input type="range" id="tt-pad" min="0" max="60" step="1" value="22">
+        <span class="slider-hint">near-miss touches still grab the node</span>
+      </label>
+      <label class="slider-label">Hold before drag: <span id="tt-hold-label" style="color:#00f5d4;">0ms</span>
+        <input type="range" id="tt-hold" min="0" max="600" step="25" value="0">
+        <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
+      </label>
+      <label><input type="checkbox" id="tt-ignore-extra" checked> Ignore extra fingers while dragging</label>
+      <label><input type="checkbox" id="tt-autoclear" checked> Auto-clear stuck touches</label>
+      <button id="tt-reset-btn" type="button">Reset touches now</button>
+    </div>
+
     <div class="tool-group">
       <input type="text" id="node-text" placeholder="Box text or URL..." />
       <button id="add-btn" type="button">Add Box</button>
@@ -912,8 +931,16 @@
       maxDistanceLimit: 10,
       inputMode: 'auto',
       autoSizeAll: true,
-      interactionMode: 'all'
+      interactionMode: 'all',
+      touchDragThreshold: 8,
+      touchHitPad: 22,
+      touchHoldMs: 0,
+      touchIgnoreExtra: true,
+      touchAutoClear: true
     };
+
+    const TOUCH_DEFAULTS = { touchDragThreshold: 8, touchHitPad: 22, touchHoldMs: 0, touchIgnoreExtra: true, touchAutoClear: true };
+    function tcfg(k) { return state[k] !== undefined ? state[k] : TOUCH_DEFAULTS[k]; }
 
     let isLocked = false;
     let lockedStateSnapshot = null;
@@ -954,6 +981,17 @@
     let pinching = false, pinchStart = null;
     let panning = false, panStart = null;
     let tapCandidate = null;
+
+    // --- touch robustness state ---
+    const ignoredPointers = new Set();   // extra / stray fingers we deliberately ignore
+    let dragActive = false;              // node drag has passed the start threshold
+    let dragDownPt = { x: 0, y: 0 };
+    let dragDownTime = 0;
+    let dragThresh = 0;
+    let dragHoldMs = 0;
+    let dragFrameQueued = false;
+    let liveTouches = 0;                 // real finger count from touch events
+    let lastTouchDownTime = 0;
 
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -1002,6 +1040,30 @@
         }
       };
     });
+
+    const ttThresh = document.getElementById('tt-thresh');
+    const ttThreshLabel = document.getElementById('tt-thresh-label');
+    const ttPad = document.getElementById('tt-pad');
+    const ttPadLabel = document.getElementById('tt-pad-label');
+    const ttHold = document.getElementById('tt-hold');
+    const ttHoldLabel = document.getElementById('tt-hold-label');
+    const ttIgnoreExtra = document.getElementById('tt-ignore-extra');
+    const ttAutoClear = document.getElementById('tt-autoclear');
+    const ttResetBtn = document.getElementById('tt-reset-btn');
+
+    function bindTouchSlider(input, label, key, unit) {
+      input.oninput = (e) => {
+        state[key] = parseInt(e.target.value, 10);
+        label.textContent = state[key] + unit;
+      };
+      input.onchange = () => saveState();
+    }
+    bindTouchSlider(ttThresh, ttThreshLabel, 'touchDragThreshold', 'px');
+    bindTouchSlider(ttPad, ttPadLabel, 'touchHitPad', 'px');
+    bindTouchSlider(ttHold, ttHoldLabel, 'touchHoldMs', 'ms');
+    ttIgnoreExtra.onchange = (e) => { state.touchIgnoreExtra = e.target.checked; saveState(); };
+    ttAutoClear.onchange = (e) => { state.touchAutoClear = e.target.checked; saveState(); };
+    ttResetBtn.onclick = () => { resetTouchState(); render(); };
 
     const narrowQuery = window.matchMedia('(max-width: 768px)');
 
@@ -1515,6 +1577,12 @@
       const activeRadio = document.querySelector(`input[name="interaction-mode"][value="${state.interactionMode || 'all'}"]`);
       if (activeRadio) activeRadio.checked = true;
 
+      ttThresh.value = tcfg('touchDragThreshold'); ttThreshLabel.textContent = tcfg('touchDragThreshold') + 'px';
+      ttPad.value = tcfg('touchHitPad'); ttPadLabel.textContent = tcfg('touchHitPad') + 'px';
+      ttHold.value = tcfg('touchHoldMs'); ttHoldLabel.textContent = tcfg('touchHoldMs') + 'ms';
+      ttIgnoreExtra.checked = !!tcfg('touchIgnoreExtra');
+      ttAutoClear.checked = !!tcfg('touchAutoClear');
+
       colorDist1Chk.checked = !!state.colorDist1; colorDist1Val.value = state.colorDist1Hex || '#ffb703';
       colorDist2Chk.checked = !!state.colorDist2; colorDist2Val.value = state.colorDist2Hex || '#fb8500';
       colorDist3Chk.checked = !!state.colorDist3; colorDist3Val.value = state.colorDist3Hex || '#ff006e';
@@ -1563,8 +1631,6 @@
       linesGroup.innerHTML = ''; labelsGroup.innerHTML = '';
 
       const hiddenNodeIds = getHiddenNodeIds();
-      const { lineDistances } = computeNodeDistances();
-      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId) ? computeChain(Array.from(selectedNodeIds)[0]) : null;
 
       const parentNodeIds = new Set();
       state.lines.forEach(l => { parentNodeIds.add(l.arrow === 'start' ? l.to : l.from); });
@@ -1596,6 +1662,7 @@
           const colBtn = document.createElement('span');
           colBtn.className = 'collapse-btn';
           colBtn.textContent = node.collapsed ? '[+]' : '[-]';
+          colBtn.onpointerdown = (e) => { e.stopPropagation(); };
           colBtn.onclick = (e) => {
             e.stopPropagation();
             if (isLocked) return;
@@ -1668,11 +1735,50 @@
         world.appendChild(el);
       });
 
+      renderLinesOnly();
+    }
+
+    // Redraws only the SVG lines/labels (cheap) - used while dragging nodes
+    function renderLinesOnly() {
+      linesGroup.innerHTML = ''; labelsGroup.innerHTML = '';
+      const hiddenNodeIds = getHiddenNodeIds();
+      const { lineDistances } = computeNodeDistances();
+      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId) ? computeChain(Array.from(selectedNodeIds)[0]) : null;
       state.lines.forEach(line => {
         if (!hiddenNodeIds.has(line.from) && !hiddenNodeIds.has(line.to)) {
           renderLine(line, chainInfo, lineDistances);
         }
       });
+    }
+
+    // Moves dragged node elements in place (no DOM rebuild) and redraws lines
+    function applyDragFrame() {
+      dragFrameQueued = false;
+      initialPositions.forEach((_, id) => {
+        const n = state.nodes.find(item => item.id === id);
+        const el = world.querySelector('.node[data-id="' + id + '"]');
+        if (n && el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+      });
+      renderLinesOnly();
+    }
+    function queueDragFrame() {
+      if (dragFrameQueued) return;
+      dragFrameQueued = true;
+      requestAnimationFrame(applyDragFrame);
+    }
+
+    // Finds a visible node whose rect (grown by pad) contains the world point
+    function findPaddedNode(x, y, pad) {
+      let best = null, bestD = Infinity;
+      state.nodes.forEach(node => {
+        if (!world.querySelector('.node[data-id="' + node.id + '"]')) return;
+        const r = getNodeRect(node);
+        const cx = Math.max(r.x, Math.min(x, r.x + r.width));
+        const cy = Math.max(r.y, Math.min(y, r.y + r.height));
+        const d = Math.hypot(x - cx, y - cy);
+        if (d <= pad && d < bestD) { bestD = d; best = node; }
+      });
+      return best;
     }
 
     function renderLine(line, chainInfo, lineDistances) {
@@ -1732,6 +1838,11 @@
       hitPath.setAttribute("fill", "none");
 
       const selectLine = (e) => {
+        if (e.pointerType === 'touch' && (state.interactionMode || 'all') === 'drag') {
+          const wp = toWorld(e.clientX, e.clientY);
+          const near = findPaddedNode(wp.x, wp.y, tcfg('touchHitPad') / zoom);
+          if (near) { handlePointerDownNode(e, near); return; }
+        }
         e.stopPropagation();
         selectedLineId = line.id; selectedNodeIds.clear(); selectedSourceNode = null;
         render(); selectedLineLabelInput.focus();
@@ -1864,6 +1975,12 @@
         return;
       }
 
+      // Touch: capture on the stable viewport BEFORE any re-render, so events keep
+      // flowing even though render() replaces the node's DOM element.
+      if (e.pointerType === 'touch') {
+        try { viewport.setPointerCapture(e.pointerId); capturedPointers.add(e.pointerId); } catch (err) {}
+      }
+
       tapCandidate = null;
       if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
         tapCandidate = { node, x: e.clientX, y: e.clientY };
@@ -1883,6 +2000,12 @@
 
       draggingNode = node;
       dragOffset.x = e.clientX; dragOffset.y = e.clientY;
+      dragDownPt = { x: e.clientX, y: e.clientY };
+      dragDownTime = performance.now();
+      const isTouchPtr = e.pointerType === 'touch';
+      dragThresh = isTouchPtr ? tcfg('touchDragThreshold') : 0;
+      dragHoldMs = isTouchPtr ? tcfg('touchHoldMs') : 0;
+      dragActive = (dragThresh === 0 && dragHoldMs === 0);
       initialPositions.clear();
       let dragSet = new Set();
       if (isLocked) {
@@ -1928,6 +2051,11 @@
           }
         }
       });
+
+      if (mode === 'drag') {
+        const padNode = findPaddedNode(clickX, clickY, tcfg('touchHitPad') / zoom);
+        if (padNode) { handlePointerDownNode(e, padNode); return; }
+      }
 
       if (mode !== 'drag' && nearbyNode) {
         isDrivingArrow = true;
@@ -2015,6 +2143,7 @@
 
     function handlePointerMove(e) {
       if (e.pointerType === 'touch') {
+        if (ignoredPointers.has(e.pointerId)) return;
         if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (pinching) { updatePinch(); return; }
         captureTouchPointer(e);
@@ -2137,16 +2266,35 @@
       }
 
       if (!draggingNode) return;
+
+      if (!dragActive) {
+        const moved = Math.hypot(e.clientX - dragDownPt.x, e.clientY - dragDownPt.y);
+        if (moved <= dragThresh) return;                      // finger jitter: ignore
+        if (dragHoldMs > 0 && performance.now() - dragDownTime < dragHoldMs) {
+          // moved before the hold time elapsed -> treat as a screen pan instead
+          draggingNode = null; initialPositions.clear(); tapCandidate = null;
+          panning = true;
+          panStart = { x: dragDownPt.x, y: dragDownPt.y, left: viewport.scrollLeft, top: viewport.scrollTop };
+          viewport.scrollLeft = panStart.left - (e.clientX - panStart.x);
+          viewport.scrollTop = panStart.top - (e.clientY - panStart.y);
+          return;
+        }
+        dragActive = true;
+        dragOffset.x = e.clientX; dragOffset.y = e.clientY;   // rebase: no jump
+        return;
+      }
+
       let deltaX = (e.clientX - dragOffset.x) / zoom, deltaY = (e.clientY - dragOffset.y) / zoom;
       initialPositions.forEach((initPos, id) => {
         const n = state.nodes.find(item => item.id === id);
         if (n) { n.x = initPos.x + deltaX; n.y = initPos.y + deltaY; }
       });
-      render();
+      queueDragFrame();
     }
 
     function handlePointerUp(e) {
       if (e.pointerType === 'touch') {
+        if (ignoredPointers.has(e.pointerId)) { ignoredPointers.delete(e.pointerId); return; }
         activePointers.delete(e.pointerId);
         capturedPointers.delete(e.pointerId);
         if (pinching) {
@@ -2233,7 +2381,10 @@
       panning = false;
 
       if (draggingNode || draggingTimeline || resizingTimeline) {
-        draggingNode = null; draggingTimeline = false; resizingTimeline = false; saveState();
+        const didMove = dragActive || draggingTimeline || resizingTimeline;
+        draggingNode = null; draggingTimeline = false; resizingTimeline = false;
+        dragActive = false; dragFrameQueued = false;
+        if (didMove) { saveState(); render(); }
       }
 
       if (tapCandidate) {
@@ -2351,7 +2502,12 @@
         maxDistanceLimit: importedState.maxDistanceLimit !== undefined ? importedState.maxDistanceLimit : 10,
         inputMode: importedState.inputMode || 'auto',
         autoSizeAll: importedState.autoSizeAll !== undefined ? importedState.autoSizeAll : true,
-        interactionMode: importedState.interactionMode || 'all'
+        interactionMode: importedState.interactionMode || 'all',
+        touchDragThreshold: importedState.touchDragThreshold !== undefined ? importedState.touchDragThreshold : state.touchDragThreshold,
+        touchHitPad: importedState.touchHitPad !== undefined ? importedState.touchHitPad : state.touchHitPad,
+        touchHoldMs: importedState.touchHoldMs !== undefined ? importedState.touchHoldMs : state.touchHoldMs,
+        touchIgnoreExtra: importedState.touchIgnoreExtra !== undefined ? importedState.touchIgnoreExtra : state.touchIgnoreExtra,
+        touchAutoClear: importedState.touchAutoClear !== undefined ? importedState.touchAutoClear : state.touchAutoClear
       };
       afterExternalChange();
     }
@@ -2419,7 +2575,12 @@
           maxDistanceLimit: state.maxDistanceLimit,
           inputMode: state.inputMode,
           autoSizeAll: state.autoSizeAll,
-          interactionMode: state.interactionMode
+          interactionMode: state.interactionMode,
+          touchDragThreshold: state.touchDragThreshold,
+          touchHitPad: state.touchHitPad,
+          touchHoldMs: state.touchHoldMs,
+          touchIgnoreExtra: state.touchIgnoreExtra,
+          touchAutoClear: state.touchAutoClear
         };
         selectedSourceNode = null;
         selectedNodeIds.clear();
@@ -2506,7 +2667,15 @@
 
     viewport.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
-      if (activePointers.size >= 2) { e.stopImmediatePropagation(); return; }
+      lastTouchDownTime = performance.now();
+      const protectedGesture = !!(draggingNode || isDrivingArrow || resizingNode || draggingTimeline || resizingTimeline);
+      if (tcfg('touchIgnoreExtra') && activePointers.size >= 1 && protectedGesture) {
+        // a stray/second finger landed mid-drag: ignore it completely
+        ignoredPointers.add(e.pointerId);
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (activePointers.size >= 2) { ignoredPointers.add(e.pointerId); e.stopImmediatePropagation(); return; }
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       window.addEventListener('pointermove', handlePointerMove);
       if (activePointers.size === 2) {
@@ -2526,6 +2695,46 @@
 
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
+
+    // Forget every tracked finger and abort any half-finished gesture
+    function resetTouchState() {
+      activePointers.clear(); capturedPointers.clear(); ignoredPointers.clear();
+      pinching = false; pinchStart = null;
+      const hadDrag = dragActive;
+      cancelSingleGestures();
+      dragActive = false; dragFrameQueued = false;
+      window.removeEventListener('pointermove', handlePointerMove);
+      if (hadDrag) saveState();
+    }
+
+    // Ground truth from touch events: when no finger is really on the screen,
+    // any pointer we still think is down is "stuck" -> clear it.
+    function onTouchCount(e) {
+      liveTouches = e.touches.length;
+      if (e.type !== 'touchstart' && liveTouches === 0 && tcfg('touchAutoClear')) {
+        if (activePointers.size || ignoredPointers.size || pinching || draggingNode || panning) {
+          // let the normal pointerup finish first, then sweep up whatever is left
+          setTimeout(() => {
+            if (liveTouches === 0 && (activePointers.size || ignoredPointers.size || pinching || draggingNode || panning)) {
+              resetTouchState(); render();
+            }
+          }, 60);
+        }
+      }
+    }
+    ['touchstart', 'touchend', 'touchcancel'].forEach(t =>
+      window.addEventListener(t, onTouchCount, { passive: true, capture: true }));
+
+    // Watchdog for browsers that drop pointerup/touchend entirely
+    setInterval(() => {
+      if (!tcfg('touchAutoClear')) return;
+      if (liveTouches === 0 && performance.now() - lastTouchDownTime > 800 &&
+          (activePointers.size || ignoredPointers.size || pinching || (draggingNode && isTouchActive()))) {
+        resetTouchState(); render();
+      }
+    }, 700);
+    window.addEventListener('blur', () => { if (tcfg('touchAutoClear')) resetTouchState(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && tcfg('touchAutoClear')) resetTouchState(); });
 
     updateZoomLabel();
 
