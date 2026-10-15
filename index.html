@@ -2426,6 +2426,36 @@
       }
     };
 
+    // --- DELETE KEY LISTENER FIX ---
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        let modified = false;
+
+        if (selectedLineId) {
+          state.lines = state.lines.filter(l => l.id !== selectedLineId);
+          selectedLineId = null;
+          modified = true;
+        }
+
+        if (selectedNodeIds.size > 0) {
+          state.nodes = state.nodes.filter(n => !selectedNodeIds.has(n.id));
+          state.lines = state.lines.filter(l => !selectedNodeIds.has(l.from) && !selectedNodeIds.has(l.to));
+          selectedNodeIds.clear();
+          modified = true;
+        }
+
+        if (modified) {
+          e.preventDefault();
+          saveState();
+          render();
+        }
+      }
+    });
+
     addBtn.onclick = createBox;
     addBoxesBtn.onclick = createBoxes;
     nodeTextInput.onkeydown = (e) => { if (e.key === 'Enter') createBox(); };
