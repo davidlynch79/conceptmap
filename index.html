@@ -96,6 +96,9 @@
                       linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
     background-size: 20px 20px;
   }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 2000; background: #1b263b; border: 1px solid #00b4d8; color: #00f5d4; font: 12px monospace; padding: 8px 14px; display: none; pointer-events: none; }
+  .view-btn { text-align: left; text-transform: none; padding: 5px 8px; }
+  .view-btn.active { background: #023e8a; border-color: #00f5d4; color: #00f5d4; font-weight: bold; }
   #selection-box { position: absolute; display: none; pointer-events: none; z-index: 50; border: 1px dashed #00f5d4; background: rgba(0,245,212,.15); }
 
   body.menu-hidden #toolbar, body.menu-hidden #sidebar-resizer { display: none; }
@@ -266,11 +269,25 @@
   <div class="tool-group" data-panel-id="panel-interaction">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <span class="cap">INTERACTION MODE</span>
-    <label><input type="radio" name="im" data-k="interactionMode" value="all"> Do All 4</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="all"> Do Top 4</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Click and Drag Only</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows Only</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="edit"> Edit Cell Only</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="link"> Goto Link Only</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="openfile"> Open file if name exists</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="expandfile"> Expand file if name exists</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="opencurrent"> Open file in current window</label>
+    <span class="cap">FILE DIRECTORY</span>
+    <button id="pick-dir-btn" class="action-btn">Pick folder (local files)</button>
+    <label style="margin-top:2px;"><input type="checkbox" data-k="includeSubfolders"> Include subfolders</label>
+    <span class="slider-hint" id="pick-dir-status">Click a box to load its corresponding file.</span>
+  </div>
+
+  <div class="tool-group" data-panel-id="panel-views">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">VIEW HISTORY (current window)</span>
+    <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
+    <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
   </div>
 
   <div class="tool-group row-inline" data-panel-id="panel-lock">
@@ -382,6 +399,7 @@
   </div>
 </div>
 
+<div id="toast"></div>
 <div id="zoom-controls">
   <button id="zoom-in-btn" aria-label="Zoom in">+</button>
   <button id="zoom-reset-btn" aria-label="Reset zoom">100%</button>
@@ -439,6 +457,7 @@ const DEFAULTS = {
     "panel-touch",
     "panel-add",
     "panel-interaction",
+    "panel-views",
     "panel-lock",
     "panel-fit",
     "panel-font",
@@ -470,6 +489,7 @@ const DEFAULTS = {
   inputMode: "desktop",
   autoSizeAll: true,
   interactionMode: "all",
+  includeSubfolders: true,
   touchDragThreshold: 10,
   touchHitPad: 25,
   touchHoldMs: 100,
@@ -754,8 +774,9 @@ function makeNode(n, parents) {
 
   el.ondblclick = e => {
     e.stopPropagation();
-    if (mode() !== 'drag' && mode() !== 'arrow' && activateNode(n)) render();
+    if (mode() !== 'drag' && mode() !== 'arrow' && !isFileMode() && activateNode(n)) render();
   };
+  el.onclick = e => { if (isFileMode()) { e.stopPropagation(); fileAction(n); } };
   el.onpointerdown = e => nodeDown(e, n);
   return el;
 }
@@ -1248,6 +1269,7 @@ function nodeDown(e, n) {
   if (touch) capture(e.pointerId);
 
   const m = mode();
+  if (isFileMode()) return; // handled by the node's click handler (no re-render, so the click survives)
   if (m === 'edit') { editingId = n.id; return render(); }
   if (m === 'link') { if (n.url) window.open(n.url, '_blank'); return; }
   if (m === 'arrow') return startArrow(e, n);
@@ -1362,6 +1384,7 @@ viewport.onpointerdown = e => {
   if (selectedLineId) { selectedLineId = null; render(); }
   const m = mode();
   if (m === 'edit' || m === 'link') return;
+  if (isFileMode()) return nearNode(toWorld(e.clientX, e.clientY), 20 / zoom) ? undefined : startPan(e);
 
   const p = toWorld(e.clientX, e.clientY);
   const near = nearNode(p, (m === 'drag' ? state.touchHitPad : 60) / zoom);
@@ -1373,7 +1396,7 @@ viewport.onpointerdown = e => {
   boxing ? startSelect(e, p) : startLine(e, p);
 };
 
-/* ---------- pointer plumbing ---------- */
+/* ======================= pointer plumbing ======================= */
 const touches = new Map(), ignored = new Set();
 let pinch = null, liveTouches = 0, lastTouchDown = 0;
 
@@ -1471,7 +1494,7 @@ function afterExternalChange() {
   saveState(); render();
 }
 function applyImportedJson(src) {
-  const keepTouch = Object.fromEntries(TOUCH_KEYS.map(k => [k, state[k]]));
+  const keepTouch = Object.fromEntries([...TOUCH_KEYS, 'includeSubfolders'].map(k => [k, state[k]]));
   state = { ...structuredClone(DEFAULTS), ...keepTouch, ...src, nodes: src.nodes || [], lines: normalizeLines(src.lines || []) };
   applyPanelOrder();
   afterExternalChange();
@@ -1480,6 +1503,18 @@ function applyImportedJson(src) {
 window.addEventListener('message', e => {
   const d = e.data;
   if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
+  if (d.type === 'cm-child-ready' && pendingChildren.has(e.source)) {
+    const payload = pendingChildren.get(e.source);
+    pendingChildren.delete(e.source);
+    return postIo({ type: 'cm-load-text', ...payload }, e.source);
+  }
+  if (d.type === 'cm-load-text' && e.source === window.opener) {
+    const parsed = parseGraphText(d.text);
+    state.nodes = parsed.nodes; state.lines = parsed.lines;
+    views[0].name = d.name || 'Main map';
+    afterExternalChange(); renderViews();
+    return;
+  }
   if (d.type === 'cm-io-ready') { ioWin = e.source; return postIo(ioPayload(), e.source); }
   if (e.source !== ioWin) return;
   const ack = (ok, message) => postIo({ type: 'cm-ack', ok, message }, e.source);
@@ -1505,10 +1540,226 @@ window.addEventListener('message', e => {
   }
 });
 
+/* ======================= file loading: open / expand / current window ======================= */
+const FILE_MODES = ['openfile', 'expandfile', 'opencurrent'];
+const isFileMode = () => FILE_MODES.includes(mode());
+const pendingChildren = new Map();
+let dirHandle = null;
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+function fileNameFor(text) { return text.trim().replace(/[\\/:*?"<>|]/g, '') + '.txt'; }
+
+/* --- remembered folder (File System Access API handle kept in IndexedDB, so it survives reloads) --- */
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('conceptmap-files', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(k) {
+  try { const db = await idb(); return await new Promise(res => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (err) { return null; }
+}
+async function idbSet(k, v) {
+  try { const db = await idb(); await new Promise(res => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = t.onerror = () => res(); }); } catch (err) {}
+}
+function setDirStatus(msg) {
+  $('pick-dir-status').textContent = msg;
+}
+
+// Recursive helper to search a directory and optionally subfolders for a file handle
+async function findFileHandleRecursive(dirH, fname, includeSub) {
+  try {
+    let perm = await dirH.queryPermission({ mode: 'read' });
+    if (perm !== 'granted') perm = await dirH.requestPermission({ mode: 'read' });
+    if (perm !== 'granted') return null;
+  } catch (err) {}
+
+  try {
+    return await dirH.getFileHandle(fname);
+  } catch (err) {
+    if (!includeSub) return null;
+    try {
+      for await (const [name, entry] of dirH.entries()) {
+        if (entry.kind === 'directory') {
+          const found = await findFileHandleRecursive(entry, fname, true);
+          if (found) return found;
+        }
+      }
+    } catch (ex) {}
+  }
+  return null;
+}
+
+async function readFromHandle(fname) {
+  if (!dirHandle) return null;
+  try {
+    const fileHandle = await findFileHandleRecursive(dirHandle, fname, state.includeSubfolders);
+    if (fileHandle) {
+      return await (await fileHandle.getFile()).text();
+    }
+  } catch (err) {}
+  return null;
+}
+
+async function fetchMapFile(nodeText) {
+  const fname = fileNameFor(nodeText);
+  if (fname === '.txt') return null;
+  return await readFromHandle(fname);
+}
+
+/* Pick folder using File System Access API */
+async function pickFolder() {
+  try {
+    dirHandle = await window.showDirectoryPicker({ id: 'conceptmap', mode: 'read' });
+    await idbSet('dir', dirHandle);
+    setDirStatus('Folder remembered: ' + dirHandle.name);
+    return true;
+  } catch (err) { return false; }
+}
+
+/* TXT parsing (same two formats as the Import/Export window) */
+function parseTextAndUrlLocal(s) { return parseTextAndUrl(s); }
+function lineDefaults() { return { width: +$('line-width').value, color:$('line-color').value }; }
+function parseSimpleTxt(text) {
+  const nodes = [], lines = [], idMap = new Map(), d = lineDefaults();
+  text.split(/\r?\n/).filter(l => l.trim()).forEach(line => {
+    const tk = line.trim().split(/\s+/);
+    if (tk.length < 3) return;
+    if (tk[0] === '-1' || tk[0] === '-2') {
+      lines.push({ id: uid(), from: idMap.get(tk[1]) || tk[1], to: idMap.get(tk[2]) || tk[2], arrow: tk[0] === '-2' ? 'none' : 'end', width: d.width, color: d.color, label: '' });
+      return;
+    }
+    let x = 80 + (nodes.length % 8) * 140, y = 140 + Math.floor(nodes.length / 8) * 60, content = tk.slice(1);
+    const py = parseFloat(tk[tk.length - 1]), px = parseFloat(tk[tk.length - 2]);
+    if (!isNaN(px) && !isNaN(py)) { x = px; y = py; content = tk.slice(1, -2); }
+    const id = uid(); idMap.set(tk[0], id);
+    nodes.push({ id, ...parseTextAndUrl(content.join(' ')), x, y, size: 'auto', collapsed: false });
+  });
+  return { nodes, lines };
+}
+function parseIndentTxt(text) {
+  const nodes = [], lines = [], stack = [], d = lineDefaults();
+  let y = 140;
+  text.split(/\r?\n/).filter(l => l.trim()).forEach(line => {
+    let lvl = 0, i = 0;
+    while (i < line.length) {
+      if (line[i] === '\t') { lvl++; i++; }
+      else if (line.substr(i, 4) === '    ') { lvl++; i += 4; }
+      else if (line.substr(i, 2) === '  ') { lvl++; i += 2; }
+      else break;
+    }
+    const node = { id: uid(), ...parseTextAndUrl(line.trim()), x: 80 + lvl * 180, y, size: 'auto', collapsed: false };
+    y += 50;
+    nodes.push(node);
+    stack[lvl] = node; stack.length = lvl + 1;
+    let parent = null;
+    for (let k = lvl - 1; k >= 0 && !parent; k--) parent = stack[k];
+    if (lvl > 0 && parent) lines.push({ id: uid(), from: parent.id, to: node.id, arrow: 'end', width: d.width, color: d.color, label: '' });
+  });
+  return { nodes, lines };
+}
+function parseGraphText(text) {
+  return /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text) ? parseSimpleTxt(text) : parseIndentTxt(text);
+}
+
+async function fileAction(n) {
+  const m = mode(), name = n.text;
+  if (!dirHandle && window.showDirectoryPicker) {
+    toast('Choose the folder that holds your .txt files...');
+    if (await pickFolder()) toast('Folder remembered. Click the box again.');
+    return;
+  }
+  let w = null;
+  if (m === 'openfile') w = window.open('', '_blank');
+  const text = await fetchMapFile(name);
+  if (text == null) {
+    if (w) w.close();
+    return toast(`No file "${fileNameFor(name)}" found.`);
+  }
+  if (m === 'openfile') {
+    if (!w) return toast('Pop-up blocked. Please allow pop-ups for this page.');
+    pendingChildren.set(w, { text, name });
+    w.location.href = location.href.split('#')[0] + '#child';
+  } else if (m === 'expandfile') {
+    const parsed = parseGraphText(text);
+    parsed.nodes.forEach(p => { p.x += n.x; p.y += n.y; });
+    state.nodes = state.nodes.concat(parsed.nodes);
+    state.lines = state.lines.concat(parsed.lines);
+    saveState(); render();
+    toast(`Expanded "${name}": ${parsed.nodes.length} nodes.`);
+  } else if (m === 'opencurrent') {
+    openInCurrent(name, parseGraphText(text));
+  }
+}
+
+/* ---------- nested view history for "open in current window" ---------- */
+const views = [{ name: 'Main map', depth: 0, nodes: null, lines: null }];
+let activeView = 0;
+const cloneJ = o => JSON.parse(JSON.stringify(o));
+
+function saveActiveView() { views[activeView].nodes = cloneJ(state.nodes); views[activeView].lines = cloneJ(state.lines); }
+function loadView(v) {
+  state.nodes = cloneJ(v.nodes); state.lines = cloneJ(v.lines);
+  selected.clear(); selectedLineId = null; editingId = null;
+  saveState(); render(); renderViews();
+}
+function openInCurrent(name, parsed) {
+  saveActiveView();
+  const v = { name, depth: views[activeView].depth + 1, nodes: parsed.nodes, lines: parsed.lines };
+  views.splice(activeView + 1, 0, v);
+  activeView++;
+  loadView(v);
+}
+function gotoView(i) {
+  if (i === activeView || !views[i]) return;
+  saveActiveView();
+  activeView = i;
+  loadView(views[i]);
+}
+function parentIndex() {
+  for (let i = activeView - 1; i >= 0; i--) if (views[i].depth < views[activeView].depth) return i;
+  return -1;
+}
+function renderViews() {
+  const list = $('views-list');
+  list.innerHTML = '';
+  views.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.className = 'view-btn' + (i === activeView ? ' active' : '');
+    b.style.marginLeft = (v.depth * 14) + 'px';
+    b.textContent = (i === activeView ? '\u25B6 ' : (v.depth ? '\u21B3 ' : '')) + v.name;
+    b.onclick = () => gotoView(i);
+    list.appendChild(b);
+  });
+  $('view-parent-btn').disabled = parentIndex() < 0; }$('view-parent-btn').onclick = () => { const p = parentIndex(); if (p >= 0) gotoView(p); };
+
+/* Initialize folder picker button if supported */
+if (window.showDirectoryPicker) {
+  $('pick-dir-btn').style.display = '';$('pick-dir-btn').onclick = pickFolder;
+  idbGet('dir').then(h => { 
+    if (h && !dirHandle) { 
+      dirHandle = h; 
+      setDirStatus('Folder remembered: ' + h.name); 
+    } 
+  });
+}
+
 /* ======================= start ======================= */
 applyPanelOrder();
 saveState();
 render();
+renderViews();
+if (window.opener && location.hash === '#child') {
+  try { window.opener.postMessage({ type: 'cm-child-ready' }, '*'); } catch (err) {}
+}
 </script>
 </body>
 </html>
