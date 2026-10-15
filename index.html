@@ -2426,9 +2426,29 @@
       }
     };
 
-    // --- DELETE KEY LISTENER FIX ---
+    // --- KEYBOARD SHORTCUTS & DELETE HANDLER ---
     window.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+      const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+
+      // Handle Undo (Ctrl+Z) and Redo (Ctrl+Y or Ctrl+Shift+Z)
+      if ((e.ctrlKey || e.metaKey) && !isInputActive) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+          return;
+        }
+        if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          redo();
+          return;
+        }
+      }
+
+      if (isInputActive) {
         return;
       }
 
