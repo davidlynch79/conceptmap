@@ -1,2795 +1,1342 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Concept Map</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-      background: #0d1b2a;
-      color: #e0e6ed;
-      overflow: hidden;
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      touch-action: none;
-      overscroll-behavior: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-text-size-adjust: 100%;
-    }
-    html { overscroll-behavior: none; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Concept Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html { overscroll-behavior: none; }
+  body {
+    --sw: 280px; /* sidebar width, set from JS */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    background: #0d1b2a; color: #e0e6ed;
+    position: fixed; inset: 0; overflow: hidden; display: flex; flex-direction: column;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
+  }
 
-    #toolbar.menu-hidden {
-      display: none !important;
-    }
+  /* ---------- form controls ---------- */
+  input[type=text], select, textarea {
+    background: #1b263b; border: 1px solid #778da9; color: #fff; padding: 6px; font: 11px monospace; outline: none;
+  }
+  input[type=text]:focus { border-color: #00b4d8; }
+  button {
+    background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 8px 12px;
+    font: 11px monospace; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; touch-action: manipulation;
+  }
+  button:hover { background: #0077b6; color: #fff; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+  .help-btn { background: #0077b6; border-color: #00b4d8; color: #fff; font-weight: bold; }
+  .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
+  .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
+  label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11.5px; }
+  input[type=checkbox], input[type=radio] { cursor: pointer; accent-color: #00b4d8; width: 18px; height: 18px; min-width: 18px; }
+  input[type=color] { border: none; width: 28px; height: 28px; cursor: pointer; background: transparent; padding: 0; }
+  .legend-up { color: #ffb703; font-weight: bold; }
+  .legend-down { color: #ff5d8f; font-weight: bold; }
 
-    body.menu-hidden #viewport {
-      margin: 0 !important;
-    }
+  /* ---------- toolbar + docking ---------- */
+  #toolbar {
+    background: #1b263b; border: 1px solid #415a77; padding: 8px; font-size: 11px; z-index: 150;
+    display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4);
+    overflow-x: hidden; overflow-y: scroll; max-height: 100vh;
+    scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a;
+  }
+  #toolbar::-webkit-scrollbar { width: 10px; }
+  #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
+  #toolbar::-webkit-scrollbar-thumb { background: #00b4d8; border: 2px solid #0d1b2a; border-radius: 5px; }
+  #toolbar.dock-top, #toolbar.dock-bottom, #toolbar.dock-floating { flex-direction: row; flex-wrap: wrap; }
+  #toolbar.dock-top { position: relative; border-width: 0 0 1px; max-height: 40vh; }
+  #toolbar.dock-bottom { position: absolute; inset: auto 0 0; border-width: 1px 0 0; max-height: 40vh; }
+  #toolbar.dock-left, #toolbar.dock-right { position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 150px; max-width: 85vw; }
+  #toolbar.dock-left { left: 0; border-width: 0 1px 0 0; }
+  #toolbar.dock-right { right: 0; border-width: 0 0 0 1px; }
+  #toolbar.dock-floating {
+    position: absolute; width: max-content; max-width: 90vw; max-height: 80vh;
+    border-color: #00b4d8; box-shadow: 0 8px 24px rgba(0,0,0,.7);
+  }
+  #toolbar-drag-handle {
+    display: none; width: 100%; padding: 8px; margin-bottom: 2px; background: #0d1b2a; color: #00f5d4;
+    font: 11px monospace; letter-spacing: 1px; text-align: center; cursor: move; border: 1px dashed #415a77;
+  }
+  .dock-floating #toolbar-drag-handle { display: block; }
 
-    body.menu-hidden #sidebar-resizer {
-      display: none !important;
-    }
+  .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; }
+  #toolbar:not(.dock-left):not(.dock-right) .tool-group { flex-direction: row; align-items: center; flex-wrap: wrap; }
+  #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+  .tool-group > button, .tool-group select, .tool-group input[type=text] { flex: 1; }
+  .tool-group label { white-space: nowrap; }
+  .cap { font-size: 9px; color: #00f5d4; font-weight: bold; }
+  .slider-label { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+  .slider-label input[type=range] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 22px; }
+  .slider-label b { color: #00f5d4; font-weight: normal; }
+  .slider-hint { color: #778da9; font-size: 9px; }
+  .range-wrap { position: relative; width: 100%; min-width: 120px; height: 22px; }
+  .range-wrap input { position: absolute; left: 0; top: 0; width: 100%; background: transparent; pointer-events: none; appearance: none; -webkit-appearance: none; }
+  .range-wrap input::-webkit-slider-thumb {
+    pointer-events: auto; cursor: pointer; appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px; background: #00b4d8; border-radius: 50%;
+  }
 
-    /* TOOLBAR BASE & GUARANTEED SCROLLBAR STYLES */
-    #toolbar {
-      background: #1b263b;
-      border: 1px solid #415a77;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 6px;
-      z-index: 150;
-      font-size: 11px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-      transition: transform 0.3s ease;
-      overflow-y: scroll !important;
-      overflow-x: hidden !important;
-      max-height: 100vh;
-      scrollbar-width: thin;
-      scrollbar-color: #00b4d8 #0d1b2a;
-    }
+  #sidebar-resizer { display: none; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; }
+  #sidebar-resizer:hover, #sidebar-resizer.resizing { background: #00b4d8; }
+  body[data-dock=left] #sidebar-resizer { display: block; left: calc(var(--sw) - 3px); }
+  body[data-dock=right] #sidebar-resizer { display: block; right: calc(var(--sw) - 3px); }
 
-    #toolbar::-webkit-scrollbar {
-      width: 10px !important;
-      display: block !important;
-    }
-    #toolbar::-webkit-scrollbar-track {
-      background: #0d1b2a !important;
-    }
-    #toolbar::-webkit-scrollbar-thumb {
-      background: #00b4d8 !important;
-      border-radius: 5px !important;
-      border: 2px solid #0d1b2a !important;
-    }
+  #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
 
-    /* Resizable Panel Splitter Handle */
-    #sidebar-resizer {
-      display: none;
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 10px;
-      background: #415a77;
-      cursor: col-resize;
-      z-index: 151;
-      transition: background 0.2s;
-    }
-    #sidebar-resizer:hover, #sidebar-resizer.resizing {
-      background: #00b4d8;
-    }
-    body.has-dock-left #sidebar-resizer,
-    body.has-dock-right #sidebar-resizer {
-      display: block;
-    }
+  /* ---------- canvas ---------- */
+  #viewport {
+    flex: 1; position: relative; overflow: auto; background: #0b132b;
+    scrollbar-color: #415a77 #0d1b2a; touch-action: none; overscroll-behavior: none;
+  }
+  body[data-dock=left] #viewport { margin-left: var(--sw); }
+  body[data-dock=right] #viewport { margin-right: var(--sw); }
+  #viewport::-webkit-scrollbar { width: 14px; height: 14px; }
+  #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
+  #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
+  #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
+  #world {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0;
+    background-image: linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  #selection-box { position: absolute; display: none; pointer-events: none; z-index: 50; border: 1px dashed #00f5d4; background: rgba(0,245,212,.15); }
 
-    /* Docking Positions */
-    #toolbar.dock-top {
-      position: relative;
-      width: 100%;
-      flex-direction: row;
-      flex-wrap: wrap;
-      border-width: 0 0 1px 0;
-      max-height: 40vh;
-    }
-    #toolbar.dock-bottom {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      flex-direction: row;
-      flex-wrap: wrap;
-      border-width: 1px 0 0 0;
-      max-height: 40vh;
-    }
-    #toolbar.dock-left {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: 280px;
-      min-width: 150px;
-      max-width: 85vw;
-      border-width: 0 1px 0 0;
-    }
-    #toolbar.dock-right {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      right: 0;
-      width: 280px;
-      min-width: 150px;
-      max-width: 85vw;
-      border-width: 0 0 0 1px;
-    }
-    #toolbar.dock-floating {
-      position: absolute;
-      width: max-content;
-      max-width: 90vw;
-      max-height: 80vh;
-      flex-direction: row;
-      flex-wrap: wrap;
-      border-width: 1px;
-      border-color: #00b4d8;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
-    }
+  body.menu-hidden #toolbar, body.menu-hidden #sidebar-resizer { display: none; }
+  body.menu-hidden #viewport { margin: 0; }
+  body.menu-hidden #top-bar-controls { display: flex; }
+  @media (max-width: 768px) {
+    body[data-dock] #viewport { margin: 0; }
+    body[data-dock] #sidebar-resizer { display: none; }
+    #toolbar.dock-left, #toolbar.dock-right { width: 280px; z-index: 300; }
+  }
 
-    #toolbar-drag-handle {
-      display: none;
-      width: 100%;
-      background: #0d1b2a;
-      color: #00f5d4;
-      font-size: 11px;
-      font-family: monospace;
-      padding: 8px;
-      cursor: move;
-      margin-bottom: 2px;
-      border: 1px dashed #415a77;
-      text-align: center;
-      letter-spacing: 1px;
-    }
-    #toolbar.dock-floating #toolbar-drag-handle {
-      display: block;
-    }
+  /* ---------- timeline ---------- */
+  #timeline-container {
+    position: absolute; top: 50px; left: 50px; width: 700px; height: 55px; z-index: 1;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 4px 10px 4px 4px;
+    background: rgba(27,38,59,.85); border: 1px dashed #778da9; box-shadow: 0 4px 12px rgba(0,0,0,.3); cursor: move; touch-action: none;
+  }
+  #timeline-container.hidden { display: none; }
+  .timeline-title { position: absolute; top: 2px; left: 6px; font: 9px monospace; color: #778da9; letter-spacing: 1px; pointer-events: none; }
+  .timeline-axis { position: absolute; bottom: 18px; left: 10px; right: 15px; height: 2px; background: rgba(0,180,216,.5); pointer-events: none; }
+  .timeline-tick { position: absolute; bottom: 18px; width: 1px; height: 8px; background: rgba(0,180,216,.7); pointer-events: none; }
+  .timeline-label { position: absolute; bottom: 2px; transform: translateX(-50%); font: 9px monospace; color: #90e0ef; white-space: nowrap; pointer-events: none; }
+  .timeline-resize-handle {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 16px; display: flex; align-items: center; justify-content: center;
+    background: rgba(65,90,119,.6); border-left: 1px solid #778da9; cursor: e-resize; font-size: 10px;
+  }
 
-    .tool-group {
-      display: flex;
-      align-items: stretch;
-      gap: 6px;
-      background: #0d1b2a;
-      padding: 6px;
-      border: 1px solid #415a77;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-    #toolbar.dock-top .tool-group,
-    #toolbar.dock-bottom .tool-group,
-    #toolbar.dock-floating .tool-group {
-      flex-direction: row;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+  /* ---------- lines ---------- */
+  #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+  #svg-layer path { pointer-events: stroke; cursor: pointer; }
+  .line-selected { stroke-dasharray: 4, 4; animation: dash 1s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -8; } }
+  .line-label-text { font: 10px monospace; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
 
-    .tool-group button,
-    .tool-group select,
-    .tool-group input[type="text"] {
-      width: 100%;
-      flex: 1;
-    }
-    #toolbar.dock-top .tool-group button,
-    #toolbar.dock-bottom .tool-group button,
-    #toolbar.dock-floating .tool-group button,
-    #toolbar.dock-top .tool-group select,
-    #toolbar.dock-bottom .tool-group select,
-    #toolbar.dock-floating .tool-group select,
-    #toolbar.dock-top .tool-group input[type="text"],
-    #toolbar.dock-bottom .tool-group input[type="text"],
-    #toolbar.dock-floating .tool-group input[type="text"] {
-      width: auto;
-    }
+  /* ---------- nodes ---------- */
+  .node {
+    position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px;
+    background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: nowrap;
+    box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none;
+  }
+  .node.fixed-size { display: block; white-space: normal; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
+  .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
+  .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
+  .node-content { line-height: 1.3; }
+  .node-content.has-url { color: #90e0ef; text-decoration: underline; }
+  .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
+  .collapse-btn { color: #00f5d4; font-weight: bold; cursor: pointer; margin-right: 2px; }
+  .node-resize-handle { display: none; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; z-index: 20; cursor: se-resize; color: #00f5d4; font-size: 12px; line-height: 14px; text-align: right; }
+  .node.selected .node-resize-handle { display: block; }
+  .node-edit-input {
+    width: 100%; height: 100%; min-width: 80px; min-height: 24px; padding: 4px; resize: both; overflow: auto;
+    background: #0d1b2a; border-color: #00f5d4; color: #00f5d4; user-select: text;
+  }
 
-    .tool-group label {
-      white-space: nowrap;
-      width: 100%;
-    }
-    #toolbar.dock-top .tool-group label,
-    #toolbar.dock-bottom .tool-group label,
-    #toolbar.dock-floating .tool-group label {
-      width: auto;
-    }
+  /* ---------- touch UI ---------- */
+  #zoom-controls { display: none; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 120; flex-direction: column; gap: 6px; }
+  body.touch-mode #zoom-controls { display: flex; }
+  #zoom-controls button { width: 48px; height: 48px; padding: 0; font-size: 22px; line-height: 1; background: rgba(27,38,59,.92); border-color: #00b4d8; color: #00f5d4; border-radius: 6px; }
+  #zoom-controls #zoom-reset-btn { font-size: 11px; }
+  body.touch-mode input[type=text], body.touch-mode select, body.touch-mode textarea { font-size: 16px; }
 
-    .row-inline {
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      width: 100% !important;
-    }
-    .row-inline * {
-      width: auto !important;
-    }
-
-    input[type="text"] {
-      background: #1b263b;
-      border: 1px solid #778da9;
-      color: #fff;
-      padding: 6px;
-      font-size: 11px;
-      font-family: monospace;
-      outline: none;
-    }
-    input[type="text"]:focus {
-      border-color: #00b4d8;
-    }
-    button {
-      background: #415a77;
-      border: 1px solid #778da9;
-      color: #e0e6ed;
-      padding: 8px 12px;
-      font-size: 11px;
-      font-family: monospace;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      touch-action: manipulation;
-    }
-    button:hover {
-      background: #0077b6;
-      color: #fff;
-    }
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
-    .help-btn { background: #0077b6; border-color: #00b4d8; color: #fff; font-weight: bold; }
-    .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 11.5px;
-      color: #e0e6ed;
-    }
-    input[type="checkbox"], input[type="radio"] {
-      cursor: pointer;
-      accent-color: #00b4d8;
-      width: 18px;
-      height: 18px;
-      min-width: 18px;
-    }
-    input[type="color"] {
-      border: none;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      background: transparent;
-      padding: 0;
-    }
-    select {
-      background: #1b263b;
-      border: 1px solid #778da9;
-      color: #fff;
-      padding: 6px;
-      font-size: 11px;
-      font-family: monospace;
-      outline: none;
-    }
-
-    #viewport {
-      flex: 1;
-      position: relative;
-      background-color: #0b132b;
-      overflow: auto;
-      scrollbar-color: #415a77 #0d1b2a;
-      touch-action: none;
-      overscroll-behavior: none;
-    }
-
-    #world {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      transform-origin: 0 0;
-      background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-      background-size: 20px 20px;
-    }
-
-    body.has-dock-left #viewport { margin-left: 280px; }
-    body.has-dock-right #viewport { margin-right: 280px; }
-
-    @media (max-width: 768px) {
-      body.has-dock-left #viewport, body.has-dock-right #viewport, body.has-dock-bottom #viewport, body.has-dock-top #viewport {
-        margin: 0 !important;
-      }
-      #toolbar.dock-left, #toolbar.dock-right {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        width: 280px !important;
-        max-width: 85vw;
-        max-height: 100vh;
-        flex-direction: column;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 300;
-      }
-      #toolbar.dock-left.mobile-open, #toolbar.dock-right.mobile-open {
-        transform: translateX(0%);
-      }
-      #sidebar-resizer { display: none !important; }
-    }
-
-    #viewport::-webkit-scrollbar { width: 14px; height: 14px; }
-    #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
-    #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
-    #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
-
-    .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
-    .legend-up { color: #ffb703; font-weight: bold; }
-    .legend-down { color: #ff5d8f; font-weight: bold; }
-
-    #selection-box {
-      position: absolute;
-      border: 1px dashed #00f5d4;
-      background: rgba(0, 245, 212, 0.15);
-      pointer-events: none;
-      z-index: 50;
-      display: none;
-    }
-
-    #timeline-container {
-      position: absolute;
-      top: 50px;
-      left: 50px;
-      width: 700px;
-      height: 55px;
-      background: rgba(27, 38, 59, 0.85);
-      border: 1px dashed #778da9;
-      z-index: 1;
-      cursor: move;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      padding: 4px 10px 4px 4px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      touch-action: none;
-    }
-    #timeline-container.hidden { display: none; }
-    .timeline-title {
-      position: absolute;
-      top: 2px;
-      left: 6px;
-      font-size: 9px;
-      font-family: monospace;
-      color: #778da9;
-      letter-spacing: 1px;
-      pointer-events: none;
-    }
-    .timeline-axis {
-      position: absolute;
-      bottom: 18px;
-      left: 10px;
-      right: 15px;
-      height: 2px;
-      background: rgba(0, 180, 216, 0.5);
-      pointer-events: none;
-    }
-    .timeline-tick {
-      position: absolute;
-      bottom: 18px;
-      width: 1px;
-      height: 8px;
-      background: rgba(0, 180, 216, 0.7);
-      pointer-events: none;
-    }
-    .timeline-label {
-      position: absolute;
-      bottom: 2px;
-      transform: translateX(-50%);
-      font-size: 9px;
-      font-family: monospace;
-      color: #90e0ef;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    .timeline-resize-handle {
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 16px;
-      background: rgba(65, 90, 119, 0.6);
-      border-left: 1px solid #778da9;
-      cursor: e-resize;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      color: #e0e6ed;
-    }
-
-    #svg-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2;
-    }
-    #svg-layer path {
-      pointer-events: stroke;
-      cursor: pointer;
-    }
-    .line-selected {
-      stroke-dasharray: 4, 4;
-      animation: dash 1s linear infinite;
-    }
-    @keyframes dash { to { stroke-dashoffset: -8; } }
-
-    .node {
-      position: absolute;
-      background: #1c2541;
-      border: 1px solid #48cae4;
-      color: #ffffff;
-      padding: 6px 10px;
-      font-family: monospace;
-      font-size: 11px;
-      white-space: nowrap;
-      cursor: move;
-      border-radius: 0 !important;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.6);
-      display: flex;
-      align-items: flex-start;
-      gap: 6px;
-      z-index: 10;
-      box-sizing: border-box;
-      touch-action: none;
-    }
-    .node.fixed-size {
-      white-space: normal;
-      word-wrap: break-word;
-      overflow-y: auto;
-      display: block;
-      padding-bottom: 14px;
-    }
-    .node.selected {
-      border-color: #00f5d4;
-      box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.5);
-    }
-    .node-resize-handle {
-      display: none;
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      width: 20px;
-      height: 20px;
-      cursor: se-resize;
-      color: #00f5d4;
-      font-size: 12px;
-      line-height: 14px;
-      text-align: right;
-      user-select: none;
-      z-index: 20;
-    }
-    .node.selected .node-resize-handle { display: block; }
-
-    .node .node-content { color: inherit; text-decoration: none; line-height: 1.3; }
-    .node .node-content.has-url { color: #90e0ef; text-decoration: underline; }
-    .node .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
-    .node .collapse-btn { color: #00f5d4; font-weight: bold; cursor: pointer; font-size: 11px; user-select: none; margin-right: 2px; }
-
-    .node-edit-input {
-      background: #0d1b2a;
-      border: 1px solid #00f5d4;
-      color: #00f5d4;
-      font-family: monospace;
-      font-size: 11px;
-      padding: 4px;
-      outline: none;
-      resize: both;
-      overflow: auto;
-      width: 100%;
-      height: 100%;
-      min-width: 80px;
-      min-height: 24px;
-      user-select: text;
-    }
-
-    .slider-label { flex-direction: column; align-items: stretch; gap: 2px; width: 100%; }
-    .slider-label input[type="range"] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 22px; }
-    .slider-hint { color: #778da9; font-size: 9px; }
-
-    .dual-slider-container { display: flex; flex-direction: column; gap: 2px; }
-    .dual-slider-inputs { display: flex; align-items: center; gap: 4px; width: 100%; }
-    .dual-slider-inputs input[type="text"] { width: 45px !important; text-align: center; padding: 2px; }
-    .range-slider-wrapper { position: relative; width: 100%; height: 22px; }
-    .range-slider-wrapper input[type="range"] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      background: transparent;
-      pointer-events: none;
-      appearance: none;
-      -webkit-appearance: none;
-    }
-    .range-slider-wrapper input[type="range"]::-webkit-slider-thumb {
-      pointer-events: auto;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #00b4d8;
-      border-radius: 50%;
-    }
-
-    .line-label-text { font-family: monospace; font-size: 10px; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
-    .line-label-bg { fill: #1b263b; stroke: #415a77; stroke-width: 1px; pointer-events: all; cursor: pointer; rx: 3px; ry: 3px; }
-    .line-label-bg.selected-bg { stroke: #00f5d4; fill: #0d1b2a; }
-
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(13, 27, 42, 0.85);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal-content {
-      background: #1b263b;
-      border: 1px solid #00b4d8;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      width: 600px; max-width: 90vw; max-height: 85vh;
-      display: flex; flex-direction: column; overflow: hidden;
-      color: #e0e6ed; font-family: monospace;
-    }
-    .modal-header { background: #0d1b2a; padding: 10px 16px; border-bottom: 1px solid #415a77; display: flex; justify-content: space-between; align-items: center; }
-    .modal-header h2 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; }
-    .modal-close { background: transparent; border: none; color: #ff4d6d; font-size: 20px; cursor: pointer; }
-    .modal-body { padding: 16px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
-    .help-section { margin-bottom: 16px; }
-    .help-section h3 { color: #90e0ef; font-size: 12px; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase; }
-    .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
-    .help-key { color: #00f5d4; font-weight: bold; }
-
-    #zoom-controls {
-      display: none;
-      position: absolute;
-      right: 12px;
-      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-      z-index: 120;
-      flex-direction: column;
-      gap: 6px;
-    }
-    body.touch-mode #zoom-controls { display: flex; }
-    #zoom-controls button {
-      width: 48px;
-      height: 48px;
-      padding: 0;
-      font-size: 22px;
-      line-height: 1;
-      background: rgba(27, 38, 59, 0.92);
-      border: 1px solid #00b4d8;
-      color: #00f5d4;
-      border-radius: 6px;
-    }
-    #zoom-controls #zoom-reset-btn { font-size: 11px; }
-
-    body.touch-mode input[type="text"],
-    body.touch-mode select,
-    body.touch-mode textarea,
-    body.touch-mode .node-edit-input {
-      font-size: 16px;
-    }
-  </style>
+  /* ---------- help modal ---------- */
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; justify-content: center; align-items: center; background: rgba(13,27,42,.85); backdrop-filter: blur(4px); }
+  .modal-overlay.active { display: flex; }
+  .modal-content { display: flex; flex-direction: column; width: 600px; max-width: 90vw; max-height: 85vh; overflow: hidden; background: #1b263b; border: 1px solid #00b4d8; box-shadow: 0 8px 32px rgba(0,0,0,.6); font-family: monospace; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #0d1b2a; border-bottom: 1px solid #415a77; }
+  .modal-header h2 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; }
+  .modal-close { background: transparent; border: none; color: #ff4d6d; font-size: 20px; }
+  .modal-body { padding: 16px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
+  .help-section { margin-bottom: 16px; }
+  .help-section h3 { color: #90e0ef; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; }
+  .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
+  .help-key { color: #00f5d4; font-weight: bold; }
+</style>
 </head>
-<body class="has-dock-left">
+<body data-dock="left">
 
-  <div id="top-bar-controls" style="position: absolute; top: 8px; left: 8px; z-index: 350; display: flex;">
-    <button id="floating-menu-btn" class="action-btn" type="button">☰ Menu</button>
+<div id="top-bar-controls"><button id="floating-menu-btn" class="action-btn">☰ Menu</button></div>
+
+<div id="toolbar" class="dock-left">
+  <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
+
+  <div class="tool-group row-inline">
+    <span class="cap" style="flex:1;text-align:center">☰ MENU</span>
+    <button id="toolbar-hide-btn" class="danger-btn">Hide</button>
   </div>
 
-  <div id="toolbar" class="dock-left">
-    <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
+  <div class="tool-group"><button id="io-btn" class="action-btn">Import / Export &#8599;</button></div>
 
-    <div class="tool-group row-inline">
-      <button id="toolbar-menu-btn" class="action-btn" type="button">☰ Menu</button>
-      <button id="toolbar-hide-btn" class="danger-btn" type="button">Hide</button>
+  <div class="tool-group">
+    <label>Interface Mode:
+      <select data-k="inputMode">
+        <option value="auto">Auto-Detect</option>
+        <option value="desktop">Desktop Mode</option>
+        <option value="touch">Touch / Phone Mode</option>
+      </select>
+    </label>
+    <label>Dock Position:
+      <select data-k="dockPosition">
+        <option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option>
+        <option value="right">Right</option><option value="floating">Floating</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="tool-group">
+    <span class="cap">INTERACTION MODE</span>
+    <label><input type="radio" name="im" data-k="interactionMode" value="all"> Do All 4</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Click and Drag Only</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows Only</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="edit"> Edit Cell Only</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="link"> Goto Link Only</label>
+  </div>
+
+  <div class="tool-group">
+    <span class="cap">TOUCH TUNING (ANTI-STICKY)</span>
+    <div class="slider-label">
+      <span>Drag starts after: <b data-out="touchDragThreshold" data-unit="px"></b></span>
+      <input type="range" data-k="touchDragThreshold" min="0" max="30" step="1">
+      <span class="slider-hint">higher = ignores finger jitter</span>
     </div>
-
-    <div class="tool-group">
-      <button id="io-btn" class="action-btn" type="button">Import / Export &#8599;</button>
+    <div class="slider-label">
+      <span>Node touch padding: <b data-out="touchHitPad" data-unit="px"></b></span>
+      <input type="range" data-k="touchHitPad" min="0" max="60" step="1">
+      <span class="slider-hint">near-miss touches still grab the node</span>
     </div>
-
-    <div class="tool-group">
-      <label>Interface Mode:
-        <select id="input-mode-select">
-          <option value="auto">Auto-Detect</option>
-          <option value="desktop">Desktop Mode</option>
-          <option value="touch">Touch / Phone Mode</option>
-        </select>
-      </label>
-      <label>Dock Position:
-        <select id="dock-position-select">
-          <option value="top">Top</option>
-          <option value="bottom">Bottom</option>
-          <option value="left" selected>Left</option>
-          <option value="right">Right</option>
-          <option value="floating">Floating</option>
-        </select>
-      </label>
+    <div class="slider-label">
+      <span>Hold before drag: <b data-out="touchHoldMs" data-unit="ms"></b></span>
+      <input type="range" data-k="touchHoldMs" min="0" max="600" step="25">
+      <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
     </div>
+    <label><input type="checkbox" data-k="touchIgnoreExtra"> Ignore extra fingers while dragging</label>
+    <label><input type="checkbox" data-k="touchAutoClear"> Auto-clear stuck touches</label>
+    <button id="tt-reset-btn">Reset touches now</button>
+  </div>
 
-    <div class="tool-group">
-      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">INTERACTION MODE</span>
-      <label><input type="radio" name="interaction-mode" value="all" checked> Do All 4</label>
-      <label><input type="radio" name="interaction-mode" value="drag"> Click and Drag Only</label>
-      <label><input type="radio" name="interaction-mode" value="arrow"> Draw Arrows Only</label>
-      <label><input type="radio" name="interaction-mode" value="edit"> Edit Cell Only</label>
-      <label><input type="radio" name="interaction-mode" value="link"> Goto Link Only</label>
-    </div>
+  <div class="tool-group">
+    <input type="text" id="node-text" placeholder="Box text or URL...">
+    <button id="add-btn">Add Box</button>
+    <button id="add-boxes-btn">Add Boxes</button>
+  </div>
 
-    <div class="tool-group" id="touch-tuning-group">
-      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">TOUCH TUNING (ANTI-STICKY)</span>
-      <label class="slider-label">Drag starts after: <span id="tt-thresh-label" style="color:#00f5d4;">8px</span>
-        <input type="range" id="tt-thresh" min="0" max="30" step="1" value="8">
-        <span class="slider-hint">higher = ignores finger jitter</span>
-      </label>
-      <label class="slider-label">Node touch padding: <span id="tt-pad-label" style="color:#00f5d4;">22px</span>
-        <input type="range" id="tt-pad" min="0" max="60" step="1" value="22">
-        <span class="slider-hint">near-miss touches still grab the node</span>
-      </label>
-      <label class="slider-label">Hold before drag: <span id="tt-hold-label" style="color:#00f5d4;">0ms</span>
-        <input type="range" id="tt-hold" min="0" max="600" step="25" value="0">
-        <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
-      </label>
-      <label><input type="checkbox" id="tt-ignore-extra" checked> Ignore extra fingers while dragging</label>
-      <label><input type="checkbox" id="tt-autoclear" checked> Auto-clear stuck touches</label>
-      <button id="tt-reset-btn" type="button">Reset touches now</button>
-    </div>
+  <div class="tool-group row-inline">
+    <button id="lock-btn" class="action-btn">Lock View</button>
+    <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
+  </div>
 
-    <div class="tool-group">
-      <input type="text" id="node-text" placeholder="Box text or URL..." />
-      <button id="add-btn" type="button">Add Box</button>
-      <button id="add-boxes-btn" type="button">Add Boxes</button>
-    </div>
+  <div class="tool-group">
+    <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
+    <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
+    <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
+  </div>
 
-    <div class="tool-group row-inline">
-      <button id="lock-btn" class="action-btn" type="button">Lock View</button>
-      <button id="unlock-btn" class="danger-btn" type="button" disabled>Unlock</button>
-    </div>
-
-    <div class="tool-group">
-      <button id="fit-screen-btn" class="action-btn" type="button">Fit Screen</button>
-      <button id="fit-box-btn" class="action-btn" type="button">Fit Grid in Box</button>
-      <button id="fit-seq-btn" class="action-btn" type="button">Fit Sequence in Region</button>
-    </div>
-
-    <div class="tool-group">
-      <label class="slider-label">Spacing <span class="slider-hint">&#9664; condense | expand &#9654;</span>
-        <input type="range" id="spread-slider" min="-100" max="100" value="0" step="1">
-      </label>
-      
-      <div class="slider-label dual-slider-container">
-        <span>Linkage Font Range</span>
-        <div class="range-slider-wrapper">
-          <input type="range" id="font-slider-min" min="6" max="36" value="10" step="1">
-          <input type="range" id="font-slider-max" min="6" max="36" value="11" step="1">
-        </div>
-        <div class="dual-slider-inputs">
-          <label style="font-size:9px;">Min: <input type="text" id="font-min-input" value="10"></label>
-          <label style="font-size:9px;">Max: <input type="text" id="font-max-input" value="11"></label>
-        </div>
+  <div class="tool-group">
+    <div class="slider-label">
+      <span>Linkage Font Range: <b data-out="fontMin"></b>&ndash;<b data-out="fontMax"></b></span>
+      <div class="range-wrap">
+        <input type="range" data-k="fontMin" min="6" max="36" step="1">
+        <input type="range" data-k="fontMax" min="6" max="36" step="1">
       </div>
-    </div>
-
-    <div class="tool-group">
-      <span style="font-size: 9px; color: #00f5d4; font-weight: bold;">DISTANCE-BASED LINE COLORING</span>
-      <div class="row-inline">
-        <label><input type="checkbox" id="color-dist1-chk"> 1 away line</label>
-        <input type="color" id="color-dist1-val" value="#ffb703">
-      </div>
-      <div class="row-inline">
-        <label><input type="checkbox" id="color-dist2-chk"> 2 away line</label>
-        <input type="color" id="color-dist2-val" value="#fb8500">
-      </div>
-      <div class="row-inline">
-        <label><input type="checkbox" id="color-dist3-chk"> 3 away line</label>
-        <input type="color" id="color-dist3-val" value="#ff006e">
-      </div>
-    </div>
-
-    <div class="tool-group">
-      <label class="slider-label">Hide nodes > dist: <span id="max-dist-label" style="color: #00f5d4;">∞</span>
-        <input type="range" id="max-distance-slider" min="1" max="10" value="10" step="1">
-      </label>
-    </div>
-
-    <div class="tool-group">
-      <label><input type="checkbox" id="auto-size-all-chk" checked> Auto-size All Nodes</label>
-      <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
-    </div>
-
-    <div class="tool-group">
-      <label><input type="checkbox" id="show-timeline-chk"> Timeline Overlay</label>
-      <label><input type="checkbox" id="show-urls-chk"> Show URLs</label>
-      <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
-      <label><input type="checkbox" id="select-region-chk"> Select Region</label>
-      <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
-    </div>
-
-    <div class="tool-group">
-      <label>Type:
-        <select id="arrow-style">
-          <option value="end">Arrow (->)</option>
-          <option value="none">Line (--)</option>
-        </select>
-      </label>
-      <label>Width:
-        <select id="line-width">
-          <option value="1" selected>Thin (1px)</option>
-          <option value="2">Medium (2px)</option>
-          <option value="4">Thick (4px)</option>
-          <option value="6">Extra Thick (6px)</option>
-        </select>
-      </label>
-      <div class="row-inline">
-        <label>Color:</label>
-        <input type="color" id="line-color" value="#00b4d8">
-      </div>
-    </div>
-
-    <div class="tool-group" id="line-controls-group" style="display: none; border-color: #00f5d4;">
-      <label>Line Label:
-        <input type="text" id="selected-line-label" placeholder="Enter label..." />
-      </label>
-      <button id="delete-line-btn" class="danger-btn" type="button">Delete Line</button>
-    </div>
-
-    <div class="tool-group">
-      <button id="undo-btn" type="button" disabled>Undo</button>
-      <button id="redo-btn" type="button" disabled>Redo</button>
-    </div>
-
-    <div class="tool-group">
-      <button id="clear-btn" class="danger-btn" type="button">Clear Map</button>
-    </div>
-
-    <div class="tool-group">
-      <button id="help-btn" class="help-btn" type="button">? Help Guide</button>
     </div>
   </div>
 
-  <div id="sidebar-resizer"></div>
+  <div class="tool-group">
+    <span class="cap">DISTANCE-BASED LINE COLORING</span>
+    <div class="row-inline"><label><input type="checkbox" data-k="colorDist1"> 1 away line</label><input type="color" data-k="colorDist1Hex"></div>
+    <div class="row-inline"><label><input type="checkbox" data-k="colorDist2"> 2 away line</label><input type="color" data-k="colorDist2Hex"></div>
+    <div class="row-inline"><label><input type="checkbox" data-k="colorDist3"> 3 away line</label><input type="color" data-k="colorDist3Hex"></div>
+  </div>
 
-  <div id="viewport">
-   <div id="world">
+  <div class="tool-group">
+    <div class="slider-label">
+      <span>Hide nodes &gt; dist: <b data-out="maxDistanceLimit"></b></span>
+      <input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1">
+    </div>
+  </div>
+
+  <div class="tool-group">
+    <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
+    <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
+  </div>
+
+  <div class="tool-group">
+    <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
+    <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
+    <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
+    <label><input type="checkbox" id="select-region-chk"> Select Region</label>
+    <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
+  </div>
+
+  <div class="tool-group">
+    <label>Type:
+      <select id="arrow-style"><option value="end">Arrow (-&gt;)</option><option value="none">Line (--)</option></select>
+    </label>
+    <label>Width:
+      <select id="line-width">
+        <option value="1" selected>Thin (1px)</option><option value="2">Medium (2px)</option>
+        <option value="4">Thick (4px)</option><option value="6">Extra Thick (6px)</option>
+      </select>
+    </label>
+    <div class="row-inline"><label>Color:</label><input type="color" id="line-color" value="#00b4d8"></div>
+  </div>
+
+  <div class="tool-group" id="line-controls-group" style="display:none;border-color:#00f5d4">
+    <label>Line Label: <input type="text" id="selected-line-label" placeholder="Enter label..."></label>
+    <button id="delete-line-btn" class="danger-btn">Delete Line</button>
+  </div>
+
+  <div class="tool-group">
+    <button id="undo-btn" disabled>Undo</button>
+    <button id="redo-btn" disabled>Redo</button>
+  </div>
+  <div class="tool-group"><button id="clear-btn" class="danger-btn">Clear Map</button></div>
+  <div class="tool-group"><button id="help-btn" class="help-btn">? Help Guide</button></div>
+</div>
+
+<div id="sidebar-resizer"></div>
+
+<div id="viewport">
+  <div id="world">
     <div id="selection-box"></div>
-
     <div id="timeline-container" class="hidden">
       <span class="timeline-title">1-YEAR TIMELINE</span>
       <div class="timeline-axis"></div>
       <div class="timeline-resize-handle">⋮</div>
     </div>
-
     <svg id="svg-layer">
       <defs></defs>
       <g id="lines-group"></g>
       <g id="labels-group"></g>
-      <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none;" />
+      <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none"/>
     </svg>
-   </div>
   </div>
+</div>
 
-  <div id="zoom-controls">
-    <button id="zoom-in-btn" type="button" aria-label="Zoom in">+</button>
-    <button id="zoom-reset-btn" type="button" aria-label="Reset zoom">100%</button>
-    <button id="zoom-out-btn" type="button" aria-label="Zoom out">&minus;</button>
-  </div>
+<div id="zoom-controls">
+  <button id="zoom-in-btn" aria-label="Zoom in">+</button>
+  <button id="zoom-reset-btn" aria-label="Reset zoom">100%</button>
+  <button id="zoom-out-btn" aria-label="Zoom out">&minus;</button>
+</div>
 
-  <div id="help-modal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Concept Map Guide</h2>
-        <button id="modal-close-btn" class="modal-close" type="button">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="help-section">
-          <h3>Drawing Arrows</h3>
-          <div class="help-grid">
-            <span class="help-key">Proximity Arrow</span>
-            <span>Click and drag near a node (outside its bounds) towards another node to grow and steer a live connection arrow. Release over the target node to create the line.</span>
-          </div>
+<div id="help-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header"><h2>Concept Map Guide</h2><button id="modal-close-btn" class="modal-close">&times;</button></div>
+    <div class="modal-body">
+      <div class="help-section">
+        <h3>Drawing Arrows</h3>
+        <div class="help-grid">
+          <span class="help-key">Proximity Arrow</span>
+          <span>Click and drag near a node (outside its bounds) towards another node to grow and steer a live connection arrow. Release over the target node to create the line.</span>
         </div>
-        <div class="help-section">
-          <h3>Touch Gestures</h3>
-          <div class="help-grid">
-            <span class="help-key">Pan</span>
-            <span>Drag one finger on empty space away from any node, or drag two fingers anywhere.</span>
-            <span class="help-key">Zoom</span>
-            <span>Pinch with two fingers, or use the + / &minus; buttons (tap the % to reset to 100%). Ctrl/Cmd + mouse wheel also zooms.</span>
-            <span class="help-key">Edit / open</span>
-            <span>Tap an already-selected box (without dragging) to edit it or open its link.</span>
-          </div>
+      </div>
+      <div class="help-section">
+        <h3>Touch Gestures</h3>
+        <div class="help-grid">
+          <span class="help-key">Pan</span>
+          <span>Drag one finger on empty space away from any node, or drag two fingers anywhere.</span>
+          <span class="help-key">Zoom</span>
+          <span>Pinch with two fingers, or use the + / &minus; buttons (tap the % to reset to 100%). Ctrl/Cmd + mouse wheel also zooms.</span>
+          <span class="help-key">Edit / open</span>
+          <span>Tap an already-selected box (without dragging) to edit it or open its link.</span>
         </div>
       </div>
     </div>
   </div>
-
-  <script>
-    const viewport = document.getElementById('viewport');
-    const world = document.getElementById('world');
-    const toolbar = document.getElementById('toolbar');
-    const sidebarResizer = document.getElementById('sidebar-resizer');
-    const toolbarDragHandle = document.getElementById('toolbar-drag-handle');
-    const dockPositionSelect = document.getElementById('dock-position-select');
-    const inputModeSelect = document.getElementById('input-mode-select');
-    const autoSizeAllChk = document.getElementById('auto-size-all-chk');
-    const svgLayer = document.getElementById('svg-layer');
-    const svgDefs = svgLayer.querySelector('defs');
-    const linesGroup = document.getElementById('lines-group');
-    const labelsGroup = document.getElementById('labels-group');
-    const liveDragArrow = document.getElementById('live-drag-arrow');
-    const timelineContainer = document.getElementById('timeline-container');
-    const timelineResizeHandle = timelineContainer.querySelector('.timeline-resize-handle');
-    const selectionBox = document.getElementById('selection-box');
-    
-    const toolbarMenuBtn = document.getElementById('toolbar-menu-btn');
-    const toolbarHideBtn = document.getElementById('toolbar-hide-btn');
-    const topBarControls = document.getElementById('top-bar-controls');
-    const floatingMenuBtn = document.getElementById('floating-menu-btn');
-
-    const nodeTextInput = document.getElementById('node-text');
-    const addBtn = document.getElementById('add-btn');
-    const addBoxesBtn = document.getElementById('add-boxes-btn');
-    const lockBtn = document.getElementById('lock-btn');
-    const unlockBtn = document.getElementById('unlock-btn');
-    const fitScreenBtn = document.getElementById('fit-screen-btn');
-    const fitBoxBtn = document.getElementById('fit-box-btn');
-    const fitSeqBtn = document.getElementById('fit-seq-btn');
-    const highlightChainChk = document.getElementById('highlight-chain-chk');
-    const spreadSlider = document.getElementById('spread-slider');
-    
-    const fontSliderMin = document.getElementById('font-slider-min');
-    const fontSliderMax = document.getElementById('font-slider-max');
-    const fontMinInput = document.getElementById('font-min-input');
-    const fontMaxInput = document.getElementById('font-max-input');
-
-    const colorDist1Chk = document.getElementById('color-dist1-chk');
-    const colorDist1Val = document.getElementById('color-dist1-val');
-    const colorDist2Chk = document.getElementById('color-dist2-chk');
-    const colorDist2Val = document.getElementById('color-dist2-val');
-    const colorDist3Chk = document.getElementById('color-dist3-chk');
-    const colorDist3Val = document.getElementById('color-dist3-val');
-    const maxDistanceSlider = document.getElementById('max-distance-slider');
-    const maxDistLabel = document.getElementById('max-dist-label');
-
-    const showTimelineChk = document.getElementById('show-timeline-chk');
-    const showUrlsChk = document.getElementById('show-urls-chk');
-    const editTextChk = document.getElementById('edit-text-chk');
-    const selectRegionChk = document.getElementById('select-region-chk');
-    const dragGraphChk = document.getElementById('drag-graph-chk');
-    const arrowStyleSelect = document.getElementById('arrow-style');
-    const lineWidthSelect = document.getElementById('line-width');
-    const lineColorPicker = document.getElementById('line-color');
-
-    const lineControlsGroup = document.getElementById('line-controls-group');
-    const selectedLineLabelInput = document.getElementById('selected-line-label');
-    const deleteLineBtn = document.getElementById('delete-line-btn');
-
-    const undoBtn = document.getElementById('undo-btn');
-    const redoBtn = document.getElementById('redo-btn');
-    const clearBtn = document.getElementById('clear-btn');
-
-    const helpBtn = document.getElementById('help-btn');
-    const helpModal = document.getElementById('help-modal');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-
-    let state = {
-      nodes: [],
-      lines: [],
-      showTimeline: false,
-      showUrls: false,
-      timelinePos: { x: 50, y: 50, width: 700 },
-      dockPosition: 'left',
-      sidebarWidth: 280,
-      floatingPos: { x: 20, y: 20 },
-      fontMin: 10,
-      fontMax: 11,
-      maxLinksBound: 1,
-      colorDist1: false,
-      colorDist1Hex: '#ffb703',
-      colorDist2: false,
-      colorDist2Hex: '#fb8500',
-      colorDist3: false,
-      colorDist3Hex: '#ff006e',
-      maxDistanceLimit: 10,
-      inputMode: 'auto',
-      autoSizeAll: true,
-      interactionMode: 'all',
-      touchDragThreshold: 8,
-      touchHitPad: 22,
-      touchHoldMs: 0,
-      touchIgnoreExtra: true,
-      touchAutoClear: true
-    };
-
-    const TOUCH_DEFAULTS = { touchDragThreshold: 8, touchHitPad: 22, touchHoldMs: 0, touchIgnoreExtra: true, touchAutoClear: true };
-    function tcfg(k) { return state[k] !== undefined ? state[k] : TOUCH_DEFAULTS[k]; }
-
-    let isLocked = false;
-    let lockedStateSnapshot = null;
-    let historyStack = [];
-    let historyIndex = -1;
-
-    let selectedNodeIds = new Set();
-    let selectedLineId = null;
-    let selectedSourceNode = null;
-    let editingNodeId = null;
-
-    let draggingNode = null;
-    let isDrivingArrow = false;
-    let driveSourceNode = null;
-    let driveStartClient = { x: 0, y: 0 };
-    let hoveredTargetNodeId = null;
-
-    let resizingNode = null;
-    let draggingTimeline = false;
-    let resizingTimeline = false;
-    let draggingToolbar = false;
-    let resizingSidebar = false;
-    let isSelectingBox = false;
-    let isFittingBox = false;
-    let fitMode = null;
-
-    let dragOffset = { x: 0, y: 0 };
-    let initialPositions = new Map();
-    let boxSelectStart = { x: 0, y: 0 };
-    let resizeStartDimensions = { width: 0, height: 0, startX: 0, startY: 0 };
-    let lineDrawStart = null;
-    let menuHidden = false;
-
-    let zoom = 1;
-    const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
-    const activePointers = new Map();
-    const capturedPointers = new Set();
-    let pinching = false, pinchStart = null;
-    let panning = false, panStart = null;
-    let tapCandidate = null;
-
-    // --- touch robustness state ---
-    const ignoredPointers = new Set();   // extra / stray fingers we deliberately ignore
-    let dragActive = false;              // node drag has passed the start threshold
-    let dragDownPt = { x: 0, y: 0 };
-    let dragDownTime = 0;
-    let dragThresh = 0;
-    let dragHoldMs = 0;
-    let dragFrameQueued = false;
-    let liveTouches = 0;                 // real finger count from touch events
-    let lastTouchDownTime = 0;
-
-    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    function generateId() {
-      return 'id_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    function normalizeLines(lines) {
-      return lines.map(l => {
-        const out = Object.assign({}, l);
-        if (out.arrow === 'start') {
-          const t = out.from; out.from = out.to; out.to = t;
-          out.arrow = 'end';
-        } else if (out.arrow !== 'none') {
-          out.arrow = 'end';
-        }
-        return out;
-      });
-    }
-
-    function isTouchActive() {
-      const mode = state.inputMode || 'auto';
-      const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
-      return (mode === 'touch' || (mode === 'auto' && isTouchDevice));
-    }
-
-    function updateInputModeUI() {
-      if (isTouchActive()) {
-        document.body.classList.add('touch-mode');
-      } else {
-        document.body.classList.remove('touch-mode');
-      }
-    }
-
-    inputModeSelect.onchange = (e) => {
-      state.inputMode = e.target.value;
-      updateInputModeUI();
-      saveState();
-    };
-
-    document.querySelectorAll('input[name="interaction-mode"]').forEach(radio => {
-      radio.onchange = (e) => {
-        if (e.target.checked) {
-          state.interactionMode = e.target.value;
-          saveState();
-        }
-      };
-    });
-
-    const ttThresh = document.getElementById('tt-thresh');
-    const ttThreshLabel = document.getElementById('tt-thresh-label');
-    const ttPad = document.getElementById('tt-pad');
-    const ttPadLabel = document.getElementById('tt-pad-label');
-    const ttHold = document.getElementById('tt-hold');
-    const ttHoldLabel = document.getElementById('tt-hold-label');
-    const ttIgnoreExtra = document.getElementById('tt-ignore-extra');
-    const ttAutoClear = document.getElementById('tt-autoclear');
-    const ttResetBtn = document.getElementById('tt-reset-btn');
-
-    function bindTouchSlider(input, label, key, unit) {
-      input.oninput = (e) => {
-        state[key] = parseInt(e.target.value, 10);
-        label.textContent = state[key] + unit;
-      };
-      input.onchange = () => saveState();
-    }
-    bindTouchSlider(ttThresh, ttThreshLabel, 'touchDragThreshold', 'px');
-    bindTouchSlider(ttPad, ttPadLabel, 'touchHitPad', 'px');
-    bindTouchSlider(ttHold, ttHoldLabel, 'touchHoldMs', 'ms');
-    ttIgnoreExtra.onchange = (e) => { state.touchIgnoreExtra = e.target.checked; saveState(); };
-    ttAutoClear.onchange = (e) => { state.touchAutoClear = e.target.checked; saveState(); };
-    ttResetBtn.onclick = () => { resetTouchState(); render(); };
-
-    const narrowQuery = window.matchMedia('(max-width: 768px)');
-
-    function syncMenuUI() {
-      toolbar.classList.toggle('menu-hidden', menuHidden);
-      document.body.classList.toggle('menu-hidden', menuHidden);
-      toolbar.classList.toggle('mobile-open', !menuHidden && narrowQuery.matches);
-      topBarControls.style.display = menuHidden ? 'flex' : 'none';
-    }
-
-    function showMenu() {
-      menuHidden = false;
-      syncMenuUI();
-    }
-
-    function hideMenu() {
-      menuHidden = true;
-      syncMenuUI();
-    }
-
-    function bindMenuToggle(btn, handler) {
-      if (!btn) return;
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handler();
-      };
-    }
-
-    bindMenuToggle(toolbarMenuBtn, showMenu);
-    bindMenuToggle(floatingMenuBtn, showMenu);
-    bindMenuToggle(toolbarHideBtn, hideMenu);
-
-    menuHidden = narrowQuery.matches;
-    narrowQuery.addEventListener('change', (e) => {
-      menuHidden = e.matches;
-      syncMenuUI();
-    });
-
-    function parseTextAndUrl(input) {
-      const urlRegex = /(https?:\/\/[^\s]+)/gi;
-      const match = input.match(urlRegex);
-      if (match) {
-        const url = match[0];
-        let text = input.replace(url, '').trim();
-        if (!text) text = url;
-        return { text, url };
-      }
-      return { text: input.trim() || 'Node', url: null };
-    }
-
-    function updateSelectedLineProperty(prop, value) {
-      if (selectedLineId) {
-        const line = state.lines.find(l => l.id === selectedLineId);
-        if (line) {
-          line[prop] = value;
-          render();
-          saveState();
-        }
-      }
-    }
-
-    arrowStyleSelect.onchange = (e) => updateSelectedLineProperty('arrow', e.target.value);
-    lineWidthSelect.onchange = (e) => updateSelectedLineProperty('width', parseInt(e.target.value, 10));
-    lineColorPicker.oninput = (e) => updateSelectedLineProperty('color', e.target.value);
-
-    colorDist1Chk.onchange = (e) => { state.colorDist1 = e.target.checked; saveState(); render(); };
-    colorDist1Val.oninput = (e) => { state.colorDist1Hex = e.target.value; render(); };
-    colorDist2Chk.onchange = (e) => { state.colorDist2 = e.target.checked; saveState(); render(); };
-    colorDist2Val.oninput = (e) => { state.colorDist2Hex = e.target.value; render(); };
-    colorDist3Chk.onchange = (e) => { state.colorDist3 = e.target.checked; saveState(); render(); };
-    colorDist3Val.oninput = (e) => { state.colorDist3Hex = e.target.value; render(); };
-
-    maxDistanceSlider.oninput = (e) => {
-      if (isLocked) return;
-      const val = parseInt(e.target.value, 10);
-      state.maxDistanceLimit = val;
-      maxDistLabel.textContent = val >= 10 ? '∞' : val;
-      render();
-    };
-
-    lockBtn.onclick = () => {
-      isLocked = true;
-      lockedStateSnapshot = {
-        selectedNodeIds: new Set(selectedNodeIds),
-        hiddenNodeIds: new Set(getHiddenNodeIds()),
-        maxDistanceLimit: state.maxDistanceLimit
-      };
-      lockBtn.disabled = true;
-      unlockBtn.disabled = false;
-      render();
-    };
-
-    unlockBtn.onclick = () => {
-      if (!isLocked) return;
-      isLocked = false;
-      if (lockedStateSnapshot) {
-        selectedNodeIds = new Set(lockedStateSnapshot.selectedNodeIds);
-        state.maxDistanceLimit = lockedStateSnapshot.maxDistanceLimit;
-        lockedStateSnapshot = null;
-      }
-      unlockBtn.disabled = true;
-      lockBtn.disabled = false;
-      render();
-    };
-
-    sidebarResizer.onpointerdown = (e) => {
-      e.stopPropagation();
-      resizingSidebar = true;
-      sidebarResizer.classList.add('resizing');
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    };
-
-    function applyDockPosition(pos) {
-      toolbar.className = `dock-${pos}`;
-      document.body.className = `has-dock-${pos}`;
-      syncMenuUI();
-      updateInputModeUI();
-
-      toolbar.style.left = '';
-      toolbar.style.top = '';
-      toolbar.style.width = '';
-
-      if (pos === 'left' || pos === 'right') {
-        const width = state.sidebarWidth || 280;
-        toolbar.style.width = `${width}px`;
-        if (pos === 'left') {
-          viewport.style.marginLeft = `${width}px`;
-          viewport.style.marginRight = '0px';
-          sidebarResizer.style.left = `${width - 3}px`;
-          sidebarResizer.style.right = '';
-        } else {
-          viewport.style.marginRight = `${width}px`;
-          viewport.style.marginLeft = '0px';
-          sidebarResizer.style.right = `${width - 3}px`;
-          sidebarResizer.style.left = '';
-        }
-      } else {
-        viewport.style.marginLeft = '0px';
-        viewport.style.marginRight = '0px';
-      }
-
-      if (pos === 'floating') {
-        toolbar.style.left = (state.floatingPos.x || 20) + 'px';
-        toolbar.style.top = (state.floatingPos.y || 20) + 'px';
-      }
-    }
-
-    dockPositionSelect.onchange = (e) => {
-      state.dockPosition = e.target.value;
-      applyDockPosition(state.dockPosition);
-      saveState();
-    };
-
-    autoSizeAllChk.onchange = (e) => {
-      state.autoSizeAll = e.target.checked;
-      if (state.autoSizeAll) {
-        state.nodes.forEach(n => {
-          n.size = 'auto';
-          delete n.customWidth;
-          delete n.customHeight;
-        });
-      }
-      saveState();
-      render();
-    };
-
-    toolbarDragHandle.onpointerdown = (e) => {
-      if (state.dockPosition !== 'floating') return;
-      draggingToolbar = true;
-      dragOffset.x = e.clientX - toolbar.offsetLeft;
-      dragOffset.y = e.clientY - toolbar.offsetTop;
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    };
-
-    function openHelpModal() { helpModal.classList.add('active'); }
-    function closeHelpModal() { helpModal.classList.remove('active'); }
-    helpBtn.onclick = openHelpModal;
-    modalCloseBtn.onclick = closeHelpModal;
-    helpModal.onclick = (e) => { if (e.target === helpModal) closeHelpModal(); };
-
-    const CHAIN_UP_COLOR = '#ffb703';
-    const CHAIN_DOWN_COLOR = '#ff5d8f';
-    const CHAIN_BOTH_COLOR = '#ffffff';
-
-    function getDirectedEdges(line) {
-      if (line.arrow === 'end') return [[line.from, line.to]];
-      if (line.arrow === 'start') return [[line.to, line.from]];
-      return [[line.from, line.to], [line.to, line.from]];
-    }
-
-    function computeNodeDistances() {
-      const distances = new Map();
-      const lineDistances = new Map();
-      if (selectedNodeIds.size === 0) return { distances, lineDistances };
-
-      const queue = [];
-      selectedNodeIds.forEach(id => {
-        distances.set(id, 0);
-        queue.push(id);
-      });
-
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        const d = distances.get(curr);
-
-        state.lines.forEach(line => {
-          getDirectedEdges(line).forEach(([p, c]) => {
-            if (p === curr) {
-              const curLineDist = lineDistances.get(line.id) !== undefined ? lineDistances.get(line.id) : Infinity;
-              if (d + 1 < curLineDist) lineDistances.set(line.id, d + 1);
-
-              if (!distances.has(c)) {
-                distances.set(c, d + 1);
-                queue.push(c);
-              }
-            }
-          });
-        });
-      }
-      return { distances, lineDistances };
-    }
-
-    function computeChain(startId) {
-      const up = new Set();
-      const down = new Set();
-      const downSeen = new Set([startId]);
-      const downQueue = [startId];
-      while (downQueue.length) {
-        const curr = downQueue.shift();
-        state.lines.forEach(line => {
-          getDirectedEdges(line).forEach(([p, c]) => {
-            if (p === curr) {
-              down.add(line.id);
-              if (!downSeen.has(c)) { downSeen.add(c); downQueue.push(c); }
-            }
-          });
-        });
-      }
-      const upSeen = new Set([startId]);
-      const upQueue = [startId];
-      while (upQueue.length) {
-        const curr = upQueue.shift();
-        state.lines.forEach(line => {
-          getDirectedEdges(line).forEach(([p, c]) => {
-            if (c === curr) {
-              up.add(line.id);
-              if (!upSeen.has(p)) { upSeen.add(p); upQueue.push(p); }
-            }
-          });
-        });
-      }
-      return { up, down };
-    }
-
-    highlightChainChk.onchange = () => render();
-
-    function getNodeLinkCounts() {
-      const counts = new Map();
-      state.nodes.forEach(n => counts.set(n.id, 0));
-      state.lines.forEach(l => {
-        if (counts.has(l.from)) counts.set(l.from, counts.get(l.from) + 1);
-        if (counts.has(l.to)) counts.set(l.to, counts.get(l.to) + 1);
-      });
-      return counts;
-    }
-
-    function getMaxLinks() {
-      const counts = getNodeLinkCounts();
-      let max = 1;
-      counts.forEach(cnt => { if (cnt > max) max = cnt; });
-      return max;
-    }
-
-    function getNodeFont(nodeId) {
-      const counts = getNodeLinkCounts();
-      const links = counts.get(nodeId) || 0;
-      const fMin = state.fontMin || 10;
-      const fMax = state.fontMax || 11;
-      const maxB = Math.max(1, state.maxLinksBound || 1);
-      if (links <= 1) return fMin;
-      if (links >= maxB) return fMax;
-      const ratio = (links - 1) / (maxB - 1);
-      return Math.round(fMin + ratio * (fMax - fMin));
-    }
-
-    function getNodeFontScale(nodeId) { return getNodeFont(nodeId) / 11; }
-
-    fontSliderMin.oninput = (e) => {
-      let val = parseInt(e.target.value, 10);
-      if (val > state.fontMax) val = state.fontMax;
-      state.fontMin = val;
-      fontMinInput.value = val;
-      render();
-    };
-    fontSliderMax.oninput = (e) => {
-      let val = parseInt(e.target.value, 10);
-      if (val < state.fontMin) val = state.fontMin;
-      state.fontMax = val;
-      fontMaxInput.value = val;
-      render();
-    };
-
-    function setFitMode(mode) {
-      fitMode = mode;
-      isFittingBox = !!mode;
-      fitBoxBtn.classList.toggle('fit-active', mode === 'grid');
-      fitSeqBtn.classList.toggle('fit-active', mode === 'sequence');
-      viewport.style.cursor = mode ? 'crosshair' : '';
-    }
-
-    fitBoxBtn.onclick = () => { if (selectedNodeIds.size === 0) { alert("Select at least one node first."); return; } setFitMode(fitMode === 'grid' ? null : 'grid'); };
-    fitSeqBtn.onclick = () => { if (selectedNodeIds.size === 0) { alert("Select at least one node first."); return; } setFitMode(fitMode === 'sequence' ? null : 'sequence'); };
-
-    fitScreenBtn.onclick = () => {
-      const hiddenNodeIds = getHiddenNodeIds();
-      const visibleNodes = state.nodes.filter(n => !hiddenNodeIds.has(n.id));
-      if (visibleNodes.length === 0) return;
-      const padding = 30;
-      const pad = padding / zoom;
-      arrangeNodesInGrid(visibleNodes, {
-        x: viewport.scrollLeft / zoom + pad,
-        y: viewport.scrollTop / zoom + pad,
-        width: Math.max(60, viewport.clientWidth / zoom - pad * 2),
-        height: Math.max(40, viewport.clientHeight / zoom - pad * 2)
-      });
-      saveState();
-      render();
-    };
-
-    function arrangeNodesInGrid(nodes, rect) {
-      const count = nodes.length;
-      if (count === 0) return;
-      const sizes = nodes.map(n => getNodeRect(n));
-      const maxW = Math.max(...sizes.map(sz => sz.width));
-      const maxH = Math.max(...sizes.map(sz => sz.height));
-      let cols = 1, bestScale = -Infinity;
-      for (let c = 1; c <= count; c++) {
-        const r = Math.ceil(count / c);
-        const scale = Math.min((rect.width / c) / maxW, (rect.height / r) / maxH);
-        if (scale > bestScale + 1e-9) { bestScale = scale; cols = c; }
-      }
-      const rows = Math.ceil(count / cols);
-      const cellW = rect.width / cols;
-      const cellH = rect.height / rows;
-      nodes.forEach((node, i) => {
-        const c = i % cols, r = Math.floor(i / cols), sz = sizes[i];
-        node.x = Math.max(0, Math.round(rect.x + c * cellW + Math.max(0, (cellW - sz.width) / 2)));
-        node.y = Math.max(0, Math.round(rect.y + r * cellH + Math.max(0, (cellH - sz.height) / 2)));
-      });
-    }
-
-    function arrangeNodesInSequence(nodes, rect) {
-      if (nodes.length === 0) return;
-      const sizes = nodes.map(n => getNodeRect(n));
-      const maxW = Math.max(...sizes.map(sz => sz.width));
-      const maxH = Math.max(...sizes.map(sz => sz.height));
-      const spanX = Math.max(0, rect.width - maxW);
-      const spanY = Math.max(0, rect.height - maxH);
-      nodes.forEach((node, i) => {
-        const t = nodes.length > 1 ? i / (nodes.length - 1) : 0;
-        node.x = Math.max(0, Math.round(rect.x + t * spanX));
-        node.y = Math.max(0, Math.round(rect.y + t * spanY));
-      });
-    }
-
-    function updateCanvasExtent() {
-      let maxR = 0, maxB = 0;
-      viewport.querySelectorAll('.node').forEach(el => {
-        maxR = Math.max(maxR, el.offsetLeft + el.offsetWidth);
-        maxB = Math.max(maxB, el.offsetTop + el.offsetHeight);
-      });
-      world.style.width = Math.max(Math.floor(viewport.clientWidth / zoom), maxR + 200) + 'px';
-      world.style.height = Math.max(Math.floor(viewport.clientHeight / zoom), maxB + 200) + 'px';
-    }
-
-    function updateTimelineTicks() {
-      const now = new Date();
-      const currentMonthIndex = now.getMonth();
-      const currentYearShort = String(now.getFullYear()).slice(-2);
-      const nextYearShort = String(now.getFullYear() + 1).slice(-2);
-      timelineContainer.querySelectorAll('.timeline-tick, .timeline-label').forEach(e => e.remove());
-      const paddingLeft = 10, paddingRight = 15;
-      const usableWidth = state.timelinePos.width - paddingLeft - paddingRight;
-
-      for (let i = 0; i <= 12; i++) {
-        const xPos = paddingLeft + (i / 12) * usableWidth;
-        const tick = document.createElement('div');
-        tick.className = 'timeline-tick';
-        tick.style.left = xPos + 'px';
-        timelineContainer.appendChild(tick);
-
-        if (i < 12) {
-          const label = document.createElement('div');
-          label.className = 'timeline-label';
-          label.style.left = (xPos + (usableWidth / 24)) + 'px';
-          const monthIdx = (currentMonthIndex + i) % 12;
-          const yearVal = (currentMonthIndex + i >= 12) ? nextYearShort : currentYearShort;
-          label.textContent = `${MONTHS[monthIdx]} '${yearVal}`;
-          timelineContainer.appendChild(label);
-        }
-      }
-    }
-
-    function getHiddenNodeIds() {
-      if (isLocked && lockedStateSnapshot) return lockedStateSnapshot.hiddenNodeIds;
-      const hiddenIds = new Set();
-      const childrenMap = new Map();
-      state.lines.forEach(line => {
-        let parentId = line.from, childId = line.to;
-        if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
-        if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
-        childrenMap.get(parentId).push(childId);
-      });
-      function hideDescendants(parentId) {
-        (childrenMap.get(parentId) || []).forEach(childId => {
-          if (!hiddenIds.has(childId)) { hiddenIds.add(childId); hideDescendants(childId); }
-        });
-      }
-      state.nodes.forEach(node => { if (node.collapsed) hideDescendants(node.id); });
-      if (selectedNodeIds.size > 0 && state.maxDistanceLimit < 10) {
-        const { distances } = computeNodeDistances();
-        state.nodes.forEach(node => {
-          const d = distances.get(node.id);
-          if (d === undefined || d > state.maxDistanceLimit) hiddenIds.add(node.id);
-        });
-      }
-      return hiddenIds;
-    }
-
-    function saveState() {
-      historyStack = historyStack.slice(0, historyIndex + 1);
-      historyStack.push(JSON.stringify(state));
-      if (historyStack.length > 50) historyStack.shift();
-      else historyIndex++;
-      updateHistoryButtons();
-    }
-
-    function updateHistoryButtons() {
-      undoBtn.disabled = historyIndex <= 0;
-      redoBtn.disabled = historyIndex >= historyStack.length - 1;
-    }
-
-    function undo() {
-      if (historyIndex > 0) {
-        historyIndex--;
-        state = JSON.parse(historyStack[historyIndex]);
-        selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
-        render(); updateHistoryButtons();
-      }
-    }
-
-    function redo() {
-      if (historyIndex < historyStack.length - 1) {
-        historyIndex++;
-        state = JSON.parse(historyStack[historyIndex]);
-        selectedNodeIds.clear(); selectedLineId = null; editingNodeId = null;
-        render(); updateHistoryButtons();
-      }
-    }
-
-    function createBox() {
-      const rawInput = nodeTextInput.value;
-      if (!rawInput.trim()) return;
-      const parsed = parseTextAndUrl(rawInput);
-      const count = state.nodes.length;
-      state.nodes.push({
-        id: generateId(), text: parsed.text, url: parsed.url,
-        x: 80 + (count % 10) * 20, y: 140 + (count % 10) * 20, size: 'auto', collapsed: false
-      });
-      nodeTextInput.value = '';
-      saveState(); render();
-    }
-
-    function createBoxes() {
-      const rawInput = nodeTextInput.value.trim();
-      if (!rawInput) return;
-      rawInput.split(/\s+/).filter(w => w.length > 0).forEach(word => {
-        const parsed = parseTextAndUrl(word);
-        const count = state.nodes.length;
-        state.nodes.push({
-          id: generateId(), text: parsed.text, url: parsed.url,
-          x: 80 + (count % 10) * 20, y: 140 + (count % 10) * 20, size: 'auto', collapsed: false
-        });
-      });
-      nodeTextInput.value = '';
-      saveState(); render();
-    }
-
-    function render() {
-      const actualMax = getMaxLinks();
-      if (!state.maxLinksBound || state.maxLinksBound < actualMax) state.maxLinksBound = Math.max(1, actualMax);
-      fontMinInput.value = state.fontMin || 10;
-      fontMaxInput.value = state.fontMax || 11;
-      fontSliderMin.value = state.fontMin || 10;
-      fontSliderMax.value = state.fontMax || 11;
-
-      updateInputModeUI();
-
-      autoSizeAllChk.checked = !!state.autoSizeAll;
-      if (state.autoSizeAll) {
-        state.nodes.forEach(n => {
-          n.size = 'auto';
-          delete n.customWidth;
-          delete n.customHeight;
-        });
-      }
-
-      const activeRadio = document.querySelector(`input[name="interaction-mode"][value="${state.interactionMode || 'all'}"]`);
-      if (activeRadio) activeRadio.checked = true;
-
-      ttThresh.value = tcfg('touchDragThreshold'); ttThreshLabel.textContent = tcfg('touchDragThreshold') + 'px';
-      ttPad.value = tcfg('touchHitPad'); ttPadLabel.textContent = tcfg('touchHitPad') + 'px';
-      ttHold.value = tcfg('touchHoldMs'); ttHoldLabel.textContent = tcfg('touchHoldMs') + 'ms';
-      ttIgnoreExtra.checked = !!tcfg('touchIgnoreExtra');
-      ttAutoClear.checked = !!tcfg('touchAutoClear');
-
-      colorDist1Chk.checked = !!state.colorDist1; colorDist1Val.value = state.colorDist1Hex || '#ffb703';
-      colorDist2Chk.checked = !!state.colorDist2; colorDist2Val.value = state.colorDist2Hex || '#fb8500';
-      colorDist3Chk.checked = !!state.colorDist3; colorDist3Val.value = state.colorDist3Hex || '#ff006e';
-      maxDistanceSlider.value = state.maxDistanceLimit !== undefined ? state.maxDistanceLimit : 10;
-      maxDistLabel.textContent = (state.maxDistanceLimit >= 10) ? '∞' : state.maxDistanceLimit;
-
-      renderInner();
-      updateCanvasExtent();
-      scheduleIoSync();
-    }
-
-    function renderInner() {
-      dockPositionSelect.value = state.dockPosition || 'left';
-      applyDockPosition(state.dockPosition || 'left');
-
-      if (state.showTimeline) {
-        timelineContainer.classList.remove('hidden');
-        timelineContainer.style.left = state.timelinePos.x + 'px';
-        timelineContainer.style.top = state.timelinePos.y + 'px';
-        timelineContainer.style.width = state.timelinePos.width + 'px';
-        showTimelineChk.checked = true;
-        updateTimelineTicks();
-      } else {
-        timelineContainer.classList.add('hidden');
-        showTimelineChk.checked = false;
-      }
-
-      showUrlsChk.checked = !!state.showUrls;
-
-      if (selectedLineId) {
-        const activeLine = state.lines.find(l => l.id === selectedLineId);
-        if (activeLine) {
-          lineControlsGroup.style.display = 'flex';
-          selectedLineLabelInput.value = activeLine.label || "";
-          if (activeLine.arrow) arrowStyleSelect.value = activeLine.arrow;
-          if (activeLine.width) lineWidthSelect.value = activeLine.width.toString();
-          if (activeLine.color) lineColorPicker.value = activeLine.color;
-        } else {
-          selectedLineId = null; lineControlsGroup.style.display = 'none';
-        }
-      } else {
-        lineControlsGroup.style.display = 'none';
-      }
-
-      document.querySelectorAll('.node').forEach(el => el.remove());
-      linesGroup.innerHTML = ''; labelsGroup.innerHTML = '';
-
-      const hiddenNodeIds = getHiddenNodeIds();
-
-      const parentNodeIds = new Set();
-      state.lines.forEach(l => { parentNodeIds.add(l.arrow === 'start' ? l.to : l.from); });
-
-      state.nodes.forEach(node => {
-        if (hiddenNodeIds.has(node.id)) return;
-        const el = document.createElement('div');
-        el.className = 'node';
-        const nodeFontSize = getNodeFont(node.id);
-        const fscale = getNodeFontScale(node.id);
-        el.style.fontSize = nodeFontSize + 'px';
-        el.style.padding = `${(6 * fscale).toFixed(1)}px ${(10 * fscale).toFixed(1)}px`;
-
-        if (!state.autoSizeAll && node.customWidth && node.customHeight) {
-          el.classList.add('fixed-size');
-          el.style.width = `${Math.round(node.customWidth * fscale)}px`;
-          el.style.height = `${Math.round(node.customHeight * fscale)}px`;
-        }
-
-        if (selectedNodeIds.has(node.id) || (selectedSourceNode && selectedSourceNode.id === node.id)) {
-          el.classList.add('selected');
-        }
-
-        el.style.left = node.x + 'px';
-        el.style.top = node.y + 'px';
-        el.dataset.id = node.id;
-
-        if (parentNodeIds.has(node.id)) {
-          const colBtn = document.createElement('span');
-          colBtn.className = 'collapse-btn';
-          colBtn.textContent = node.collapsed ? '[+]' : '[-]';
-          colBtn.onpointerdown = (e) => { e.stopPropagation(); };
-          colBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (isLocked) return;
-            node.collapsed = !node.collapsed;
-            saveState(); render();
-          };
-          el.appendChild(colBtn);
-        }
-
-        if (editingNodeId === node.id) {
-          const inputEl = document.createElement('textarea');
-          inputEl.className = 'node-edit-input';
-          inputEl.value = node.url ? `${node.text} ${node.url}` : node.text;
-          const finishEditing = () => {
-            if (editingNodeId === node.id) {
-              const val = inputEl.value;
-              if (val.trim() !== '') {
-                const parsed = parseTextAndUrl(val);
-                node.text = parsed.text; node.url = parsed.url;
-              }
-              editingNodeId = null; saveState(); render();
-            }
-          };
-          inputEl.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishEditing(); } };
-          inputEl.onblur = finishEditing;
-          inputEl.onpointerdown = (e) => e.stopPropagation();
-          el.appendChild(inputEl);
-          setTimeout(() => { inputEl.focus(); inputEl.select(); }, 0);
-        } else {
-          const contentSpan = document.createElement('span');
-          contentSpan.className = 'node-content';
-          contentSpan.textContent = node.text;
-          if (node.url) contentSpan.classList.add('has-url');
-          el.appendChild(contentSpan);
-
-          if (node.url && state.showUrls) {
-            const urlSpan = document.createElement('span');
-            urlSpan.className = 'node-url-text';
-            urlSpan.textContent = ` (${node.url})`;
-            el.appendChild(urlSpan);
-          }
-        }
-
-        const resizeHandle = document.createElement('div');
-        resizeHandle.className = 'node-resize-handle';
-        resizeHandle.innerHTML = '◢';
-        resizeHandle.onpointerdown = (e) => {
-          e.stopPropagation();
-          if (state.autoSizeAll) return;
-          resizingNode = node;
-          const rect = el.getBoundingClientRect();
-          resizeStartDimensions = { width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY };
-          window.addEventListener('pointermove', handlePointerMove);
-          window.addEventListener('pointerup', handlePointerUp);
-        };
-        el.appendChild(resizeHandle);
-
-        el.ondblclick = (e) => {
-          e.stopPropagation();
-          const mode = state.interactionMode || 'all';
-          if (mode === 'drag' || mode === 'arrow') return;
-          if (mode === 'edit' || editTextChk.checked || !node.url) {
-            editingNodeId = node.id; render();
-          } else if (mode === 'link' || node.url) {
-            window.open(node.url, '_blank');
-          }
-        };
-
-        el.onpointerdown = (e) => handlePointerDownNode(e, node);
-        world.appendChild(el);
-      });
-
-      renderLinesOnly();
-    }
-
-    // Redraws only the SVG lines/labels (cheap) - used while dragging nodes
-    function renderLinesOnly() {
-      linesGroup.innerHTML = ''; labelsGroup.innerHTML = '';
-      const hiddenNodeIds = getHiddenNodeIds();
-      const { lineDistances } = computeNodeDistances();
-      const chainInfo = (highlightChainChk.checked && selectedNodeIds.size === 1 && !selectedLineId) ? computeChain(Array.from(selectedNodeIds)[0]) : null;
-      state.lines.forEach(line => {
-        if (!hiddenNodeIds.has(line.from) && !hiddenNodeIds.has(line.to)) {
-          renderLine(line, chainInfo, lineDistances);
-        }
-      });
-    }
-
-    // Moves dragged node elements in place (no DOM rebuild) and redraws lines
-    function applyDragFrame() {
-      dragFrameQueued = false;
-      initialPositions.forEach((_, id) => {
-        const n = state.nodes.find(item => item.id === id);
-        const el = world.querySelector('.node[data-id="' + id + '"]');
-        if (n && el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
-      });
-      renderLinesOnly();
-    }
-    function queueDragFrame() {
-      if (dragFrameQueued) return;
-      dragFrameQueued = true;
-      requestAnimationFrame(applyDragFrame);
-    }
-
-    // Finds a visible node whose rect (grown by pad) contains the world point
-    function findPaddedNode(x, y, pad) {
-      let best = null, bestD = Infinity;
-      state.nodes.forEach(node => {
-        if (!world.querySelector('.node[data-id="' + node.id + '"]')) return;
-        const r = getNodeRect(node);
-        const cx = Math.max(r.x, Math.min(x, r.x + r.width));
-        const cy = Math.max(r.y, Math.min(y, r.y + r.height));
-        const d = Math.hypot(x - cx, y - cy);
-        if (d <= pad && d < bestD) { bestD = d; best = node; }
-      });
-      return best;
-    }
-
-    function renderLine(line, chainInfo, lineDistances) {
-      const sourceNode = state.nodes.find(n => n.id === line.from);
-      const targetNode = state.nodes.find(n => n.id === line.to);
-      if (!sourceNode || !targetNode) return;
-
-      const isSelected = selectedLineId === line.id;
-      let effColor = line.color || "#00b4d8";
-      let effWidth = line.width || 1;
-      let dimmed = false;
-
-      const dStep = lineDistances ? lineDistances.get(line.id) : undefined;
-      let distanceColored = false;
-      if (dStep === 1 && state.colorDist1) { effColor = state.colorDist1Hex || '#ffb703'; distanceColored = true; }
-      else if (dStep === 2 && state.colorDist2) { effColor = state.colorDist2Hex || '#fb8500'; distanceColored = true; }
-      else if (dStep === 3 && state.colorDist3) { effColor = state.colorDist3Hex || '#ff006e'; distanceColored = true; }
-
-      if (!distanceColored && chainInfo) {
-        const inUp = chainInfo.up.has(line.id), inDown = chainInfo.down.has(line.id);
-        if (inUp && inDown) { effColor = CHAIN_BOTH_COLOR; effWidth += 1; }
-        else if (inUp) { effColor = CHAIN_UP_COLOR; effWidth += 1; }
-        else if (inDown) { effColor = CHAIN_DOWN_COLOR; effWidth += 1; }
-        else { dimmed = true; }
-      }
-
-      const sourceRect = getNodeRect(sourceNode);
-      const targetRect = getNodeRect(targetNode);
-      const p1 = { x: sourceRect.x + sourceRect.width / 2, y: sourceRect.y + sourceRect.height / 2 };
-      const p2 = { x: targetRect.x + targetRect.width / 2, y: targetRect.y + targetRect.height / 2 };
-      const clipP1 = clipLineWithRect(p2, p1, sourceRect);
-      const clipP2 = clipLineWithRect(p1, p2, targetRect);
-      const pathData = `M ${clipP1.x} ${clipP1.y} L ${clipP2.x} ${clipP2.y}`;
-
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", pathData);
-      path.setAttribute("stroke", effColor);
-      if (dimmed) path.setAttribute("opacity", "0.2");
-      path.setAttribute("stroke-width", `${isSelected ? Math.max(effWidth + 1, 3) : effWidth}px`);
-      path.setAttribute("fill", "none");
-      if (isSelected) path.classList.add("line-selected");
-
-      const markerColor = effColor.replace('#', '');
-      if (line.arrow === 'end' || line.arrow === 'both') {
-        ensureMarker(markerColor, 'end');
-        path.setAttribute("marker-end", `url(#arrow-end-${markerColor})`);
-      }
-      if (line.arrow === 'start' || line.arrow === 'both') {
-        ensureMarker(markerColor, 'start');
-        path.setAttribute("marker-start", `url(#arrow-start-${markerColor})`);
-      }
-
-      const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      hitPath.setAttribute("d", pathData);
-      hitPath.setAttribute("stroke", "transparent");
-      hitPath.setAttribute("stroke-width", "25px");
-      hitPath.setAttribute("fill", "none");
-
-      const selectLine = (e) => {
-        if (e.pointerType === 'touch' && (state.interactionMode || 'all') === 'drag') {
-          const wp = toWorld(e.clientX, e.clientY);
-          const near = findPaddedNode(wp.x, wp.y, tcfg('touchHitPad') / zoom);
-          if (near) { handlePointerDownNode(e, near); return; }
-        }
-        e.stopPropagation();
-        selectedLineId = line.id; selectedNodeIds.clear(); selectedSourceNode = null;
-        render(); selectedLineLabelInput.focus();
-      };
-
-      path.onpointerdown = selectLine;
-      hitPath.onpointerdown = selectLine;
-
-      linesGroup.appendChild(path);
-      linesGroup.appendChild(hitPath);
-
-      if (line.label) {
-        const midX = (clipP1.x + clipP2.x) / 2;
-        const midY = (clipP1.y + clipP2.y) / 2;
-        const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        textEl.setAttribute("x", midX); textEl.setAttribute("y", midY);
-        textEl.setAttribute("text-anchor", "middle"); textEl.setAttribute("dominant-baseline", "central");
-        textEl.setAttribute("class", "line-label-text");
-        textEl.textContent = line.label;
-        textEl.onpointerdown = selectLine;
-        labelsGroup.appendChild(textEl);
-      }
-    }
-
-    function ensureMarker(colorHex, type) {
-      const markerId = `arrow-${type}-${colorHex}`;
-      if (!document.getElementById(markerId)) {
-        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-        marker.setAttribute("id", markerId);
-        marker.setAttribute("viewBox", "0 0 10 10");
-        marker.setAttribute("refX", type === 'end' ? "8" : "2");
-        marker.setAttribute("refY", "5");
-        marker.setAttribute("markerWidth", "6");
-        marker.setAttribute("markerHeight", "6");
-        marker.setAttribute("orient", "auto");
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", type === 'end' ? "M 0 1 L 10 5 L 0 9 z" : "M 10 1 L 0 5 L 10 9 z");
-        path.setAttribute("fill", `#${colorHex}`);
-        marker.appendChild(path);
-        svgDefs.appendChild(marker);
-      }
-    }
-
-    function getNodeRect(node) {
-      const el = document.querySelector(`[data-id="${node.id}"]`);
-      if (el) {
-        const bbox = el.getBoundingClientRect();
-        const wBox = world.getBoundingClientRect();
-        return {
-          x: (bbox.left - wBox.left) / zoom,
-          y: (bbox.top - wBox.top) / zoom,
-          width: bbox.width / zoom,
-          height: bbox.height / zoom
-        };
-      }
-      return { x: node.x, y: node.y, width: 60, height: 20 };
-    }
-
-    function clipLineWithRect(p1, p2, rect) {
-      const dx = p2.x - p1.x, dy = p2.y - p1.y;
-      let tMin = 1;
-      if (dx !== 0) {
-        const tLeft = (rect.x - p1.x) / dx;
-        if (tLeft >= 0 && tLeft <= 1) {
-          const y = p1.y + tLeft * dy;
-          if (y >= rect.y && y <= rect.y + rect.height) tMin = Math.min(tMin, tLeft);
-        }
-        const tRight = (rect.x + rect.width - p1.x) / dx;
-        if (tRight >= 0 && tRight <= 1) {
-          const y = p1.y + tRight * dy;
-          if (y >= rect.y && y <= rect.y + rect.height) tMin = Math.min(tMin, tRight);
-        }
-      }
-      if (dy !== 0) {
-        const tTop = (rect.y - p1.y) / dy;
-        if (tTop >= 0 && tTop <= 1) {
-          const x = p1.x + tTop * dx;
-          if (x >= rect.x && x <= rect.x + rect.width) tMin = Math.min(tMin, tTop);
-        }
-        const tBottom = (rect.y + rect.height - p1.y) / dy;
-        if (tBottom >= 0 && tBottom <= 1) {
-          const x = p1.x + tBottom * dx;
-          if (x >= rect.x && x <= rect.x + rect.width) tMin = Math.min(tMin, tBottom);
-        }
-      }
-      return { x: p1.x + tMin * dx, y: p1.y + tMin * dy };
-    }
-
-    function findClosestNode(x, y, maxDist = 90) {
-      let closest = null;
-      let minDist = Infinity;
-      state.nodes.forEach(node => {
-        const rect = getNodeRect(node);
-        const cx = rect.x + rect.width / 2;
-        const cy = rect.y + rect.height / 2;
-        const dist = Math.hypot(cx - x, cy - y);
-        if (dist < minDist && dist <= maxDist) {
-          minDist = dist;
-          closest = node;
-        }
-      });
-      return closest;
-    }
-
-    function handlePointerDownNode(e, node) {
-      if (editingNodeId === node.id) return;
-      e.stopPropagation();
+</div>
+
+<script>
+/* ======================= helpers & elements ======================= */
+const $ = id => document.getElementById(id);
+const $$ = sel => [...document.querySelectorAll(sel)];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+const uid = () => 'id_' + Math.random().toString(36).slice(2, 11);
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CHAIN = { up: '#ffb703', down: '#ff5d8f', both: '#ffffff' };
+
+const viewport = $('viewport'), world = $('world'), toolbar = $('toolbar'), svgLayer = $('svg-layer');
+const svgDefs = svgLayer.querySelector('defs'), linesGroup = $('lines-group'), labelsGroup = $('labels-group');
+const liveArrow = $('live-drag-arrow'), selBox = $('selection-box'), timelineEl = $('timeline-container');
+const tlHandle = timelineEl.querySelector('.timeline-resize-handle'), sidebarResizer = $('sidebar-resizer');
+
+/* ======================= state ======================= */
+const DEFAULTS = {
+  nodes: [], lines: [],
+  showTimeline: false, showUrls: false, timelinePos: { x: 50, y: 50, width: 700 },
+  dockPosition: 'left', sidebarWidth: 280, floatingPos: { x: 20, y: 20 },
+  fontMin: 10, fontMax: 11, maxLinksBound: 1,
+  colorDist1: false, colorDist1Hex: '#ffb703', colorDist2: false, colorDist2Hex: '#fb8500', colorDist3: false, colorDist3Hex: '#ff006e',
+  maxDistanceLimit: 10, inputMode: 'auto', autoSizeAll: true, interactionMode: 'all',
+  touchDragThreshold: 8, touchHitPad: 22, touchHoldMs: 0, touchIgnoreExtra: true, touchAutoClear: true
+};
+const TOUCH_KEYS = ['touchDragThreshold', 'touchHitPad', 'touchHoldMs', 'touchIgnoreExtra', 'touchAutoClear'];
+let state = structuredClone(DEFAULTS);
+
+let hist = [], histIdx = -1;                 // undo history (JSON snapshots)
+let selected = new Set(), selectedLineId = null, editingId = null;
+let isLocked = false, lock = null;           // lock = { selected, hidden, maxDist }
+let fitMode = null;                          // null | 'grid' | 'sequence'
+let zoom = 1;
+const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
+
+let els = new Map();                         // node id -> DOM element (visible nodes only)
+let view = { links: new Map(), hidden: new Set(), lineDist: new Map(), chain: null };
+
+const mode = () => state.interactionMode;
+const nodeById = id => state.nodes.find(n => n.id === id);
+const isTouchActive = () => state.inputMode === 'touch' ||
+  (state.inputMode === 'auto' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+
+function parseTextAndUrl(input) {
+  const url = (input.match(/https?:\/\/[^\s]+/i) || [])[0];
+  return url ? { text: input.replace(url, '').trim() || url, url } : { text: input.trim() || 'Node', url: null };
+}
+
+// Older files may use arrow:'start'; flip those so every arrow points from -> to.
+const normalizeLines = lines => lines.map(l =>
+  l.arrow === 'start' ? { ...l, from: l.to, to: l.from, arrow: 'end' } : l.arrow === 'none' ? l : { ...l, arrow: 'end' });
+
+/* ---------- undo / redo ---------- */
+function updateHistBtns() {
+  $('undo-btn').disabled = histIdx <= 0;
+  $('redo-btn').disabled = histIdx >= hist.length - 1;
+}
+function saveState() {
+  hist = hist.slice(0, histIdx + 1);
+  hist.push(JSON.stringify(state));
+  if (hist.length > 50) hist.shift(); else histIdx++;
+  updateHistBtns();
+}
+function restore(i) {
+  if (i < 0 || i >= hist.length) return;
+  histIdx = i;
+  state = JSON.parse(hist[i]);
+  selected.clear(); selectedLineId = null; editingId = null;
+  render(); updateHistBtns();
+}
+$('undo-btn').onclick = () => restore(histIdx - 1);
+$('redo-btn').onclick = () => restore(histIdx + 1);
+
+/* ======================= keyboard shortcuts (Delete, Undo, Redo) ======================= */
+window.addEventListener('keydown', e => {
+  // Do not trigger canvas keyboard shortcuts if user is typing in a text field, textarea, or editing a node
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingId !== null) {
+    return;
+  }
+
+  // Undo: Ctrl+Z or Cmd+Z (without Shift)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    if (histIdx > 0) restore(histIdx - 1);
+    return;
+  }
+
+  // Redo: Ctrl+Y, or Ctrl+Shift+Z, or Cmd+Shift+Z
+  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    if (histIdx < hist.length - 1) restore(histIdx + 1);
+    return;
+  }
+
+  // Delete / Backspace: Delete selected line or selected nodes
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    let changed = false;
+
+    if (selectedLineId) {
+      state.lines = state.lines.filter(l => l.id !== selectedLineId);
       selectedLineId = null;
-
-      const mode = state.interactionMode || 'all';
-
-      if (mode === 'edit') {
-        editingNodeId = node.id;
-        render();
-        return;
-      }
-      if (mode === 'link') {
-        if (node.url) window.open(node.url, '_blank');
-        return;
-      }
-      if (mode === 'arrow') {
-        isDrivingArrow = true;
-        driveSourceNode = node;
-        driveStartClient = { x: e.clientX, y: e.clientY };
-        selectedNodeIds.clear();
-        selectedNodeIds.add(node.id);
-        render();
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        return;
-      }
-
-      // Touch: capture on the stable viewport BEFORE any re-render, so events keep
-      // flowing even though render() replaces the node's DOM element.
-      if (e.pointerType === 'touch') {
-        try { viewport.setPointerCapture(e.pointerId); capturedPointers.add(e.pointerId); } catch (err) {}
-      }
-
-      tapCandidate = null;
-      if (isTouchActive() && selectedNodeIds.has(node.id) && selectedNodeIds.size === 1) {
-        tapCandidate = { node, x: e.clientX, y: e.clientY };
-      }
-
-      if (!isLocked) {
-        if (e.ctrlKey || e.metaKey) {
-          if (selectedNodeIds.has(node.id)) selectedNodeIds.delete(node.id);
-          else selectedNodeIds.add(node.id);
-          render();
-        } else {
-          if (!selectedNodeIds.has(node.id)) {
-            selectedNodeIds.clear(); selectedNodeIds.add(node.id); render();
-          }
-        }
-      }
-
-      draggingNode = node;
-      dragOffset.x = e.clientX; dragOffset.y = e.clientY;
-      dragDownPt = { x: e.clientX, y: e.clientY };
-      dragDownTime = performance.now();
-      const isTouchPtr = e.pointerType === 'touch';
-      dragThresh = isTouchPtr ? tcfg('touchDragThreshold') : 0;
-      dragHoldMs = isTouchPtr ? tcfg('touchHoldMs') : 0;
-      dragActive = (dragThresh === 0 && dragHoldMs === 0);
-      initialPositions.clear();
-      let dragSet = new Set();
-      if (isLocked) {
-        dragSet.add(node.id);
-      } else {
-        dragSet = new Set(selectedNodeIds);
-        if (dragGraphChk.checked) {
-          selectedNodeIds.forEach(id => getConnectedComponent(id).forEach(cId => dragSet.add(cId)));
-        }
-      }
-      dragSet.forEach(id => {
-        const n = state.nodes.find(item => item.id === id);
-        if (n) initialPositions.set(id, { x: n.x, y: n.y });
-      });
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
+      changed = true;
     }
 
-    viewport.onpointerdown = (e) => {
-      if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
-      selectedLineId = null;
-
-      const mode = state.interactionMode || 'all';
-      if (mode === 'edit' || mode === 'link') return;
-
-      const wp0 = toWorld(e.clientX, e.clientY);
-      const clickX = wp0.x;
-      const clickY = wp0.y;
-
-      let nearbyNode = null;
-      let minNodeDist = Infinity;
-      state.nodes.forEach(node => {
-        const rect = getNodeRect(node);
-        const inside = (clickX >= rect.x && clickX <= rect.x + rect.width && clickY >= rect.y && clickY <= rect.y + rect.height);
-        if (!inside) {
-          const cx = Math.max(rect.x, Math.min(clickX, rect.x + rect.width));
-          const cy = Math.max(rect.y, Math.min(clickY, rect.y + rect.height));
-          const dist = Math.hypot(clickX - cx, clickY - cy);
-          if (dist < 60 / zoom && dist < minNodeDist) {
-            minNodeDist = dist;
-            nearbyNode = node;
-          }
-        }
-      });
-
-      if (mode === 'drag') {
-        const padNode = findPaddedNode(clickX, clickY, tcfg('touchHitPad') / zoom);
-        if (padNode) { handlePointerDownNode(e, padNode); return; }
-      }
-
-      if (mode !== 'drag' && nearbyNode) {
-        isDrivingArrow = true;
-        driveSourceNode = nearbyNode;
-        driveStartClient = { x: e.clientX, y: e.clientY };
-
-        if (!isLocked) {
-          if (!selectedNodeIds.has(nearbyNode.id)) {
-            selectedNodeIds.clear(); selectedNodeIds.add(nearbyNode.id); render();
-          }
-        }
-
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        return;
-      }
-
-      if (mode === 'arrow') return;
-
-      if (e.pointerType === 'touch' && !selectRegionChk.checked) {
-        panning = true;
-        panStart = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        return;
-      }
-
-      if (mode === 'drag') {
-        panning = true;
-        panStart = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        return;
-      }
-
-      lineDrawStart = { x: clickX, y: clickY };
-      liveDragArrow.setAttribute('x1', clickX);
-      liveDragArrow.setAttribute('y1', clickY);
-      liveDragArrow.setAttribute('x2', clickX);
-      liveDragArrow.setAttribute('y2', clickY);
-      liveDragArrow.style.display = 'block';
-
-      if (!selectRegionChk.checked) {
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        return;
-      }
-
-      if (!isLocked && !e.ctrlKey && !e.metaKey && !isFittingBox) {
-        selectedNodeIds.clear(); selectedSourceNode = null; render();
-      }
-
-      isSelectingBox = true;
-      boxSelectStart.x = clickX;
-      boxSelectStart.y = clickY;
-
-      selectionBox.style.left = clickX + 'px';
-      selectionBox.style.top = clickY + 'px';
-      selectionBox.style.width = '0px';
-      selectionBox.style.height = '0px';
-      selectionBox.style.display = 'block';
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    };
-
-    timelineContainer.onpointerdown = (e) => {
-      if (e.target === timelineResizeHandle) return;
-      draggingTimeline = true;
-      const twp = toWorld(e.clientX, e.clientY);
-      dragOffset.x = twp.x - state.timelinePos.x;
-      dragOffset.y = twp.y - state.timelinePos.y;
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    };
-
-    timelineResizeHandle.onpointerdown = (e) => {
-      e.stopPropagation();
-      resizingTimeline = true;
-      dragOffset.x = e.clientX;
-      dragOffset.initialWidth = state.timelinePos.width;
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    };
-
-    function handlePointerMove(e) {
-      if (e.pointerType === 'touch') {
-        if (ignoredPointers.has(e.pointerId)) return;
-        if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (pinching) { updatePinch(); return; }
-        captureTouchPointer(e);
-      }
-
-      const wpMove = toWorld(e.clientX, e.clientY);
-      const currentX = wpMove.x;
-      const currentY = wpMove.y;
-
-      if (panning && panStart) {
-        viewport.scrollLeft = panStart.left - (e.clientX - panStart.x);
-        viewport.scrollTop = panStart.top - (e.clientY - panStart.y);
-        return;
-      }
-
-      if (isDrivingArrow && driveSourceNode) {
-        const sourceRect = getNodeRect(driveSourceNode);
-        const startX = sourceRect.x + sourceRect.width / 2;
-        const startY = sourceRect.y + sourceRect.height / 2;
-
-        const dx = e.clientX - driveStartClient.x;
-        const dy = e.clientY - driveStartClient.y;
-
-        const scale = 1.5 / zoom;
-        const tipX = startX + dx * scale;
-        const tipY = startY + dy * scale;
-
-        const clipStart = clipLineWithRect({ x: tipX, y: tipY }, { x: startX, y: startY }, sourceRect);
-
-        liveDragArrow.setAttribute('x1', clipStart.x);
-        liveDragArrow.setAttribute('y1', clipStart.y);
-        liveDragArrow.setAttribute('x2', tipX);
-        liveDragArrow.setAttribute('y2', tipY);
-        liveDragArrow.setAttribute('stroke', lineColorPicker.value);
-        const markerColor = lineColorPicker.value.replace('#', '');
-        ensureMarker(markerColor, 'end');
-        liveDragArrow.setAttribute('marker-end', `url(#arrow-end-${markerColor})`);
-        liveDragArrow.style.display = 'block';
-
-        hoveredTargetNodeId = null;
-        state.nodes.forEach(n => {
-          if (n.id === driveSourceNode.id) return;
-          const rect = getNodeRect(n);
-          if (tipX >= rect.x && tipX <= rect.x + rect.width && tipY >= rect.y && tipY <= rect.y + rect.height) {
-            hoveredTargetNodeId = n.id;
-          }
-        });
-
-        viewport.querySelectorAll('.node').forEach(el => {
-          if (el.dataset.id === hoveredTargetNodeId) {
-            el.style.borderColor = '#00f5d4';
-            el.style.boxShadow = '0 0 0 3px rgba(0, 245, 212, 0.7)';
-          } else if (!selectedNodeIds.has(el.dataset.id)) {
-            el.style.borderColor = '';
-            el.style.boxShadow = '';
-          }
-        });
-
-        return;
-      }
-
-      if (lineDrawStart) {
-        liveDragArrow.setAttribute('x2', currentX);
-        liveDragArrow.setAttribute('y2', currentY);
-      }
-
-      if (resizingNode && !state.autoSizeAll) {
-        const deltaX = e.clientX - resizeStartDimensions.startX;
-        const deltaY = e.clientY - resizeStartDimensions.startY;
-        const newW = Math.max(80, (resizeStartDimensions.width + deltaX) / zoom);
-        const newH = Math.max(40, (resizeStartDimensions.height + deltaY) / zoom);
-        resizingNode.customWidth = Math.round(newW / getNodeFontScale(resizingNode.id));
-        resizingNode.customHeight = Math.round(newH / getNodeFontScale(resizingNode.id));
-        resizingNode.size = 'custom';
-        render(); return;
-      }
-
-      if (resizingSidebar) {
-        let newWidth = 280;
-        if (state.dockPosition === 'left') newWidth = Math.max(150, Math.min(600, e.clientX));
-        else if (state.dockPosition === 'right') newWidth = Math.max(150, Math.min(600, window.innerWidth - e.clientX));
-        state.sidebarWidth = newWidth;
-        applyDockPosition(state.dockPosition); return;
-      }
-
-      if (draggingToolbar) {
-        const newX = Math.max(0, e.clientX - dragOffset.x);
-        const newY = Math.max(0, e.clientY - dragOffset.y);
-        state.floatingPos = { x: newX, y: newY };
-        toolbar.style.left = newX + 'px'; toolbar.style.top = newY + 'px'; return;
-      }
-
-      if (isSelectingBox && selectRegionChk.checked) {
-        const left = Math.min(boxSelectStart.x, currentX), top = Math.min(boxSelectStart.y, currentY);
-        const width = Math.abs(currentX - boxSelectStart.x), height = Math.abs(currentY - boxSelectStart.y);
-
-        selectionBox.style.left = left + 'px'; selectionBox.style.top = top + 'px';
-        selectionBox.style.width = width + 'px'; selectionBox.style.height = height + 'px';
-
-        if (!isLocked && !isFittingBox) {
-          state.nodes.forEach(node => {
-            const rect = getNodeRect(node);
-            const intersects = !(rect.x > left + width || rect.x + rect.width < left || rect.y > top + height || rect.y + rect.height < top);
-            if (intersects) selectedNodeIds.add(node.id);
-          });
-          render();
-        }
-        return;
-      }
-
-      if (resizingTimeline) {
-        state.timelinePos.width = Math.max(300, dragOffset.initialWidth + (e.clientX - dragOffset.x) / zoom);
-        render(); return;
-      }
-
-      if (draggingTimeline) {
-        state.timelinePos.x = currentX - dragOffset.x;
-        state.timelinePos.y = currentY - dragOffset.y;
-        render(); return;
-      }
-
-      if (!draggingNode) return;
-
-      if (!dragActive) {
-        const moved = Math.hypot(e.clientX - dragDownPt.x, e.clientY - dragDownPt.y);
-        if (moved <= dragThresh) return;                      // finger jitter: ignore
-        if (dragHoldMs > 0 && performance.now() - dragDownTime < dragHoldMs) {
-          // moved before the hold time elapsed -> treat as a screen pan instead
-          draggingNode = null; initialPositions.clear(); tapCandidate = null;
-          panning = true;
-          panStart = { x: dragDownPt.x, y: dragDownPt.y, left: viewport.scrollLeft, top: viewport.scrollTop };
-          viewport.scrollLeft = panStart.left - (e.clientX - panStart.x);
-          viewport.scrollTop = panStart.top - (e.clientY - panStart.y);
-          return;
-        }
-        dragActive = true;
-        dragOffset.x = e.clientX; dragOffset.y = e.clientY;   // rebase: no jump
-        return;
-      }
-
-      let deltaX = (e.clientX - dragOffset.x) / zoom, deltaY = (e.clientY - dragOffset.y) / zoom;
-      initialPositions.forEach((initPos, id) => {
-        const n = state.nodes.find(item => item.id === id);
-        if (n) { n.x = initPos.x + deltaX; n.y = initPos.y + deltaY; }
-      });
-      queueDragFrame();
+    if (selected.size > 0 && !isLocked) {
+      state.nodes = state.nodes.filter(n => !selected.has(n.id));
+      state.lines = state.lines.filter(l => !selected.has(l.from) && !selected.has(l.to));
+      selected.clear();
+      changed = true;
     }
 
-    function handlePointerUp(e) {
-      if (e.pointerType === 'touch') {
-        if (ignoredPointers.has(e.pointerId)) { ignoredPointers.delete(e.pointerId); return; }
-        activePointers.delete(e.pointerId);
-        capturedPointers.delete(e.pointerId);
-        if (pinching) {
-          if (activePointers.size < 2) pinching = false;
-          if (activePointers.size > 0) return;
-        }
-      }
-      if (e.type === 'pointercancel') tapCandidate = null;
-
-      liveDragArrow.style.display = 'none';
-
-      if (isDrivingArrow) {
-        viewport.querySelectorAll('.node').forEach(el => {
-          if (!selectedNodeIds.has(el.dataset.id)) {
-            el.style.borderColor = '';
-            el.style.boxShadow = '';
-          }
-        });
-
-        if (hoveredTargetNodeId && driveSourceNode && hoveredTargetNodeId !== driveSourceNode.id) {
-          state.lines.push({
-            id: generateId(),
-            from: driveSourceNode.id,
-            to: hoveredTargetNodeId,
-            arrow: arrowStyleSelect.value,
-            width: parseInt(lineWidthSelect.value, 10),
-            color: lineColorPicker.value,
-            label: ""
-          });
-          saveState();
-          render();
-        }
-
-        isDrivingArrow = false;
-        driveSourceNode = null;
-        hoveredTargetNodeId = null;
-      }
-
-      if (lineDrawStart) {
-        const wpEnd = toWorld(e.clientX, e.clientY);
-        const endX = wpEnd.x;
-        const endY = wpEnd.y;
-        const startNode = findClosestNode(lineDrawStart.x, lineDrawStart.y, 90 / zoom);
-        const endNode = findClosestNode(endX, endY, 90 / zoom);
-
-        if (startNode && endNode && startNode.id !== endNode.id) {
-          state.lines.push({
-            id: generateId(),
-            from: startNode.id,
-            to: endNode.id,
-            arrow: arrowStyleSelect.value,
-            width: parseInt(lineWidthSelect.value, 10),
-            color: lineColorPicker.value,
-            label: ""
-          });
-          saveState();
-          render();
-        }
-        lineDrawStart = null;
-      }
-
-      if (resizingNode) { resizingNode = null; saveState(); }
-      if (resizingSidebar) { resizingSidebar = false; sidebarResizer.classList.remove('resizing'); saveState(); }
-      if (draggingToolbar) { draggingToolbar = false; saveState(); }
-
-      if (isSelectingBox) {
-        if (!isLocked && isFittingBox) {
-          const rect = {
-            x: parseFloat(selectionBox.style.left), y: parseFloat(selectionBox.style.top),
-            width: parseFloat(selectionBox.style.width), height: parseFloat(selectionBox.style.height)
-          };
-          if (rect.width > 20 && rect.height > 20) {
-            const hiddenNodeIds = getHiddenNodeIds();
-            const nodesToArrange = state.nodes.filter(n => selectedNodeIds.has(n.id) && !hiddenNodeIds.has(n.id));
-            if (fitMode === 'sequence') arrangeNodesInSequence(nodesToArrange, rect);
-            else arrangeNodesInGrid(nodesToArrange, rect);
-            saveState();
-          }
-          setFitMode(null);
-        }
-        isSelectingBox = false; selectionBox.style.display = 'none'; render();
-      }
-
-      panning = false;
-
-      if (draggingNode || draggingTimeline || resizingTimeline) {
-        const didMove = dragActive || draggingTimeline || resizingTimeline;
-        draggingNode = null; draggingTimeline = false; resizingTimeline = false;
-        dragActive = false; dragFrameQueued = false;
-        if (didMove) { saveState(); render(); }
-      }
-
-      if (tapCandidate) {
-        const c = tapCandidate;
-        tapCandidate = null;
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - c.x, e.clientY - c.y) < 8) {
-          const mode = state.interactionMode || 'all';
-          if (mode === 'edit' || editTextChk.checked || !c.node.url) { editingNodeId = c.node.id; render(); }
-          else if (mode === 'link' || c.node.url) { window.open(c.node.url, '_blank'); }
-        }
-      }
-
-      if (activePointers.size === 0) window.removeEventListener('pointermove', handlePointerMove);
-    }
-
-    function getConnectedComponent(startId) {
-      const visited = new Set([startId]), queue = [startId];
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        state.lines.forEach(line => {
-          if (line.from === curr && !visited.has(line.to)) { visited.add(line.to); queue.push(line.to); }
-          if (line.to === curr && !visited.has(line.from)) { visited.add(line.from); queue.push(line.from); }
-        });
-      }
-      return visited;
-    }
-
-    selectedLineLabelInput.oninput = (e) => {
-      if (!selectedLineId) return;
-      const activeLine = state.lines.find(l => l.id === selectedLineId);
-      if (activeLine) { activeLine.label = e.target.value; render(); }
-    };
-    selectedLineLabelInput.onchange = () => saveState();
-
-    deleteLineBtn.onclick = () => {
-      if (selectedLineId) {
-        state.lines = state.lines.filter(l => l.id !== selectedLineId);
-        selectedLineId = null; saveState(); render();
-      }
-    };
-
-    // --- KEYBOARD SHORTCUTS & DELETE HANDLER ---
-    window.addEventListener('keydown', (e) => {
-      const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-
-      // Handle Undo (Ctrl+Z) and Redo (Ctrl+Y or Ctrl+Shift+Z)
-      if ((e.ctrlKey || e.metaKey) && !isInputActive) {
-        if (e.key.toLowerCase() === 'z') {
-          e.preventDefault();
-          if (e.shiftKey) {
-            redo();
-          } else {
-            undo();
-          }
-          return;
-        }
-        if (e.key.toLowerCase() === 'y') {
-          e.preventDefault();
-          redo();
-          return;
-        }
-      }
-
-      if (isInputActive) {
-        return;
-      }
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        let modified = false;
-
-        if (selectedLineId) {
-          state.lines = state.lines.filter(l => l.id !== selectedLineId);
-          selectedLineId = null;
-          modified = true;
-        }
-
-        if (selectedNodeIds.size > 0) {
-          state.nodes = state.nodes.filter(n => !selectedNodeIds.has(n.id));
-          state.lines = state.lines.filter(l => !selectedNodeIds.has(l.from) && !selectedNodeIds.has(l.to));
-          selectedNodeIds.clear();
-          modified = true;
-        }
-
-        if (modified) {
-          e.preventDefault();
-          saveState();
-          render();
-        }
-      }
-    });
-
-    addBtn.onclick = createBox;
-    addBoxesBtn.onclick = createBoxes;
-    nodeTextInput.onkeydown = (e) => { if (e.key === 'Enter') createBox(); };
-
-    showTimelineChk.onchange = (e) => { state.showTimeline = e.target.checked; saveState(); render(); };
-    showUrlsChk.onchange = (e) => { state.showUrls = e.target.checked; saveState(); render(); };
-
-    /* ---------------- IMPORT / EXPORT BRIDGE ---------------- */
-    const IO_PAGE = 'conceptmap_io.html';
-    let ioWin = null;
-    let ioSyncTimer = null;
-
-    const ioBtn = document.getElementById('io-btn');
-
-    function ioPayload() {
-      return {
-        type: 'cm-state',
-        state: state,
-        defaults: {
-          width: parseInt(lineWidthSelect.value, 10),
-          color: lineColorPicker.value,
-          arrow: arrowStyleSelect.value
-        }
-      };
-    }
-
-    function postToIo(msg, target) {
-      const w = target || ioWin;
-      if (w && !w.closed) {
-        try { w.postMessage(msg, '*'); } catch (err) {}
-      }
-    }
-
-    function scheduleIoSync() {
-      if (!ioWin || ioWin.closed) return;
-      clearTimeout(ioSyncTimer);
-      ioSyncTimer = setTimeout(() => postToIo(ioPayload()), 250);
-    }
-
-    ioBtn.onclick = () => {
-      if (ioWin && !ioWin.closed) { ioWin.focus(); postToIo(ioPayload()); return; }
-      ioWin = window.open(IO_PAGE, 'conceptmap_io', 'width=560,height=760');
-      if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
-    };
-
-    function afterExternalChange() {
-      selectedNodeIds.clear();
-      selectedLineId = null;
-      selectedSourceNode = null;
-      editingNodeId = null;
+    if (changed) {
       saveState();
       render();
     }
+  }
+});
 
-    function applyImportedJson(importedState) {
-      state = {
-        nodes: importedState.nodes || [],
-        lines: normalizeLines(importedState.lines || []),
-        showTimeline: importedState.showTimeline !== undefined ? importedState.showTimeline : false,
-        showUrls: importedState.showUrls !== undefined ? importedState.showUrls : false,
-        timelinePos: importedState.timelinePos || { x: 50, y: 50, width: 700 },
-        dockPosition: importedState.dockPosition || 'left',
-        sidebarWidth: importedState.sidebarWidth || 280,
-        floatingPos: importedState.floatingPos || { x: 20, y: 20 },
-        fontMin: importedState.fontMin || 10,
-        fontMax: importedState.fontMax || 11,
-        maxLinksBound: importedState.maxLinksBound || 1,
-        colorDist1: importedState.colorDist1 || false,
-        colorDist1Hex: importedState.colorDist1Hex || '#ffb703',
-        colorDist2: importedState.colorDist2 || false,
-        colorDist2Hex: importedState.colorDist2Hex || '#fb8500',
-        colorDist3: importedState.colorDist3 || false,
-        colorDist3Hex: importedState.colorDist3Hex || '#ff006e',
-        maxDistanceLimit: importedState.maxDistanceLimit !== undefined ? importedState.maxDistanceLimit : 10,
-        inputMode: importedState.inputMode || 'auto',
-        autoSizeAll: importedState.autoSizeAll !== undefined ? importedState.autoSizeAll : true,
-        interactionMode: importedState.interactionMode || 'all',
-        touchDragThreshold: importedState.touchDragThreshold !== undefined ? importedState.touchDragThreshold : state.touchDragThreshold,
-        touchHitPad: importedState.touchHitPad !== undefined ? importedState.touchHitPad : state.touchHitPad,
-        touchHoldMs: importedState.touchHoldMs !== undefined ? importedState.touchHoldMs : state.touchHoldMs,
-        touchIgnoreExtra: importedState.touchIgnoreExtra !== undefined ? importedState.touchIgnoreExtra : state.touchIgnoreExtra,
-        touchAutoClear: importedState.touchAutoClear !== undefined ? importedState.touchAutoClear : state.touchAutoClear
-      };
-      afterExternalChange();
+/* ======================= graph queries ======================= */
+// [parent, child] of a line
+const dir = l => l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
+// directed edges a line provides (undirected lines work both ways)
+const edges = l => (l.arrow === 'end' || l.arrow === 'start') ? [dir(l)] : [[l.from, l.to], [l.to, l.from]];
+
+// Breadth-first walk. Returns hop distance per node and per line.
+function bfs(starts, up = false) {
+  const dist = new Map(starts.map(id => [id, 0])), lineDist = new Map(), queue = [...starts];
+  while (queue.length) {
+    const cur = queue.shift(), d = dist.get(cur);
+    for (const l of state.lines) for (const e of edges(l)) {
+      const [from, to] = up ? [e[1], e[0]] : e;
+      if (from !== cur) continue;
+      if (!(lineDist.get(l.id) <= d + 1)) lineDist.set(l.id, d + 1);
+      if (!dist.has(to)) { dist.set(to, d + 1); queue.push(to); }
     }
+  }
+  return { dist, lineDist };
+}
 
-    window.addEventListener('message', (e) => {
-      const d = e.data;
-      if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
+function componentOf(start) {
+  const seen = new Set([start]), queue = [start];
+  while (queue.length) {
+    const cur = queue.shift();
+    state.lines.forEach(l => [[l.from, l.to], [l.to, l.from]].forEach(([a, b]) => {
+      if (a === cur && !seen.has(b)) { seen.add(b); queue.push(b); }
+    }));
+  }
+  return seen;
+}
 
-      if (d.type === 'cm-io-ready') {
-        ioWin = e.source;
-        postToIo(ioPayload(), e.source);
-        return;
-      }
-      if (e.source !== ioWin) return;
+function hiddenIds() {
+  if (isLocked && lock) return lock.hidden;
+  const hide = new Set(), kids = new Map();
+  state.lines.forEach(l => { const [p, c] = dir(l); kids.set(p, [...(kids.get(p) || []), c]); });
+  const hideBelow = id => (kids.get(id) || []).forEach(c => { if (!hide.has(c)) { hide.add(c); hideBelow(c); } });
+  state.nodes.forEach(n => n.collapsed && hideBelow(n.id));
+  if (selected.size && state.maxDistanceLimit < 10) {
+    const { dist } = bfs([...selected]);
+    state.nodes.forEach(n => { const d = dist.get(n.id); if (d === undefined || d > state.maxDistanceLimit) hide.add(n.id); });
+  }
+  return hide;
+}
 
-      if (d.type === 'cm-request-state') {
-        postToIo(ioPayload(), e.source);
-      } else if (d.type === 'cm-import-json') {
-        try {
-          if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
-          applyImportedJson(d.data);
-          postToIo({ type: 'cm-ack', ok: true, message: `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.` }, e.source);
-        } catch (err) {
-          postToIo({ type: 'cm-ack', ok: false, message: 'Invalid JSON file structure.' }, e.source);
-        }
-      } else if (d.type === 'cm-import-graph') {
-        const nodes = Array.isArray(d.nodes) ? d.nodes : [];
-        const lines = Array.isArray(d.lines) ? d.lines : [];
-        if (d.replace) {
-          state.nodes = nodes;
-          state.lines = lines;
-        } else {
-          state.nodes = state.nodes.concat(nodes);
-          state.lines = state.lines.concat(lines);
-        }
-        afterExternalChange();
-        postToIo({ type: 'cm-ack', ok: true, message: `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.` }, e.source);
-      } else if (d.type === 'cm-state-update' && d.data) {
-        state = Object.assign(state, d.data);
-        afterExternalChange();
-      }
-    });
+function nodeFont(id) {
+  const n = view.links.get(id) || 0, { fontMin: lo, fontMax: hi, maxLinksBound: max } = state;
+  return n <= 1 ? lo : n >= max ? hi : Math.round(lo + (n - 1) / (max - 1) * (hi - lo));
+}
 
-    clearBtn.onclick = () => {
-      if (isLocked) return;
-      if (confirm("Clear all nodes and connections?")) {
-        state = { 
-          nodes: [], 
-          lines: [], 
-          showTimeline: state.showTimeline, 
-          showUrls: state.showUrls, 
-          timelinePos: state.timelinePos,
-          dockPosition: state.dockPosition,
-          sidebarWidth: state.sidebarWidth,
-          floatingPos: state.floatingPos,
-          fontMin: state.fontMin,
-          fontMax: state.fontMax,
-          maxLinksBound: state.maxLinksBound,
-          colorDist1: state.colorDist1,
-          colorDist1Hex: state.colorDist1Hex,
-          colorDist2: state.colorDist2,
-          colorDist2Hex: state.colorDist2Hex,
-          colorDist3: state.colorDist3,
-          colorDist3Hex: state.colorDist3Hex,
-          maxDistanceLimit: state.maxDistanceLimit,
-          inputMode: state.inputMode,
-          autoSizeAll: state.autoSizeAll,
-          interactionMode: state.interactionMode,
-          touchDragThreshold: state.touchDragThreshold,
-          touchHitPad: state.touchHitPad,
-          touchHoldMs: state.touchHoldMs,
-          touchIgnoreExtra: state.touchIgnoreExtra,
-          touchAutoClear: state.touchAutoClear
-        };
-        selectedSourceNode = null;
-        selectedNodeIds.clear();
-        selectedLineId = null;
-        editingNodeId = null;
-        saveState();
-        render();
-      }
+/* ======================= geometry ======================= */
+function toWorld(cx, cy) {
+  const r = world.getBoundingClientRect();
+  return { x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
+}
+// node rectangle in world coordinates (offset* ignores the zoom transform)
+function rect(n) {
+  const el = els.get(n.id);
+  return el ? { x: el.offsetLeft, y: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight } : { x: n.x, y: n.y, width: 60, height: 20 };
+}
+const center = r => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+// where the line from a rect's centre toward `to` leaves the rect
+function edgePoint(r, to) {
+  const c = center(r), dx = to.x - c.x, dy = to.y - c.y;
+  const t = Math.min(r.width / 2 / Math.abs(dx), r.height / 2 / Math.abs(dy), 1);
+  return { x: c.x + dx * t, y: c.y + dy * t };
+}
+const visibleNodes = () => state.nodes.filter(n => els.has(n.id));
+const inside = (p, r) => p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+
+// nearest visible node whose rectangle is within `pad` of point p
+function nearNode(p, pad) {
+  let best = null, bestD = Infinity;
+  visibleNodes().forEach(n => {
+    const r = rect(n);
+    const d = Math.hypot(p.x - clamp(p.x, r.x, r.x + r.width), p.y - clamp(p.y, r.y, r.y + r.height));
+    if (d <= pad && d < bestD) { bestD = d; best = n; }
+  });
+  return best;
+}
+function closestNode(p, maxDist) {
+  let best = null, bestD = Infinity;
+  visibleNodes().forEach(n => {
+    const d = Math.hypot(center(rect(n)).x - p.x, center(rect(n)).y - p.y);
+    if (d < bestD && d <= maxDist) { bestD = d; best = n; }
+  });
+  return best;
+}
+
+function arrangeGrid(nodes, r) {
+  if (!nodes.length) return;
+  const sizes = nodes.map(n => rect(n)), maxW = Math.max(...sizes.map(s => s.width)), maxH = Math.max(...sizes.map(s => s.height));
+  let cols = 1, best = -Infinity;
+  for (let c = 1; c <= nodes.length; c++) {
+    const s = Math.min(r.width / c / maxW, r.height / Math.ceil(nodes.length / c) / maxH);
+    if (s > best + 1e-9) { best = s; cols = c; }
+  }
+  const cw = r.width / cols, ch = r.height / Math.ceil(nodes.length / cols);
+  nodes.forEach((n, i) => {
+    n.x = Math.max(0, Math.round(r.x + (i % cols) * cw + Math.max(0, (cw - sizes[i].width) / 2)));
+    n.y = Math.max(0, Math.round(r.y + Math.floor(i / cols) * ch + Math.max(0, (ch - sizes[i].height) / 2)));
+  });
+}
+function arrangeSequence(nodes, r) {
+  if (!nodes.length) return;
+  const sizes = nodes.map(n => rect(n));
+  const spanX = Math.max(0, r.width - Math.max(...sizes.map(s => s.width)));
+  const spanY = Math.max(0, r.height - Math.max(...sizes.map(s => s.height)));
+  nodes.forEach((n, i) => {
+    const t = nodes.length > 1 ? i / (nodes.length - 1) : 0;
+    n.x = Math.max(0, Math.round(r.x + t * spanX));
+    n.y = Math.max(0, Math.round(r.y + t * spanY));
+  });
+}
+
+/* ======================= rendering ======================= */
+function render() {
+  // per-render caches
+  view.links = new Map(state.nodes.map(n => [n.id, 0]));
+  state.lines.forEach(l => [l.from, l.to].forEach(id => view.links.has(id) && view.links.set(id, view.links.get(id) + 1)));
+  state.maxLinksBound = Math.max(1, state.maxLinksBound || 0, ...view.links.values());
+  if (state.autoSizeAll) state.nodes.forEach(n => { n.size = 'auto'; delete n.customWidth; delete n.customHeight; });
+  view.hidden = hiddenIds();
+  view.lineDist = bfs([...selected]).lineDist;
+  view.chain = ($('highlight-chain-chk').checked && selected.size === 1 && !selectedLineId)
+    ? { up: bfs([...selected], true).lineDist, down: bfs([...selected]).lineDist } : null;
+
+  syncControls();
+  applyDock();
+  drawTimeline();
+  drawLineControls();
+
+  els.forEach(el => el.remove());
+  els.clear();
+  const parents = new Set(state.lines.map(l => dir(l)[0]));
+  state.nodes.forEach(n => {
+    if (view.hidden.has(n.id)) return;
+    const el = makeNode(n, parents);
+    world.appendChild(el);
+    els.set(n.id, el);
+  });
+  drawLines();
+  updateExtent();
+  scheduleIoSync();
+}
+
+function makeNode(n, parents) {
+  const font = nodeFont(n.id), k = font / 11;
+  const el = document.createElement('div');
+  el.className = 'node' + (selected.has(n.id) ? ' selected' : '');
+  el.dataset.id = n.id;
+  el.style.cssText = `left:${n.x}px;top:${n.y}px;font-size:${font}px;padding:${(6 * k).toFixed(1)}px ${(10 * k).toFixed(1)}px`;
+  if (!state.autoSizeAll && n.customWidth && n.customHeight) {
+    el.classList.add('fixed-size');
+    el.style.width = Math.round(n.customWidth * k) + 'px';
+    el.style.height = Math.round(n.customHeight * k) + 'px';
+  }
+
+  if (parents.has(n.id)) {
+    const btn = document.createElement('span');
+    btn.className = 'collapse-btn';
+    btn.textContent = n.collapsed ? '[+]' : '[-]';
+    btn.onpointerdown = e => e.stopPropagation();
+    btn.onclick = e => { e.stopPropagation(); if (isLocked) return; n.collapsed = !n.collapsed; saveState(); render(); };
+    el.appendChild(btn);
+  }
+
+  if (editingId === n.id) {
+    const input = document.createElement('textarea');
+    input.className = 'node-edit-input';
+    input.value = n.url ? `${n.text} ${n.url}` : n.text;
+    const finish = () => {
+      if (editingId !== n.id) return;
+      if (input.value.trim()) Object.assign(n, parseTextAndUrl(input.value));
+      editingId = null; saveState(); render();
     };
-
-    undoBtn.onclick = undo;
-    redoBtn.onclick = redo;
-
-    const zoomInBtn = document.getElementById('zoom-in-btn');
-    const zoomOutBtn = document.getElementById('zoom-out-btn');
-    const zoomResetBtn = document.getElementById('zoom-reset-btn');
-
-    function updateZoomLabel() {
-      zoomResetBtn.textContent = Math.round(zoom * 100) + '%';
+    input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(); } };
+    input.onblur = finish;
+    input.onpointerdown = e => e.stopPropagation();
+    el.appendChild(input);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  } else {
+    const text = document.createElement('span');
+    text.className = 'node-content' + (n.url ? ' has-url' : '');
+    text.textContent = n.text;
+    el.appendChild(text);
+    if (n.url && state.showUrls) {
+      const u = document.createElement('span');
+      u.className = 'node-url-text';
+      u.textContent = ` (${n.url})`;
+      el.appendChild(u);
     }
+  }
 
-    function toWorld(cx, cy) {
-      const r = world.getBoundingClientRect();
-      return { x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
+  const handle = document.createElement('div');
+  handle.className = 'node-resize-handle';
+  handle.textContent = '◢';
+  handle.onpointerdown = e => startResize(e, n, el);
+  el.appendChild(handle);
+
+  el.ondblclick = e => {
+    e.stopPropagation();
+    if (mode() !== 'drag' && mode() !== 'arrow' && activateNode(n)) render();
+  };
+  el.onpointerdown = e => nodeDown(e, n);
+  return el;
+}
+
+// edit the node's text, or open its link. Returns true when edit mode was entered.
+function activateNode(n) {
+  if (mode() === 'edit' || $('edit-text-chk').checked || !n.url) { editingId = n.id; return true; }
+  window.open(n.url, '_blank');
+  return false;
+}
+
+function drawLines() {
+  linesGroup.innerHTML = labelsGroup.innerHTML = '';
+  state.lines.forEach(l => { if (!view.hidden.has(l.from) && !view.hidden.has(l.to)) drawLine(l); });
+}
+let linesQueued = false;   // throttle line redraws while dragging
+const queueLines = () => {
+  if (linesQueued) return;
+  linesQueued = true;
+  requestAnimationFrame(() => { linesQueued = false; drawLines(); });
+};
+
+function svgEl(tag, attrs) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+// one arrowhead marker per colour; auto-start-reverse lets it serve both line ends
+function markerFor(color) {
+  const id = 'arr-' + color.replace('#', '');
+  if (!$(id)) {
+    const m = svgEl('marker', { id, viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
+    m.appendChild(svgEl('path', { d: 'M 0 1 L 10 5 L 0 9 z', fill: color }));
+    svgDefs.appendChild(m);
+  }
+  return `url(#${id})`;
+}
+
+function drawLine(line) {
+  const a = nodeById(line.from), b = nodeById(line.to);
+  if (!a || !b) return;
+  const sel = selectedLineId === line.id;
+  let color = line.color || '#00b4d8', width = line.width || 1, dim = false;
+
+  const step = view.lineDist.get(line.id);
+  if (step >= 1 && step <= 3 && state['colorDist' + step]) {
+    color = state['colorDist' + step + 'Hex'];
+  } else if (view.chain) {
+    const up = view.chain.up.has(line.id), down = view.chain.down.has(line.id);
+    if (up || down) { color = up && down ? CHAIN.both : up ? CHAIN.up : CHAIN.down; width++; }
+    else dim = true;
+  }
+
+  const ra = rect(a), rb = rect(b);
+  const p1 = edgePoint(ra, center(rb)), p2 = edgePoint(rb, center(ra));
+  const d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+
+  const path = svgEl('path', { d, stroke: color, fill: 'none', 'stroke-width': (sel ? Math.max(width + 1, 3) : width) + 'px' });
+  if (dim) path.setAttribute('opacity', '0.2');
+  if (sel) path.classList.add('line-selected');
+  if (line.arrow === 'end' || line.arrow === 'both') path.setAttribute('marker-end', markerFor(color));
+  if (line.arrow === 'start' || line.arrow === 'both') path.setAttribute('marker-start', markerFor(color));
+  const hit = svgEl('path', { d, stroke: 'transparent', 'stroke-width': '25px', fill: 'none' });  // fat invisible click target
+
+  const pick = e => {
+    if (e.pointerType === 'touch' && mode() === 'drag') {   // a line must not steal a touch meant for a nearby node
+      const n = nearNode(toWorld(e.clientX, e.clientY), state.touchHitPad / zoom);
+      if (n) return nodeDown(e, n);
     }
-
-    function setZoom(newZoom, cx, cy, anchor) {
-      newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
-      const vp = viewport.getBoundingClientRect();
-      if (cx === undefined) { cx = vp.left + vp.width / 2; cy = vp.top + vp.height / 2; }
-      const a = anchor || toWorld(cx, cy);
-      zoom = newZoom;
-      world.style.transform = 'scale(' + zoom + ')';
-      updateCanvasExtent();
-      viewport.scrollLeft = a.x * zoom - (cx - vp.left);
-      viewport.scrollTop = a.y * zoom - (cy - vp.top);
-      updateZoomLabel();
-    }
-
-    zoomInBtn.onclick = () => setZoom(zoom * 1.25);
-    zoomOutBtn.onclick = () => setZoom(zoom / 1.25);
-    zoomResetBtn.onclick = () => setZoom(1);
-
-    viewport.addEventListener('wheel', (e) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
-      setZoom(zoom * zoomFactor, e.clientX, e.clientY);
-    }, { passive: false });
-
-    viewport.addEventListener('touchmove', (e) => {
-      if (e.target.closest && e.target.closest('.node-edit-input')) return;
-      e.preventDefault();
-    }, { passive: false });
-    ['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
-      document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
-
-    function captureTouchPointer(e) {
-      if (capturedPointers.has(e.pointerId)) return;
-      capturedPointers.add(e.pointerId);
-      try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
-    }
-
-    function cancelSingleGestures() {
-      if (draggingNode || resizingNode) saveState();
-      draggingNode = null; resizingNode = null;
-      draggingTimeline = false; resizingTimeline = false;
-      isDrivingArrow = false; driveSourceNode = null; hoveredTargetNodeId = null;
-      lineDrawStart = null; isSelectingBox = false; panning = false; tapCandidate = null;
-      liveDragArrow.style.display = 'none';
-      selectionBox.style.display = 'none';
-      viewport.querySelectorAll('.node').forEach(el => {
-        if (!selectedNodeIds.has(el.dataset.id)) { el.style.borderColor = ''; el.style.boxShadow = ''; }
-      });
-    }
-
-    function updatePinch() {
-      const pts = [...activePointers.values()];
-      if (pts.length < 2 || !pinchStart) return;
-      const a = pts[0], b = pts[1];
-      const dist = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
-      setZoom(pinchStart.zoom * dist / pinchStart.dist, (a.x + b.x) / 2, (a.y + b.y) / 2, pinchStart.anchor);
-    }
-
-    viewport.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'touch') return;
-      lastTouchDownTime = performance.now();
-      const protectedGesture = !!(draggingNode || isDrivingArrow || resizingNode || draggingTimeline || resizingTimeline);
-      if (tcfg('touchIgnoreExtra') && activePointers.size >= 1 && protectedGesture) {
-        // a stray/second finger landed mid-drag: ignore it completely
-        ignoredPointers.add(e.pointerId);
-        e.stopImmediatePropagation();
-        return;
-      }
-      if (activePointers.size >= 2) { ignoredPointers.add(e.pointerId); e.stopImmediatePropagation(); return; }
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      window.addEventListener('pointermove', handlePointerMove);
-      if (activePointers.size === 2) {
-        e.stopImmediatePropagation();
-        cancelSingleGestures();
-        const pts = [...activePointers.values()];
-        const cx = (pts[0].x + pts[1].x) / 2, cy = (pts[0].y + pts[1].y) / 2;
-        pinching = true;
-        pinchStart = {
-          dist: Math.max(10, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)),
-          zoom: zoom,
-          anchor: toWorld(cx, cy)
-        };
-        activePointers.forEach((_, id) => captureTouchPointer({ pointerId: id }));
-      }
-    }, true);
-
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerUp);
-
-    // Forget every tracked finger and abort any half-finished gesture
-    function resetTouchState() {
-      activePointers.clear(); capturedPointers.clear(); ignoredPointers.clear();
-      pinching = false; pinchStart = null;
-      const hadDrag = dragActive;
-      cancelSingleGestures();
-      dragActive = false; dragFrameQueued = false;
-      window.removeEventListener('pointermove', handlePointerMove);
-      if (hadDrag) saveState();
-    }
-
-    // Ground truth from touch events: when no finger is really on the screen,
-    // any pointer we still think is down is "stuck" -> clear it.
-    function onTouchCount(e) {
-      liveTouches = e.touches.length;
-      if (e.type !== 'touchstart' && liveTouches === 0 && tcfg('touchAutoClear')) {
-        if (activePointers.size || ignoredPointers.size || pinching || draggingNode || panning) {
-          // let the normal pointerup finish first, then sweep up whatever is left
-          setTimeout(() => {
-            if (liveTouches === 0 && (activePointers.size || ignoredPointers.size || pinching || draggingNode || panning)) {
-              resetTouchState(); render();
-            }
-          }, 60);
-        }
-      }
-    }
-    ['touchstart', 'touchend', 'touchcancel'].forEach(t =>
-      window.addEventListener(t, onTouchCount, { passive: true, capture: true }));
-
-    // Watchdog for browsers that drop pointerup/touchend entirely
-    setInterval(() => {
-      if (!tcfg('touchAutoClear')) return;
-      if (liveTouches === 0 && performance.now() - lastTouchDownTime > 800 &&
-          (activePointers.size || ignoredPointers.size || pinching || (draggingNode && isTouchActive()))) {
-        resetTouchState(); render();
-      }
-    }, 700);
-    window.addEventListener('blur', () => { if (tcfg('touchAutoClear')) resetTouchState(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && tcfg('touchAutoClear')) resetTouchState(); });
-
-    updateZoomLabel();
-
-    saveState();
+    e.stopPropagation();
+    selectedLineId = line.id; selected.clear();
     render();
-  </script>
+    $('selected-line-label').focus();
+  };
+  path.onpointerdown = hit.onpointerdown = pick;
+  linesGroup.append(path, hit);
+
+  if (line.label) {
+    const t = svgEl('text', { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2, 'text-anchor': 'middle', 'dominant-baseline': 'central', class: 'line-label-text' });
+    t.textContent = line.label;
+    t.onpointerdown = pick;
+    labelsGroup.appendChild(t);
+  }
+}
+
+function drawLineControls() {
+  const line = selectedLineId && state.lines.find(l => l.id === selectedLineId);
+  if (selectedLineId && !line) selectedLineId = null;
+  $('line-controls-group').style.display = line ? 'flex' : 'none';
+  if (!line) return;
+  $('selected-line-label').value = line.label || '';
+  if (line.arrow) $('arrow-style').value = line.arrow;
+  if (line.width) $('line-width').value = String(line.width);
+  if (line.color) $('line-color').value = line.color;
+}
+
+function drawTimeline() {
+  timelineEl.classList.toggle('hidden', !state.showTimeline);
+  if (!state.showTimeline) return;
+  const tp = state.timelinePos, m0 = new Date().getMonth(), y0 = new Date().getFullYear(), usable = tp.width - 25;
+  Object.assign(timelineEl.style, { left: tp.x + 'px', top: tp.y + 'px', width: tp.width + 'px' });
+  timelineEl.querySelectorAll('.timeline-tick, .timeline-label').forEach(e => e.remove());
+  const add = (cls, left, text = '') => {
+    const d = document.createElement('div');
+    d.className = cls; d.style.left = left + 'px'; d.textContent = text;
+    timelineEl.appendChild(d);
+  };
+  for (let i = 0; i <= 12; i++) {
+    const x = 10 + (i / 12) * usable;
+    add('timeline-tick', x);
+    if (i < 12) add('timeline-label', x + usable / 24, `${MONTHS[(m0 + i) % 12]} '${String(y0 + (m0 + i >= 12 ? 1 : 0)).slice(-2)}`);
+  }
+}
+
+function updateExtent() {
+  let r = 0, b = 0;
+  els.forEach(el => { r = Math.max(r, el.offsetLeft + el.offsetWidth); b = Math.max(b, el.offsetTop + el.offsetHeight); });
+  world.style.width = Math.max(Math.floor(viewport.clientWidth / zoom), r + 200) + 'px';
+  world.style.height = Math.max(Math.floor(viewport.clientHeight / zoom), b + 200) + 'px';
+}
+
+/* ======================= toolbar: settings, dock, menu ======================= */
+const controls = $$('[data-k]');
+controls.forEach(el => {
+  const k = el.dataset.k, live = el.type === 'range' || el.type === 'color';
+  el.addEventListener(live ? 'input' : 'change', () => {
+    if (el.type === 'radio' && !el.checked) return;
+    if (isLocked && k === 'maxDistanceLimit') return render();
+    let v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    if (k === 'fontMin') v = Math.min(v, state.fontMax);
+    if (k === 'fontMax') v = Math.max(v, state.fontMin);
+    state[k] = v;
+    if (!live) saveState();
+    render();
+  });
+  if (live) el.addEventListener('change', saveState);
+});
+
+function syncControls() {
+  controls.forEach(el => {
+    const v = state[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = !!v;
+    else if (el.type === 'radio') el.checked = v === el.value;
+    else el.value = v;
+  });
+  $$('[data-out]').forEach(s => {
+    const k = s.dataset.out, v = state[k];
+    s.textContent = k === 'maxDistanceLimit' && v >= 10 ? '∞' : v + (s.dataset.unit || '');
+  });
+  document.body.classList.toggle('touch-mode', isTouchActive());
+}
+
+function applyDock() {
+  const pos = state.dockPosition;
+  toolbar.className = 'dock-' + pos;
+  document.body.dataset.dock = pos;
+  document.body.style.setProperty('--sw', state.sidebarWidth + 'px');
+  toolbar.style.left = toolbar.style.top = '';
+  if (pos === 'floating') { toolbar.style.left = state.floatingPos.x + 'px'; toolbar.style.top = state.floatingPos.y + 'px'; }
+}
+
+const narrow = matchMedia('(max-width: 768px)');
+const setMenuHidden = h => document.body.classList.toggle('menu-hidden', h);
+setMenuHidden(narrow.matches);
+narrow.addEventListener('change', e => setMenuHidden(e.matches));
+$('toolbar-hide-btn').onclick = () => setMenuHidden(true);
+$('floating-menu-btn').onclick = () => setMenuHidden(false);
+
+const helpModal = $('help-modal');
+$('help-btn').onclick = () => helpModal.classList.add('active');
+$('modal-close-btn').onclick = () => helpModal.classList.remove('active');
+helpModal.onclick = e => { if (e.target === helpModal) helpModal.classList.remove('active'); };
+
+/* ---------- adding / clearing ---------- */
+function addBoxes(texts) {
+  texts.forEach(t => {
+    const i = state.nodes.length;
+    state.nodes.push({ id: uid(), ...parseTextAndUrl(t), x: 80 + (i % 10) * 20, y: 140 + (i % 10) * 20, size: 'auto', collapsed: false });
+  });
+  $('node-text').value = '';
+  saveState(); render();
+}
+const createBox = () => { const t = $('node-text').value; if (t.trim()) addBoxes([t]); };
+const createBoxes = () => { const t = $('node-text').value.trim(); if (t) addBoxes(t.split(/\s+/)); };
+$('add-btn').onclick = createBox;
+$('add-boxes-btn').onclick = createBoxes;
+$('node-text').onkeydown = e => { if (e.key === 'Enter') createBox(); };
+
+$('clear-btn').onclick = () => {
+  if (isLocked || !confirm('Clear all nodes and connections?')) return;
+  state = { ...state, nodes: [], lines: [] };
+  selected.clear(); selectedLineId = null; editingId = null;
+  saveState(); render();
+};
+
+/* ---------- lock view ---------- */
+function setLock(on) {
+  isLocked = on;
+  $('lock-btn').disabled = on;
+  $('unlock-btn').disabled = !on;
+}
+$('lock-btn').onclick = () => {
+  lock = { selected: new Set(selected), hidden: new Set(hiddenIds()), maxDist: state.maxDistanceLimit };
+  setLock(true); render();
+};
+$('unlock-btn').onclick = () => {
+  if (!isLocked) return;
+  setLock(false);
+  selected = new Set(lock.selected);
+  state.maxDistanceLimit = lock.maxDist;
+  lock = null;
+  render();
+};
+
+/* ---------- fit / arrange ---------- */
+function setFitMode(m) {
+  fitMode = m;
+  $('fit-box-btn').classList.toggle('fit-active', m === 'grid');
+  $('fit-seq-btn').classList.toggle('fit-active', m === 'sequence');
+  viewport.style.cursor = m ? 'crosshair' : '';
+}
+const toggleFit = m => {
+  if (!selected.size) return alert('Select at least one node first.');
+  setFitMode(fitMode === m ? null : m);
+};
+$('fit-box-btn').onclick = () => toggleFit('grid');
+$('fit-seq-btn').onclick = () => toggleFit('sequence');
+$('fit-screen-btn').onclick = () => {
+  const nodes = visibleNodes();
+  if (!nodes.length) return;
+  const pad = 30 / zoom;
+  arrangeGrid(nodes, {
+    x: viewport.scrollLeft / zoom + pad, y: viewport.scrollTop / zoom + pad,
+    width: Math.max(60, viewport.clientWidth / zoom - pad * 2), height: Math.max(40, viewport.clientHeight / zoom - pad * 2)
+  });
+  saveState(); render();
+};
+
+/* ---------- selected line editing ---------- */
+function updateSelectedLine(prop, value) {
+  const l = state.lines.find(x => x.id === selectedLineId);
+  if (l) { l[prop] = value; render(); saveState(); }
+}
+$('arrow-style').onchange = e => updateSelectedLine('arrow', e.target.value);
+$('line-width').onchange = e => updateSelectedLine('width', parseInt(e.target.value, 10));
+$('line-color').oninput = e => updateSelectedLine('color', e.target.value);
+$('selected-line-label').oninput = e => {
+  const l = state.lines.find(x => x.id === selectedLineId);
+  if (l) { l.label = e.target.value; render(); }
+};
+$('selected-line-label').onchange = saveState;
+$('delete-line-btn').onclick = () => {
+  if (!selectedLineId) return;
+  state.lines = state.lines.filter(l => l.id !== selectedLineId);
+  selectedLineId = null; saveState(); render();
+};
+
+/* ======================= zoom ======================= */
+function setZoom(z, cx, cy, anchor) {
+  z = clamp(z, MIN_ZOOM, MAX_ZOOM);
+  const vp = viewport.getBoundingClientRect();
+  if (cx === undefined) { cx = vp.left + vp.width / 2; cy = vp.top + vp.height / 2; }
+  const a = anchor || toWorld(cx, cy);
+  zoom = z;
+  world.style.transform = `scale(${z})`;
+  updateExtent();
+  viewport.scrollLeft = a.x * z - (cx - vp.left);
+  viewport.scrollTop = a.y * z - (cy - vp.top);
+  $('zoom-reset-btn').textContent = Math.round(z * 100) + '\%'; }$('zoom-in-btn').onclick = () => setZoom(zoom * 1.25);
+$('zoom-out-btn').onclick = () => setZoom(zoom / 1.25);$('zoom-reset-btn').onclick = () => setZoom(1);
+viewport.addEventListener('wheel', e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  setZoom(zoom * (e.deltaY < 0 ? 1.15 : 0.87), e.clientX, e.clientY);
+}, { passive: false });
+
+/* ======================= gestures ======================= */
+let g = null;
+
+function capture(id) {
+  try { if (!viewport.hasPointerCapture(id)) viewport.setPointerCapture(id); } catch (err) {}
+}
+function begin(e, spec) {
+  if (e.pointerType === 'touch') { capture(e.pointerId); spec.touch = true; }
+  g = spec;
+}
+function cancelGesture() {
+  if (g && g.moved) saveState();
+  g = null;
+  liveArrow.style.display = selBox.style.display = 'none';
+  els.forEach(el => el.classList.remove('target'));
+}
+
+function addLine(from, to) {
+  state.lines.push({
+    id: uid(), from, to, label: '',
+    arrow: $('arrow-style').value, width: +$('line-width').value, color:$('line-color').value
+  });
+  saveState(); render();
+}
+
+function startPan(e, origin = { x: e.clientX, y: e.clientY }) {
+  const l0 = viewport.scrollLeft, t0 = viewport.scrollTop;
+  const gest = { type: 'pan', move: m => {
+    viewport.scrollLeft = l0 - (m.clientX - origin.x);
+    viewport.scrollTop = t0 - (m.clientY - origin.y);
+  } };
+  begin(e, gest);
+  gest.move(e);
+}
+
+function startArrow(e, src) {
+  if (!isLocked && !selected.has(src.id)) { selected.clear(); selected.add(src.id); render(); }
+  const x0 = e.clientX, y0 = e.clientY;
+  const gest = {
+    type: 'arrow', protect: true, target: null,
+    move(m) {
+      const c = center(rect(src));
+      const tip = { x: c.x + (m.clientX - x0) * 1.5 / zoom, y: c.y + (m.clientY - y0) * 1.5 / zoom };
+      const s = edgePoint(rect(src), tip), color = $('line-color').value;
+      liveArrow.setAttribute('x1', s.x); liveArrow.setAttribute('y1', s.y);
+      liveArrow.setAttribute('x2', tip.x); liveArrow.setAttribute('y2', tip.y);
+      liveArrow.setAttribute('stroke', color);
+      liveArrow.setAttribute('marker-end', markerFor(color));
+      liveArrow.style.display = 'block';
+      gest.target = null;
+      visibleNodes().forEach(n => { if (n.id !== src.id && inside(tip, rect(n))) gest.target = n.id; });
+      els.forEach((el, id) => el.classList.toggle('target', id === gest.target));
+    },
+    up() {
+      liveArrow.style.display = 'none';
+      els.forEach(el => el.classList.remove('target'));
+      if (gest.target) addLine(src.id, gest.target);
+    }
+  };
+  begin(e, gest);
+}
+
+function startLine(e, p) {
+  ['x1', 'x2'].forEach(a => liveArrow.setAttribute(a, p.x));
+  ['y1', 'y2'].forEach(a => liveArrow.setAttribute(a, p.y));
+  liveArrow.setAttribute('stroke', '#00f5d4');
+  liveArrow.removeAttribute('marker-end');
+  liveArrow.style.display = 'block';
+  begin(e, {
+    type: 'line',
+    move(m) { const q = toWorld(m.clientX, m.clientY); liveArrow.setAttribute('x2', q.x); liveArrow.setAttribute('y2', q.y); },
+    up(m) {
+      liveArrow.style.display = 'none';
+      const a = closestNode(p, 90 / zoom), b = closestNode(toWorld(m.clientX, m.clientY), 90 / zoom);
+      if (a && b && a.id !== b.id) addLine(a.id, b.id);
+    }
+  });
+}
+
+function startSelect(e, p) {
+  if (!isLocked && !e.ctrlKey && !e.metaKey && !fitMode) { selected.clear(); render(); }
+  Object.assign(selBox.style, { left: p.x + 'px', top: p.y + 'px', width: '0px', height: '0px', display: 'block' });
+  begin(e, {
+    type: 'select',
+    move(m) {
+      const q = toWorld(m.clientX, m.clientY);
+      const r = { x: Math.min(p.x, q.x), y: Math.min(p.y, q.y), width: Math.abs(q.x - p.x), height: Math.abs(q.y - p.y) };
+      Object.assign(selBox.style, { left: r.x + 'px', top: r.y + 'px', width: r.width + 'px', height: r.height + 'px' });
+      if (isLocked || fitMode) return;
+      const before = selected.size;
+      visibleNodes().forEach(n => {
+        const b = rect(n);
+        if (!(b.x > r.x + r.width || b.x + b.width < r.x || b.y > r.y + r.height || b.y + b.height < r.y)) selected.add(n.id);
+      });
+      if (selected.size !== before) render();
+    },
+    up() {
+      if (fitMode) {
+        const r = { x: parseFloat(selBox.style.left), y: parseFloat(selBox.style.top), width: parseFloat(selBox.style.width), height: parseFloat(selBox.style.height) };
+        if (!isLocked && r.width > 20 && r.height > 20) {
+          (fitMode === 'sequence' ? arrangeSequence : arrangeGrid)(visibleNodes().filter(n => selected.has(n.id)), r);
+          saveState();
+        }
+        setFitMode(null);
+      }
+      selBox.style.display = 'none';
+      render();
+    }
+  });
+}
+
+function nodeDown(e, n) {
+  if (editingId === n.id) return;
+  e.stopPropagation();
+  selectedLineId = null;
+  const touch = e.pointerType === 'touch';
+  if (touch) capture(e.pointerId);
+
+  const m = mode();
+  if (m === 'edit') { editingId = n.id; return render(); }
+  if (m === 'link') { if (n.url) window.open(n.url, '_blank'); return; }
+  if (m === 'arrow') return startArrow(e, n);
+
+  const tap = isTouchActive() && selected.size === 1 && selected.has(n.id);
+  if (!isLocked) {
+    if (e.ctrlKey || e.metaKey) { selected.has(n.id) ? selected.delete(n.id) : selected.add(n.id); render(); }
+    else if (!selected.has(n.id)) { selected.clear(); selected.add(n.id); render(); }
+  }
+
+  const ids = isLocked ? new Set([n.id]) : new Set(selected);
+  if (!isLocked && $('drag-graph-chk').checked) selected.forEach(id => componentOf(id).forEach(c => ids.add(c)));
+  const starts = [...ids].map(nodeById).filter(Boolean).map(x => ({ n: x, x: x.x, y: x.y }));
+
+  const thresh = touch ? state.touchDragThreshold : 0, hold = touch ? state.touchHoldMs : 0, t0 = performance.now();
+  let active = thresh === 0 && hold === 0, ox = e.clientX, oy = e.clientY;
+  const gest = {
+    type: 'node', protect: true, moved: false,
+    move(p) {
+      if (!active) {
+        if (Math.hypot(p.clientX - e.clientX, p.clientY - e.clientY) <= thresh) return;
+        if (hold > 0 && performance.now() - t0 < hold) return startPan(p, { x: e.clientX, y: e.clientY });
+        active = true; ox = p.clientX; oy = p.clientY;
+        return;
+      }
+      const dx = (p.clientX - ox) / zoom, dy = (p.clientY - oy) / zoom;
+      starts.forEach(s => {
+        s.n.x = s.x + dx; s.n.y = s.y + dy;
+        const el = els.get(s.n.id);
+        if (el) { el.style.left = s.n.x + 'px'; el.style.top = s.n.y + 'px'; }
+      });
+      gest.moved = true;
+      queueLines();
+    },
+    up(p) {
+      if (gest.moved) saveState();
+      const isTap = tap && p.type === 'pointerup' && Math.hypot(p.clientX - e.clientX, p.clientY - e.clientY) < 8;
+      if (isTap) activateNode(n);
+      if (gest.moved || isTap) render();
+    }
+  };
+  begin(e, gest);
+}
+
+function startResize(e, n, el) {
+  e.stopPropagation();
+  if (state.autoSizeAll) return;
+  const r = el.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY;
+  const gest = {
+    type: 'resize', protect: true, moved: false,
+    move(p) {
+      const k = nodeFont(n.id) / 11;
+      n.customWidth = Math.round(Math.max(80, (r.width + p.clientX - x0) / zoom) / k);
+      n.customHeight = Math.round(Math.max(40, (r.height + p.clientY - y0) / zoom) / k);
+      n.size = 'custom';
+      gest.moved = true;
+      render();
+    },
+    up() { if (gest.moved) saveState(); }
+  };
+  begin(e, gest);
+}
+
+timelineEl.onpointerdown = e => {
+  const tp = state.timelinePos, p = toWorld(e.clientX, e.clientY), ox = p.x - tp.x, oy = p.y - tp.y;
+  begin(e, { type: 'timeline', protect: true,
+    move(m) { const q = toWorld(m.clientX, m.clientY); tp.x = q.x - ox; tp.y = q.y - oy; render(); },
+    up() { saveState(); render(); } });
+};
+tlHandle.onpointerdown = e => {
+  e.stopPropagation();
+  const x0 = e.clientX, w0 = state.timelinePos.width;
+  begin(e, { type: 'timeline-resize', protect: true,
+    move(m) { state.timelinePos.width = Math.max(300, w0 + (m.clientX - x0) / zoom); render(); },
+    up() { saveState(); render(); } });
+};
+
+$('toolbar-drag-handle').onpointerdown = e => {
+  if (state.dockPosition !== 'floating') return;
+  const ox = e.clientX - toolbar.offsetLeft, oy = e.clientY - toolbar.offsetTop;
+  begin(e, { type: 'toolbar',
+    move(m) {
+      state.floatingPos = { x: Math.max(0, m.clientX - ox), y: Math.max(0, m.clientY - oy) };
+      toolbar.style.left = state.floatingPos.x + 'px'; toolbar.style.top = state.floatingPos.y + 'px';
+    },
+    up() { saveState(); } });
+};
+sidebarResizer.onpointerdown = e => {
+  e.stopPropagation();
+  sidebarResizer.classList.add('resizing');
+  begin(e, { type: 'sidebar',
+    move(m) {
+      const w = state.dockPosition === 'left' ? m.clientX : window.innerWidth - m.clientX;
+      state.sidebarWidth = clamp(w, 150, 600);
+      applyDock();
+    },
+    up() { sidebarResizer.classList.remove('resizing'); saveState(); } });
+};
+
+viewport.onpointerdown = e => {
+  if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
+  if (selectedLineId) { selectedLineId = null; render(); }
+  const m = mode();
+  if (m === 'edit' || m === 'link') return;
+
+  const p = toWorld(e.clientX, e.clientY);
+  const near = nearNode(p, (m === 'drag' ? state.touchHitPad : 60) / zoom);
+  if (near) return m === 'drag' ? nodeDown(e, near) : startArrow(e, near);
+  if (m === 'arrow') return;
+
+  const boxing = $('select-region-chk').checked || fitMode;
+  if (m === 'drag' || (e.pointerType === 'touch' && !boxing)) return startPan(e);
+  boxing ? startSelect(e, p) : startLine(e, p);
+};
+
+/* ---------- pointer plumbing (mouse + multi-touch) ---------- */
+const touches = new Map(), ignored = new Set();
+let pinch = null, liveTouches = 0, lastTouchDown = 0;
+
+function onMove(e) {
+  if (e.pointerType === 'touch') {
+    if (ignored.has(e.pointerId)) return;
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch) return updatePinch();
+    capture(e.pointerId);
+  }
+  if (g) g.move(e);
+}
+function onUp(e) {
+  if (e.pointerType === 'touch') {
+    if (ignored.delete(e.pointerId)) return;
+    touches.delete(e.pointerId);
+    if (pinch) {
+      if (touches.size < 2) pinch = null;
+      if (touches.size) return;
+    }
+  }
+  if (!g) return;
+  if (e.type === 'pointercancel') return cancelGesture();
+  const done = g;
+  g = null;
+  if (done.up) done.up(e);
+}
+window.addEventListener('pointermove', onMove);
+window.addEventListener('pointerup', onUp);
+window.addEventListener('pointercancel', onUp);
+
+function updatePinch() {
+  const [a, b] = [...touches.values()];
+  if (!b || !pinch) return;
+  const dist = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+  setZoom(pinch.zoom * dist / pinch.dist, (a.x + b.x) / 2, (a.y + b.y) / 2, pinch.anchor);
+}
+
+viewport.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  lastTouchDown = performance.now();
+  const ignore = () => { ignored.add(e.pointerId); e.stopImmediatePropagation(); };
+  if (state.touchIgnoreExtra && touches.size >= 1 && g && g.protect) return ignore();
+  if (touches.size >= 2) return ignore();
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size < 2) return;
+  e.stopImmediatePropagation();
+  cancelGesture();
+  const [a, b] = [...touches.values()];
+  pinch = { dist: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), zoom, anchor: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) };
+  touches.forEach((_, id) => capture(id));
+}, true);
+
+viewport.addEventListener('touchmove', e => { if (!e.target.closest('.node-edit-input')) e.preventDefault(); }, { passive: false });
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+
+/* ---------- stuck-touch recovery ---------- */
+const stuck = () => touches.size || ignored.size || pinch || (g && g.touch);
+function resetTouchState() {
+  touches.clear(); ignored.clear(); pinch = null;
+  cancelGesture();
+}
+$('tt-reset-btn').onclick = () => { resetTouchState(); render(); };
+const sweep = () => { if (!liveTouches && stuck()) { resetTouchState(); render(); } };
+
+['touchstart', 'touchend', 'touchcancel'].forEach(t => window.addEventListener(t, e => {
+  liveTouches = e.touches.length;
+  if (t !== 'touchstart' && !liveTouches && state.touchAutoClear && stuck()) setTimeout(sweep, 60);
+}, { passive: true, capture: true }));
+
+setInterval(() => { if (state.touchAutoClear && performance.now() - lastTouchDown > 800) sweep(); }, 700);
+window.addEventListener('blur', () => { if (state.touchAutoClear) resetTouchState(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state.touchAutoClear) resetTouchState(); });
+
+/* ======================= import / export bridge ======================= */
+let ioWin = null, ioTimer = null;
+const ioPayload = () => ({
+  type: 'cm-state', state,
+  defaults: { width: +$('line-width').value, color: $('line-color').value, arrow:$('arrow-style').value }
+});
+function postIo(msg, target = ioWin) {
+  if (target && !target.closed) try { target.postMessage(msg, '*'); } catch (err) {}
+}
+function scheduleIoSync() {
+  if (!ioWin || ioWin.closed) return;
+  clearTimeout(ioTimer);
+  ioTimer = setTimeout(() => postIo(ioPayload()), 250);
+}
+$('io-btn').onclick = () => {
+  if (ioWin && !ioWin.closed) { ioWin.focus(); return postIo(ioPayload()); }
+  ioWin = window.open('conceptmap_io.html', 'conceptmap_io', 'width=560,height=760');
+  if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
+};
+function afterExternalChange() {
+  selected.clear(); selectedLineId = null; editingId = null;
+  saveState(); render();
+}
+function applyImportedJson(src) {
+  const keepTouch = Object.fromEntries(TOUCH_KEYS.map(k => [k, state[k]]));
+  state = { ...structuredClone(DEFAULTS), ...keepTouch, ...src, nodes: src.nodes || [], lines: normalizeLines(src.lines || []) };
+  afterExternalChange();
+}
+
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || typeof d !== 'object' || typeof d.type !== 'string') return;
+  if (d.type === 'cm-io-ready') { ioWin = e.source; return postIo(ioPayload(), e.source); }
+  if (e.source !== ioWin) return;
+  const ack = (ok, message) => postIo({ type: 'cm-ack', ok, message }, e.source);
+
+  if (d.type === 'cm-request-state') {
+    postIo(ioPayload(), e.source);
+  } else if (d.type === 'cm-import-json') {
+    try {
+      if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
+      applyImportedJson(d.data);
+      ack(true, `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.`);
+    } catch (err) { ack(false, 'Invalid JSON file structure.'); }
+  } else if (d.type === 'cm-import-graph') {
+    const nodes = Array.isArray(d.nodes) ? d.nodes : [], lines = Array.isArray(d.lines) ? d.lines : [];
+    state.nodes = d.replace ? nodes : state.nodes.concat(nodes);
+    state.lines = d.replace ? lines : state.lines.concat(lines);
+    afterExternalChange();
+    ack(true, `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.`);
+  } else if (d.type === 'cm-state-update' && d.data) {
+    Object.assign(state, d.data);
+    afterExternalChange();
+  }
+});
+
+/* ======================= start ======================= */
+saveState();
+render();
+</script>
 </body>
 </html>
