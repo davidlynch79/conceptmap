@@ -43,28 +43,23 @@
     display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4);
     overflow-x: hidden; overflow-y: scroll; max-height: 100vh;
     scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a;
+    position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 150px; max-width: 85vw; left: 0; border-width: 0 1px 0 0;
   }
   #toolbar::-webkit-scrollbar { width: 10px; }
   #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
   #toolbar::-webkit-scrollbar-thumb { background: #00b4d8; border: 2px solid #0d1b2a; border-radius: 5px; }
-  #toolbar.dock-top, #toolbar.dock-bottom, #toolbar.dock-floating { flex-direction: row; flex-wrap: wrap; }
-  #toolbar.dock-top { position: relative; border-width: 0 0 1px; max-height: 40vh; }
-  #toolbar.dock-bottom { position: absolute; inset: auto 0 0; border-width: 1px 0 0; max-height: 40vh; }
-  #toolbar.dock-left, #toolbar.dock-right { position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 150px; max-width: 85vw; }
-  #toolbar.dock-left { left: 0; border-width: 0 1px 0 0; }
-  #toolbar.dock-right { right: 0; border-width: 0 0 0 1px; }
-  #toolbar.dock-floating {
-    position: absolute; width: max-content; max-width: 90vw; max-height: 80vh;
-    border-color: #00b4d8; box-shadow: 0 8px 24px rgba(0,0,0,.7);
-  }
-  #toolbar-drag-handle {
-    display: none; width: 100%; padding: 8px; margin-bottom: 2px; background: #0d1b2a; color: #00f5d4;
-    font: 11px monospace; letter-spacing: 1px; text-align: center; cursor: move; border: 1px dashed #415a77;
-  }
-  .dock-floating #toolbar-drag-handle { display: block; }
 
-  .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; }
-  #toolbar:not(.dock-left):not(.dock-right) .tool-group { flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; position: relative; }
+  .panel-grip {
+    display: none; font: 9px monospace; color: #778da9; background: #1b263b; padding: 2px 4px; text-align: center; cursor: grab; border: 1px dotted #415a77; letter-spacing: 1px; margin-bottom: 2px;
+  }
+  .panel-grip:active { cursor: grabbing; color: #00f5d4; }
+  body.draggable-panels-enabled .tool-group .panel-grip { display: block; }
+
+  /* Collapsible sub-panel body content */
+  .panel-body { display: flex; flex-direction: column; gap: 6px; }
+  .panel-body.collapsed { display: none; }
+
   #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
   .tool-group > button, .tool-group select, .tool-group input[type=text] { flex: 1; }
   .tool-group label { white-space: nowrap; }
@@ -80,10 +75,8 @@
     width: 18px; height: 18px; background: #00b4d8; border-radius: 50%;
   }
 
-  #sidebar-resizer { display: none; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; }
+  #sidebar-resizer { display: block; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; left: calc(var(--sw) - 3px); }
   #sidebar-resizer:hover, #sidebar-resizer.resizing { background: #00b4d8; }
-  body[data-dock=left] #sidebar-resizer { display: block; left: calc(var(--sw) - 3px); }
-  body[data-dock=right] #sidebar-resizer { display: block; right: calc(var(--sw) - 3px); }
 
   #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
 
@@ -91,9 +84,8 @@
   #viewport {
     flex: 1; position: relative; overflow: auto; background: #0b132b;
     scrollbar-color: #415a77 #0d1b2a; touch-action: none; overscroll-behavior: none;
+    margin-left: var(--sw);
   }
-  body[data-dock=left] #viewport { margin-left: var(--sw); }
-  body[data-dock=right] #viewport { margin-right: var(--sw); }
   #viewport::-webkit-scrollbar { width: 14px; height: 14px; }
   #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
   #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
@@ -110,9 +102,9 @@
   body.menu-hidden #viewport { margin: 0; }
   body.menu-hidden #top-bar-controls { display: flex; }
   @media (max-width: 768px) {
-    body[data-dock] #viewport { margin: 0; }
-    body[data-dock] #sidebar-resizer { display: none; }
-    #toolbar.dock-left, #toolbar.dock-right { width: 280px; z-index: 300; }
+    #viewport { margin: 0; }
+    #sidebar-resizer { display: none; }
+    #toolbar { width: 280px; z-index: 300; }
   }
 
   /* ---------- timeline ---------- */
@@ -179,37 +171,100 @@
   .help-key { color: #00f5d4; font-weight: bold; }
 </style>
 </head>
-<body data-dock="left">
+<body>
 
 <div id="top-bar-controls"><button id="floating-menu-btn" class="action-btn">☰ Menu</button></div>
 
-<div id="toolbar" class="dock-left">
-  <div id="toolbar-drag-handle">:: DRAG MENU ::</div>
-
-  <div class="tool-group row-inline">
+<div id="toolbar">
+  <div class="tool-group row-inline" data-panel-id="panel-header">
     <span class="cap" style="flex:1;text-align:center">☰ MENU</span>
     <button id="toolbar-hide-btn" class="danger-btn">Hide</button>
   </div>
 
-  <div class="tool-group"><button id="io-btn" class="action-btn">Import / Export &#8599;</button></div>
-
-  <div class="tool-group">
-    <label>Interface Mode:
-      <select data-k="inputMode">
-        <option value="auto">Auto-Detect</option>
-        <option value="desktop">Desktop Mode</option>
-        <option value="touch">Touch / Phone Mode</option>
-      </select>
-    </label>
-    <label>Dock Position:
-      <select data-k="dockPosition">
-        <option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option>
-        <option value="right">Right</option><option value="floating">Floating</option>
-      </select>
-    </label>
+  <div class="tool-group" data-panel-id="panel-io">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
   </div>
 
-  <div class="tool-group">
+  <!-- SETTINGS SUB-PANEL -->
+  <div class="tool-group" data-panel-id="panel-settings-io">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline">
+      <span class="cap">SETTINGS PREFERENCES</span>
+      <div>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-settings" style="padding:2px 6px;font-size:9px;">Hide</button>
+      </div>
+    </div>
+    <div id="body-settings" class="panel-body">
+      <div class="row-inline">
+        <button id="export-settings-btn" class="action-btn">Export Settings</button>
+        <button id="import-settings-btn" class="action-btn">Import Settings</button>
+        <input type="file" id="import-settings-file" accept=".json" style="display:none">
+      </div>
+      <label><input type="checkbox" data-k="draggablePanels" id="draggable-panels-chk"> Make sub menus draggable</label>
+    </div>
+  </div>
+
+  <!-- INTERFACE SUB-PANEL (Default Collapsed) -->
+  <div class="tool-group" data-panel-id="panel-interface">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline">
+      <span class="cap">INTERFACE OPTIONS</span>
+      <div>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-interface" style="padding:2px 6px;font-size:9px;">Settings</button>
+      </div>
+    </div>
+    <div id="body-interface" class="panel-body collapsed">
+      <label>Interface Mode:
+        <select data-k="inputMode">
+          <option value="auto">Auto-Detect</option>
+          <option value="desktop">Desktop Mode</option>
+          <option value="touch">Touch / Phone Mode</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- TOUCH TUNING SUB-PANEL (Default Collapsed) -->
+  <div class="tool-group" data-panel-id="panel-touch">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline">
+      <span class="cap">TOUCH TUNING (ANTI-STICKY)</span>
+      <div>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-touch" style="padding:2px 6px;font-size:9px;">Settings</button>
+      </div>
+    </div>
+    <div id="body-touch" class="panel-body collapsed">
+      <div class="slider-label">
+        <span>Drag starts after: <b data-out="touchDragThreshold" data-unit="px"></b></span>
+        <input type="range" data-k="touchDragThreshold" min="0" max="30" step="1">
+        <span class="slider-hint">higher = ignores finger jitter</span>
+      </div>
+      <div class="slider-label">
+        <span>Node touch padding: <b data-out="touchHitPad" data-unit="px"></b></span>
+        <input type="range" data-k="touchHitPad" min="0" max="60" step="1">
+        <span class="slider-hint">near-miss touches still grab the node</span>
+      </div>
+      <div class="slider-label">
+        <span>Hold before drag: <b data-out="touchHoldMs" data-unit="ms"></b></span>
+        <input type="range" data-k="touchHoldMs" min="0" max="600" step="25">
+        <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
+      </div>
+      <label><input type="checkbox" data-k="touchIgnoreExtra"> Ignore extra fingers while dragging</label>
+      <label><input type="checkbox" data-k="touchAutoClear"> Auto-clear stuck touches</label>
+      <button id="tt-reset-btn">Reset touches now</button>
+    </div>
+  </div>
+
+  <div class="tool-group" data-panel-id="panel-add">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <input type="text" id="node-text" placeholder="Box text or URL...">
+    <button id="add-btn">Add Box</button>
+    <button id="add-boxes-btn">Add Boxes</button>
+  </div>
+
+  <div class="tool-group" data-panel-id="panel-interaction">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <span class="cap">INTERACTION MODE</span>
     <label><input type="radio" name="im" data-k="interactionMode" value="all"> Do All 4</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Click and Drag Only</label>
@@ -218,46 +273,21 @@
     <label><input type="radio" name="im" data-k="interactionMode" value="link"> Goto Link Only</label>
   </div>
 
-  <div class="tool-group">
-    <span class="cap">TOUCH TUNING (ANTI-STICKY)</span>
-    <div class="slider-label">
-      <span>Drag starts after: <b data-out="touchDragThreshold" data-unit="px"></b></span>
-      <input type="range" data-k="touchDragThreshold" min="0" max="30" step="1">
-      <span class="slider-hint">higher = ignores finger jitter</span>
-    </div>
-    <div class="slider-label">
-      <span>Node touch padding: <b data-out="touchHitPad" data-unit="px"></b></span>
-      <input type="range" data-k="touchHitPad" min="0" max="60" step="1">
-      <span class="slider-hint">near-miss touches still grab the node</span>
-    </div>
-    <div class="slider-label">
-      <span>Hold before drag: <b data-out="touchHoldMs" data-unit="ms"></b></span>
-      <input type="range" data-k="touchHoldMs" min="0" max="600" step="25">
-      <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
-    </div>
-    <label><input type="checkbox" data-k="touchIgnoreExtra"> Ignore extra fingers while dragging</label>
-    <label><input type="checkbox" data-k="touchAutoClear"> Auto-clear stuck touches</label>
-    <button id="tt-reset-btn">Reset touches now</button>
-  </div>
-
-  <div class="tool-group">
-    <input type="text" id="node-text" placeholder="Box text or URL...">
-    <button id="add-btn">Add Box</button>
-    <button id="add-boxes-btn">Add Boxes</button>
-  </div>
-
-  <div class="tool-group row-inline">
+  <div class="tool-group row-inline" data-panel-id="panel-lock">
+    <div class="panel-grip" style="width:100%">≡ DRAG SUB-PANEL</div>
     <button id="lock-btn" class="action-btn">Lock View</button>
     <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-fit">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
     <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
     <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-font">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="slider-label">
       <span>Linkage Font Range: <b data-out="fontMin"></b>&ndash;<b data-out="fontMax"></b></span>
       <div class="range-wrap">
@@ -267,26 +297,30 @@
     </div>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-dist-color">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <span class="cap">DISTANCE-BASED LINE COLORING</span>
     <div class="row-inline"><label><input type="checkbox" data-k="colorDist1"> 1 away line</label><input type="color" data-k="colorDist1Hex"></div>
     <div class="row-inline"><label><input type="checkbox" data-k="colorDist2"> 2 away line</label><input type="color" data-k="colorDist2Hex"></div>
     <div class="row-inline"><label><input type="checkbox" data-k="colorDist3"> 3 away line</label><input type="color" data-k="colorDist3Hex"></div>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-max-dist">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="slider-label">
       <span>Hide nodes &gt; dist: <b data-out="maxDistanceLimit"></b></span>
       <input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1">
     </div>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-autosize">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
     <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span> <span class="legend-down">&#9644;down</span></label>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-toggles">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
     <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
     <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
@@ -294,7 +328,8 @@
     <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-line-style">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <label>Type:
       <select id="arrow-style"><option value="end">Arrow (-&gt;)</option><option value="none">Line (--)</option></select>
     </label>
@@ -307,17 +342,25 @@
     <div class="row-inline"><label>Color:</label><input type="color" id="line-color" value="#00b4d8"></div>
   </div>
 
-  <div class="tool-group" id="line-controls-group" style="display:none;border-color:#00f5d4">
+  <div class="tool-group" id="line-controls-group" data-panel-id="panel-selected-line" style="display:none;border-color:#00f5d4">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <label>Line Label: <input type="text" id="selected-line-label" placeholder="Enter label..."></label>
     <button id="delete-line-btn" class="danger-btn">Delete Line</button>
   </div>
 
-  <div class="tool-group">
+  <div class="tool-group" data-panel-id="panel-history">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <button id="undo-btn" disabled>Undo</button>
     <button id="redo-btn" disabled>Redo</button>
   </div>
-  <div class="tool-group"><button id="clear-btn" class="danger-btn">Clear Map</button></div>
-  <div class="tool-group"><button id="help-btn" class="help-btn">? Help Guide</button></div>
+  <div class="tool-group" data-panel-id="panel-clear">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <button id="clear-btn" class="danger-btn">Clear Map</button>
+  </div>
+  <div class="tool-group" data-panel-id="panel-help">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <button id="help-btn" class="help-btn">? Help Guide</button>
+  </div>
 </div>
 
 <div id="sidebar-resizer"></div>
@@ -385,27 +428,65 @@ const svgDefs = svgLayer.querySelector('defs'), linesGroup = $('lines-group'), l
 const liveArrow = $('live-drag-arrow'), selBox = $('selection-box'), timelineEl = $('timeline-container');
 const tlHandle = timelineEl.querySelector('.timeline-resize-handle'), sidebarResizer = $('sidebar-resizer');
 
-/* ======================= state ======================= */
+/* ======================= state with custom defaults ======================= */
 const DEFAULTS = {
   nodes: [], lines: [],
-  showTimeline: false, showUrls: false, timelinePos: { x: 50, y: 50, width: 700 },
-  dockPosition: 'left', sidebarWidth: 280, floatingPos: { x: 20, y: 20 },
-  fontMin: 10, fontMax: 11, maxLinksBound: 1,
-  colorDist1: false, colorDist1Hex: '#ffb703', colorDist2: false, colorDist2Hex: '#fb8500', colorDist3: false, colorDist3Hex: '#ff006e',
-  maxDistanceLimit: 10, inputMode: 'auto', autoSizeAll: true, interactionMode: 'all',
-  touchDragThreshold: 8, touchHitPad: 22, touchHoldMs: 0, touchIgnoreExtra: true, touchAutoClear: true
+  panelOrder: [
+    "panel-header",
+    "panel-io",
+    "panel-settings-io",
+    "panel-interface",
+    "panel-touch",
+    "panel-add",
+    "panel-interaction",
+    "panel-lock",
+    "panel-fit",
+    "panel-font",
+    "panel-dist-color",
+    "panel-max-dist",
+    "panel-autosize",
+    "panel-toggles",
+    "panel-line-style",
+    "panel-selected-line",
+    "panel-history",
+    "panel-clear",
+    "panel-help"
+  ],
+  draggablePanels: false,
+  showTimeline: false,
+  showUrls: false,
+  timelinePos: { x: 50, y: 50, width: 700 },
+  sidebarWidth: 280,
+  fontMin: 12,
+  fontMax: 14,
+  maxLinksBound: 1,
+  colorDist1: true,
+  colorDist1Hex: "#ffb703",
+  colorDist2: false,
+  colorDist2Hex: "#fb8500",
+  colorDist3: false,
+  colorDist3Hex: "#ff006e",
+  maxDistanceLimit: 10,
+  inputMode: "desktop",
+  autoSizeAll: true,
+  interactionMode: "all",
+  touchDragThreshold: 10,
+  touchHitPad: 25,
+  touchHoldMs: 100,
+  touchIgnoreExtra: true,
+  touchAutoClear: true
 };
 const TOUCH_KEYS = ['touchDragThreshold', 'touchHitPad', 'touchHoldMs', 'touchIgnoreExtra', 'touchAutoClear'];
 let state = structuredClone(DEFAULTS);
 
-let hist = [], histIdx = -1;                 // undo history (JSON snapshots)
+let hist = [], histIdx = -1;
 let selected = new Set(), selectedLineId = null, editingId = null;
-let isLocked = false, lock = null;           // lock = { selected, hidden, maxDist }
-let fitMode = null;                          // null | 'grid' | 'sequence'
+let isLocked = false, lock = null;
+let fitMode = null;
 let zoom = 1;
 const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
 
-let els = new Map();                         // node id -> DOM element (visible nodes only)
+let els = new Map();
 let view = { links: new Map(), hidden: new Set(), lineDist: new Map(), chain: null };
 
 const mode = () => state.interactionMode;
@@ -418,7 +499,6 @@ function parseTextAndUrl(input) {
   return url ? { text: input.replace(url, '').trim() || url, url } : { text: input.trim() || 'Node', url: null };
 }
 
-// Older files may use arrow:'start'; flip those so every arrow points from -> to.
 const normalizeLines = lines => lines.map(l =>
   l.arrow === 'start' ? { ...l, from: l.to, to: l.from, arrow: 'end' } : l.arrow === 'none' ? l : { ...l, arrow: 'end' });
 
@@ -438,50 +518,41 @@ function restore(i) {
   histIdx = i;
   state = JSON.parse(hist[i]);
   selected.clear(); selectedLineId = null; editingId = null;
+  applyPanelOrder();
   render(); updateHistBtns();
 }
 $('undo-btn').onclick = () => restore(histIdx - 1);
 $('redo-btn').onclick = () => restore(histIdx + 1);
 
-/* ======================= keyboard shortcuts (Delete, Undo, Redo) ======================= */
+/* ======================= keyboard shortcuts ======================= */
 window.addEventListener('keydown', e => {
-  // Do not trigger canvas keyboard shortcuts if user is typing in a text field, textarea, or editing a node
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingId !== null) {
     return;
   }
-
-  // Undo: Ctrl+Z or Cmd+Z (without Shift)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
     e.preventDefault();
     if (histIdx > 0) restore(histIdx - 1);
     return;
   }
-
-  // Redo: Ctrl+Y, or Ctrl+Shift+Z, or Cmd+Shift+Z
   if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
     e.preventDefault();
     if (histIdx < hist.length - 1) restore(histIdx + 1);
     return;
   }
-
-  // Delete / Backspace: Delete selected line or selected nodes
   if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
     let changed = false;
-
     if (selectedLineId) {
       state.lines = state.lines.filter(l => l.id !== selectedLineId);
       selectedLineId = null;
       changed = true;
     }
-
     if (selected.size > 0 && !isLocked) {
       state.nodes = state.nodes.filter(n => !selected.has(n.id));
       state.lines = state.lines.filter(l => !selected.has(l.from) && !selected.has(l.to));
       selected.clear();
       changed = true;
     }
-
     if (changed) {
       saveState();
       render();
@@ -489,13 +560,10 @@ window.addEventListener('keydown', e => {
   }
 });
 
-/* ======================= graph queries ======================= */
-// [parent, child] of a line
+/* ======================= graph queries & geom ======================= */
 const dir = l => l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
-// directed edges a line provides (undirected lines work both ways)
 const edges = l => (l.arrow === 'end' || l.arrow === 'start') ? [dir(l)] : [[l.from, l.to], [l.to, l.from]];
 
-// Breadth-first walk. Returns hop distance per node and per line.
 function bfs(starts, up = false) {
   const dist = new Map(starts.map(id => [id, 0])), lineDist = new Map(), queue = [...starts];
   while (queue.length) {
@@ -539,18 +607,15 @@ function nodeFont(id) {
   return n <= 1 ? lo : n >= max ? hi : Math.round(lo + (n - 1) / (max - 1) * (hi - lo));
 }
 
-/* ======================= geometry ======================= */
 function toWorld(cx, cy) {
   const r = world.getBoundingClientRect();
   return { x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
 }
-// node rectangle in world coordinates (offset* ignores the zoom transform)
 function rect(n) {
   const el = els.get(n.id);
   return el ? { x: el.offsetLeft, y: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight } : { x: n.x, y: n.y, width: 60, height: 20 };
 }
 const center = r => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
-// where the line from a rect's centre toward `to` leaves the rect
 function edgePoint(r, to) {
   const c = center(r), dx = to.x - c.x, dy = to.y - c.y;
   const t = Math.min(r.width / 2 / Math.abs(dx), r.height / 2 / Math.abs(dy), 1);
@@ -559,7 +624,6 @@ function edgePoint(r, to) {
 const visibleNodes = () => state.nodes.filter(n => els.has(n.id));
 const inside = (p, r) => p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
 
-// nearest visible node whose rectangle is within `pad` of point p
 function nearNode(p, pad) {
   let best = null, bestD = Infinity;
   visibleNodes().forEach(n => {
@@ -606,7 +670,6 @@ function arrangeSequence(nodes, r) {
 
 /* ======================= rendering ======================= */
 function render() {
-  // per-render caches
   view.links = new Map(state.nodes.map(n => [n.id, 0]));
   state.lines.forEach(l => [l.from, l.to].forEach(id => view.links.has(id) && view.links.set(id, view.links.get(id) + 1)));
   state.maxLinksBound = Math.max(1, state.maxLinksBound || 0, ...view.links.values());
@@ -617,7 +680,7 @@ function render() {
     ? { up: bfs([...selected], true).lineDist, down: bfs([...selected]).lineDist } : null;
 
   syncControls();
-  applyDock();
+  document.body.style.setProperty('--sw', state.sidebarWidth + 'px');
   drawTimeline();
   drawLineControls();
 
@@ -697,7 +760,6 @@ function makeNode(n, parents) {
   return el;
 }
 
-// edit the node's text, or open its link. Returns true when edit mode was entered.
 function activateNode(n) {
   if (mode() === 'edit' || $('edit-text-chk').checked || !n.url) { editingId = n.id; return true; }
   window.open(n.url, '_blank');
@@ -708,7 +770,7 @@ function drawLines() {
   linesGroup.innerHTML = labelsGroup.innerHTML = '';
   state.lines.forEach(l => { if (!view.hidden.has(l.from) && !view.hidden.has(l.to)) drawLine(l); });
 }
-let linesQueued = false;   // throttle line redraws while dragging
+let linesQueued = false;
 const queueLines = () => {
   if (linesQueued) return;
   linesQueued = true;
@@ -720,7 +782,6 @@ function svgEl(tag, attrs) {
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
 }
-// one arrowhead marker per colour; auto-start-reverse lets it serve both line ends
 function markerFor(color) {
   const id = 'arr-' + color.replace('#', '');
   if (!$(id)) {
@@ -755,10 +816,10 @@ function drawLine(line) {
   if (sel) path.classList.add('line-selected');
   if (line.arrow === 'end' || line.arrow === 'both') path.setAttribute('marker-end', markerFor(color));
   if (line.arrow === 'start' || line.arrow === 'both') path.setAttribute('marker-start', markerFor(color));
-  const hit = svgEl('path', { d, stroke: 'transparent', 'stroke-width': '25px', fill: 'none' });  // fat invisible click target
+  const hit = svgEl('path', { d, stroke: 'transparent', 'stroke-width': '25px', fill: 'none' });
 
   const pick = e => {
-    if (e.pointerType === 'touch' && mode() === 'drag') {   // a line must not steal a touch meant for a nearby node
+    if (e.pointerType === 'touch' && mode() === 'drag') {
       const n = nearNode(toWorld(e.clientX, e.clientY), state.touchHitPad / zoom);
       if (n) return nodeDown(e, n);
     }
@@ -825,6 +886,9 @@ controls.forEach(el => {
     if (k === 'fontMin') v = Math.min(v, state.fontMax);
     if (k === 'fontMax') v = Math.max(v, state.fontMin);
     state[k] = v;
+    if (k === 'draggablePanels') {
+      document.body.classList.toggle('draggable-panels-enabled', !!v);
+    }
     if (!live) saveState();
     render();
   });
@@ -843,15 +907,7 @@ function syncControls() {
     s.textContent = k === 'maxDistanceLimit' && v >= 10 ? '∞' : v + (s.dataset.unit || '');
   });
   document.body.classList.toggle('touch-mode', isTouchActive());
-}
-
-function applyDock() {
-  const pos = state.dockPosition;
-  toolbar.className = 'dock-' + pos;
-  document.body.dataset.dock = pos;
-  document.body.style.setProperty('--sw', state.sidebarWidth + 'px');
-  toolbar.style.left = toolbar.style.top = '';
-  if (pos === 'floating') { toolbar.style.left = state.floatingPos.x + 'px'; toolbar.style.top = state.floatingPos.y + 'px'; }
+  document.body.classList.toggle('draggable-panels-enabled', !!state.draggablePanels);
 }
 
 const narrow = matchMedia('(max-width: 768px)');
@@ -865,6 +921,110 @@ const helpModal = $('help-modal');
 $('help-btn').onclick = () => helpModal.classList.add('active');
 $('modal-close-btn').onclick = () => helpModal.classList.remove('active');
 helpModal.onclick = e => { if (e.target === helpModal) helpModal.classList.remove('active'); };
+
+/* ---------- Collapsible Sub-Panels ---------- */
+$$('.panel-toggle-btn').forEach(btn => {
+  btn.onclick = () => {
+    const targetId = btn.dataset.target;
+    const bodyEl = $(targetId);
+    if (!bodyEl) return;
+    const isHidden = bodyEl.classList.toggle('collapsed');
+    btn.textContent = isHidden ? 'Settings' : 'Hide';
+  };
+});
+
+/* ---------- Sub-Panels Sortable Dragging ---------- */
+function getPanelOrder() {
+  return $$('#toolbar .tool-group').map(el => el.dataset.panelId).filter(Boolean);
+}
+function applyPanelOrder() {
+  if (!state.panelOrder || !state.panelOrder.length) return;
+  const map = new Map($$('#toolbar .tool-group').map(el => [el.dataset.panelId, el]));
+  state.panelOrder.forEach(id => {
+    const el = map.get(id);
+    if (el) toolbar.appendChild(el);
+  });
+}
+
+$$('.panel-grip').forEach(grip => {
+  grip.addEventListener('pointerdown', e => {
+    if (!state.draggablePanels) return;
+    e.stopPropagation();
+    const panel = grip.closest('.tool-group');
+    if (!panel) return;
+    const placeholder = document.createElement('div');
+    placeholder.style.height = panel.offsetHeight + 'px';
+    placeholder.style.border = '1px dashed #00b4d8';
+    placeholder.style.margin = '4px 0';
+    panel.style.opacity = '0.5';
+    panel.parentNode.insertBefore(placeholder, panel.nextSibling);
+
+    const onPointerMove = moveEvent => {
+      const y = moveEvent.clientY;
+      const siblings = [...toolbar.querySelectorAll('.tool-group:not([style*="opacity"])')];
+      let nextSibling = null;
+      for (const sib of siblings) {
+        const box = sib.getBoundingClientRect();
+        if (y < box.top + box.height / 2) {
+          nextSibling = sib;
+          break;
+        }
+      }
+      toolbar.insertBefore(placeholder, nextSibling);
+    };
+
+    const onPointerUp = () => {
+      panel.style.opacity = '';
+      toolbar.insertBefore(panel, placeholder);
+      placeholder.remove();
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      state.panelOrder = getPanelOrder();
+      saveState();
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  });
+});
+
+/* ---------- Settings Import / Export ---------- */
+const SETTING_KEYS = Object.keys(DEFAULTS).filter(k => k !== 'nodes' && k !== 'lines');
+
+$('export-settings-btn').onclick = () => {
+  const settingsObj = {};
+  SETTING_KEYS.forEach(k => { settingsObj[k] = state[k]; });
+  const blob = new Blob([JSON.stringify(settingsObj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'concept_map_settings.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+$('import-settings-btn').onclick = () => $('import-settings-file').click();
+$('import-settings-file').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = event => {
+    try {
+      const parsed = JSON.parse(event.target.result);
+      SETTING_KEYS.forEach(k => {
+        if (parsed[k] !== undefined) state[k] = parsed[k];
+      });
+      applyPanelOrder();
+      saveState();
+      render();
+      alert('Settings imported successfully!');
+    } catch (err) {
+      alert('Failed to parse settings JSON file.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+};
 
 /* ---------- adding / clearing ---------- */
 function addBoxes(texts) {
@@ -1165,27 +1325,37 @@ tlHandle.onpointerdown = e => {
     up() { saveState(); render(); } });
 };
 
-$('toolbar-drag-handle').onpointerdown = e => {
-  if (state.dockPosition !== 'floating') return;
-  const ox = e.clientX - toolbar.offsetLeft, oy = e.clientY - toolbar.offsetTop;
-  begin(e, { type: 'toolbar',
-    move(m) {
-      state.floatingPos = { x: Math.max(0, m.clientX - ox), y: Math.max(0, m.clientY - oy) };
-      toolbar.style.left = state.floatingPos.x + 'px'; toolbar.style.top = state.floatingPos.y + 'px';
-    },
-    up() { saveState(); } });
-};
 sidebarResizer.onpointerdown = e => {
   e.stopPropagation();
   sidebarResizer.classList.add('resizing');
   begin(e, { type: 'sidebar',
     move(m) {
-      const w = state.dockPosition === 'left' ? m.clientX : window.innerWidth - m.clientX;
+      const w = m.clientX;
       state.sidebarWidth = clamp(w, 150, 600);
-      applyDock();
+      render();
     },
     up() { sidebarResizer.classList.remove('resizing'); saveState(); } });
 };
+
+// Double click empty space on canvas -> create node with text field ready
+viewport.addEventListener('dblclick', e => {
+  if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
+  const p = toWorld(e.clientX, e.clientY);
+  const newNode = {
+    id: uid(),
+    text: '',
+    url: null,
+    x: Math.round(p.x - 40),
+    y: Math.round(p.y - 15),
+    size: 'auto',
+    collapsed: false
+  };
+  state.nodes.push(newNode);
+  editingId = newNode.id;
+  selected.clear();
+  saveState();
+  render();
+});
 
 viewport.onpointerdown = e => {
   if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
@@ -1203,7 +1373,7 @@ viewport.onpointerdown = e => {
   boxing ? startSelect(e, p) : startLine(e, p);
 };
 
-/* ---------- pointer plumbing (mouse + multi-touch) ---------- */
+/* ---------- pointer plumbing ---------- */
 const touches = new Map(), ignored = new Set();
 let pinch = null, liveTouches = 0, lastTouchDown = 0;
 
@@ -1260,7 +1430,6 @@ viewport.addEventListener('pointerdown', e => {
 viewport.addEventListener('touchmove', e => { if (!e.target.closest('.node-edit-input')) e.preventDefault(); }, { passive: false });
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
 
-/* ---------- stuck-touch recovery ---------- */
 const stuck = () => touches.size || ignored.size || pinch || (g && g.touch);
 function resetTouchState() {
   touches.clear(); ignored.clear(); pinch = null;
@@ -1304,6 +1473,7 @@ function afterExternalChange() {
 function applyImportedJson(src) {
   const keepTouch = Object.fromEntries(TOUCH_KEYS.map(k => [k, state[k]]));
   state = { ...structuredClone(DEFAULTS), ...keepTouch, ...src, nodes: src.nodes || [], lines: normalizeLines(src.lines || []) };
+  applyPanelOrder();
   afterExternalChange();
 }
 
@@ -1330,11 +1500,13 @@ window.addEventListener('message', e => {
     ack(true, `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.`);
   } else if (d.type === 'cm-state-update' && d.data) {
     Object.assign(state, d.data);
+    applyPanelOrder();
     afterExternalChange();
   }
 });
 
 /* ======================= start ======================= */
+applyPanelOrder();
 saveState();
 render();
 </script>
