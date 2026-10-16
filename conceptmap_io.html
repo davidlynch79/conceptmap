@@ -35,11 +35,12 @@
     button:hover:not(:disabled) { background: #0077b6; color: #fff; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+    .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
     .hint { color: #778da9; font-size: 10.5px; line-height: 1.5; margin-bottom: 6px; }
     label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; margin-bottom: 4px; }
     input[type="checkbox"] { accent-color: #00b4d8; }
     #log {
-      background: #0b132b; border: 1px solid #415a77; padding: 6px 8px; height: 110px; overflow-y: auto;
+      background: #0b132b; border: 1px solid #415a77; padding: 6px 8px; height: 90px; overflow-y: auto;
       font-family: monospace; font-size: 10.5px; color: #90e0ef; white-space: pre-wrap;
     }
     .ok { color: #00f5d4; }
@@ -49,10 +50,15 @@
       font-family: monospace; font-size: 11px; margin-bottom: 8px;
     }
     #dropzone.over { border-color: #00f5d4; color: #00f5d4; background: rgba(0,245,212,0.08); }
+    .history-item {
+      display: flex; justify-content: space-between; align-items: center; background: #0d1b2a;
+      border: 1px solid #415a77; padding: 4px 8px; margin-bottom: 4px; font-family: monospace; font-size: 10px;
+    }
+    .history-item.active { border-color: #00f5d4; color: #00f5d4; }
   </style>
 </head>
 <body>
-  <h1>:: IMPORT / EXPORT ::</h1>
+  <h1>:: IMPORT / EXPORT & HISTORY MANAGER ::</h1>
 
   <div id="status">
     <span id="status-dot"></span>
@@ -61,35 +67,52 @@
   </div>
 
   <div class="panel">
-    <h2>Export</h2>
-    <div class="hint">Exports whatever is currently on the map (this page stays in sync as you edit).</div>
+    <h2>Export & Save</h2>
+    <div class="hint">Export data or overwrite the currently loaded file while maintaining its active format.</div>
     <div class="btn-row">
+      <button id="save-btn" class="action-btn" disabled title="Overwrites the previously imported/saved file">Save File (Overwrite)</button>
       <button id="export-btn" class="action-btn" disabled>Export JSON</button>
+      <button id="export-lines-btn" class="action-btn" disabled>Export Lines (Extended)</button>
       <button id="export-txt-simple-btn" class="action-btn" disabled>Export TXT Simple</button>
       <button id="export-txt-btn" class="action-btn" disabled>Export TXT Indent</button>
+      <button id="export-html-btn" class="action-btn" disabled>Export Full HTML</button>
     </div>
   </div>
 
   <div class="panel">
     <h2>Import</h2>
-    <div id="dropzone">Drop a .json or .txt file here, or use the buttons below</div>
-    <label><input type="checkbox" id="replace-chk"> Replace the map when importing TXT (otherwise TXT is added to it)</label>
-    <div class="hint">JSON import always replaces the map, just as before.</div>
+    <div id="dropzone">Drop a file here (.json, .txt, .html), or use the buttons below</div>
+    <label><input type="checkbox" id="replace-chk"> Replace the map when importing TXT / Lines (otherwise added)</label>
+    <div class="hint">JSON and HTML imports replace the map.</div>
     <div class="btn-row">
       <button id="import-btn" disabled>Import JSON</button>
+      <button id="import-lines-btn" disabled>Import Lines (Extended)</button>
       <button id="import-txt-simple-btn" disabled>Import TXT Simple</button>
       <button id="import-txt-btn" disabled>Import TXT Indent</button>
+      <button id="import-html-btn" disabled>Import Full HTML</button>
     </div>
     <input type="file" id="import-file" accept=".json" style="display:none">
+    <input type="file" id="import-lines-file" accept=".txt,.json" style="display:none">
     <input type="file" id="import-txt-simple-file" accept=".txt" style="display:none">
     <input type="file" id="import-txt-file" accept=".txt" style="display:none">
+    <input type="file" id="import-html-file" accept=".html,.htm" style="display:none">
+  </div>
+
+  <div class="panel">
+    <h2>History States (Viewer & Deleter)</h2>
+    <div class="hint">Inspect, jump to, or delete recorded history states from the mapping session.</div>
+    <div id="history-list" style="max-height: 100px; overflow-y: auto; margin-bottom: 6px;"></div>
+    <div class="btn-row">
+      <button id="clear-history-btn" class="danger-btn" disabled>Clear All History States</button>
+    </div>
   </div>
 
   <div class="panel">
     <h2>Format Notes</h2>
     <div class="hint">
-      <b>TXT Simple:</b> one node per line as <code>id text [url] x y</code>, then connections as <code>-1 fromId toId</code> (arrow) or <code>-2 fromId toId</code> (plain line).<br>
-      <b>TXT Indent:</b> an outline; each indent level (tab, 4 spaces, or 2 spaces) becomes a child of the line above it.
+      <b>Lines Extended:</b> Contains nodes, lines, plus rich metadata (viewports, settings, layout metadata).<br>
+      <b>TXT Simple:</b> node rows and arrow line identifiers.<br>
+      <b>TXT Indent:</b> hierarchical outline format.
     </div>
   </div>
 
@@ -100,6 +123,11 @@
 
   <script>
     let mapState = null;
+    let historyStates = [];
+    let historyIdx = -1;
+    let currentFileHandle = null; // File System Access API handle if available
+    let currentFileName = null;
+    let currentFormatType = 'json';
     let defaults = { width: 1, color: '#00b4d8', arrow: 'end' };
     const opener_ = window.opener;
 
@@ -109,16 +137,26 @@
     const refreshBtn = document.getElementById('refresh-btn');
     const replaceChk = document.getElementById('replace-chk');
     const dropzone = document.getElementById('dropzone');
+    const historyListEl = document.getElementById('history-list');
 
+    const saveBtn = document.getElementById('save-btn');
     const exportBtn = document.getElementById('export-btn');
+    const exportLinesBtn = document.getElementById('export-lines-btn');
     const exportTxtSimpleBtn = document.getElementById('export-txt-simple-btn');
     const exportTxtBtn = document.getElementById('export-txt-btn');
+    const exportHtmlBtn = document.getElementById('export-html-btn');
+
     const importBtn = document.getElementById('import-btn');
+    const importLinesBtn = document.getElementById('import-lines-btn');
     const importTxtSimpleBtn = document.getElementById('import-txt-simple-btn');
     const importTxtBtn = document.getElementById('import-txt-btn');
+    const importHtmlBtn = document.getElementById('import-html-btn');
+
     const importFileInput = document.getElementById('import-file');
+    const importLinesFileInput = document.getElementById('import-lines-file');
     const importTxtSimpleFileInput = document.getElementById('import-txt-simple-file');
     const importTxtFileInput = document.getElementById('import-txt-file');
+    const importHtmlFileInput = document.getElementById('import-html-file');
 
     function log(msg, cls) {
       const line = document.createElement('div');
@@ -146,13 +184,16 @@
 
     function setConnected(connected) {
       statusEl.classList.toggle('connected', connected);
-      [exportBtn, exportTxtSimpleBtn, exportTxtBtn].forEach(b => b.disabled = !connected || !mapState);
-      [importBtn, importTxtSimpleBtn, importTxtBtn].forEach(b => b.disabled = !connected);
+      const btns = [exportBtn, exportLinesBtn, exportTxtSimpleBtn, exportTxtBtn, exportHtmlBtn];
+      btns.forEach(b => b.disabled = !connected || !mapState);
+      [importBtn, importLinesBtn, importTxtSimpleBtn, importTxtBtn, importHtmlBtn].forEach(b => b.disabled = !connected);
+      saveBtn.disabled = !connected || !mapState;
     }
 
     function updateStatus() {
       if (!mapState) return;
       statusText.textContent = `Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;
+      renderHistoryList();
     }
 
     function sendToMap(msg) {
@@ -166,17 +207,66 @@
       return true;
     }
 
+    /* ---- remember the picked file handle in IndexedDB (same DB the map window reads) ---- */
+    function idbOpen() {
+      return new Promise((res, rej) => {
+        const r = indexedDB.open('conceptmap-files', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('h');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    async function idbPut(k, v) {
+      try {
+        const db = await idbOpen();
+        await new Promise(res => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = t.onerror = () => res(); });
+      } catch (err) {}
+    }
+
+    /* The file the map should overwrite on Save / Ctrl+S. Kept separate from currentFileName,
+       which the Export buttons overwrite. */
+    let linked = null;
+
+    /* Name + format are sent as plain data (always arrives). The handle is sent separately and also stored
+       in IndexedDB, because browsers often refuse to pass file handles between windows (e.g. pages opened from disk). */
+    function announceTarget(handle, name, format) {
+      linked = handle ? { handle, name, format } : null;
+      sendToMap({ type: 'cm-save-target', name, format });
+      idbPut('saveTarget', handle ? { handle, name, format } : null);
+      if (!handle) return;
+      try { sendToMap({ type: 'cm-save-handle', handle, name }); } catch (err) { /* map falls back to IndexedDB / asking this window */ }
+    }
+
     window.addEventListener('message', (e) => {
       if (e.source !== opener_) return;
       const d = e.data;
       if (!d || typeof d !== 'object') return;
       if (d.type === 'cm-state') {
         mapState = d.state;
+        if (d.history) historyStates = d.history;
+        if (d.historyIdx !== undefined) historyIdx = d.historyIdx;
         if (d.defaults) defaults = d.defaults;
         setConnected(true);
         updateStatus();
       } else if (d.type === 'cm-ack') {
         log(d.message, d.ok === false ? 'err' : 'ok');
+      } else if (d.type === 'cm-save-request') {
+        (async () => {
+          let ok = false;
+          try {
+            if (!linked) throw new Error('no imported file is linked in this window');
+            if (d.name && d.name !== linked.name) throw new Error(`linked file is ${linked.name}, not ${d.name}`);
+            let perm = await linked.handle.queryPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') perm = await linked.handle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') throw new Error('write permission not granted (click Save in the map after allowing)');
+            const w = await linked.handle.createWritable();
+            await w.write(d.content);
+            await w.close();
+            ok = true;
+            log(`Saved ${linked.name} (requested by the map).`, 'ok');
+          } catch (err) { log('Map save request failed: ' + err.message, 'err'); }
+          sendToMap({ type: 'cm-save-result', id: d.id, ok });
+        })();
       }
     });
 
@@ -211,16 +301,160 @@
 
     function today() { return new Date().toISOString().split('T')[0]; }
 
-    /* ---------------- EXPORTS ---------------- */
+    /* ---------------- HISTORY VIEWER & DELETER ---------------- */
+    function renderHistoryList() {
+      historyListEl.innerHTML = '';
+      if (!historyStates || historyStates.length === 0) {
+        historyListEl.innerHTML = '<div class="hint" style="padding:4px;">No history states recorded.</div>';
+        document.getElementById('clear-history-btn').disabled = true;
+        return;
+      }
+      document.getElementById('clear-history-btn').disabled = false;
+      historyStates.forEach((stateStr, idx) => {
+        let parsedNodes = 0, parsedLines = 0;
+        try {
+          const parsed = JSON.parse(stateStr);
+          parsedNodes = parsed.nodes ? parsed.nodes.length : 0;
+          parsedLines = parsed.lines ? parsed.lines.length : 0;
+        } catch (e) {}
+
+        const item = document.createElement('div');
+        item.className = 'history-item' + (idx === historyIdx ? ' active' : '');
+        item.innerHTML = `
+          <span>State #${idx + 1} (${parsedNodes} nodes, ${parsedLines} lines)</span>
+          <div style="display:flex;gap:4px;">
+            <button onclick="jumpToHistory(${idx})" class="action-btn" style="padding:2px 6px;font-size:9px;">Jump</button>
+            <button onclick="deleteHistory(${idx})" class="danger-btn" style="padding:2px 6px;font-size:9px;">Delete</button>
+          </div>
+        `;
+        historyListEl.appendChild(item);
+      });
+    }
+
+    window.jumpToHistory = function(idx) {
+      sendToMap({ type: 'cm-jump-history', index: idx });
+      log(`Jumped to history state #${idx + 1}.`);
+    };
+
+    window.deleteHistory = function(idx) {
+      sendToMap({ type: 'cm-delete-history', index: idx });
+      log(`Deleted history state #${idx + 1}.`);
+    };
+
+    document.getElementById('clear-history-btn').onclick = () => {
+      sendToMap({ type: 'cm-clear-history' });
+      log('Cleared all history states.');
+    };
+
+    /* ---------------- SAVE (OVERWRITE) & EXPORTS ---------------- */
+
+    function formatExtendedLinesData(state) {
+      const out = [];
+      out.push(`VERSION: 2.0_METADATA`);
+      out.push(`CREATED: ${new Date().toISOString()}`);
+      out.push(`NODES: ${state.nodes.length}`);
+      out.push(`LINES: ${state.lines.length}`);
+      out.push(`--- NODES ---`);
+      state.nodes.forEach(n => {
+        const urlPart = n.url ? ` | URL: ${n.url}` : '';
+        const sizePart = n.size ? ` | size: ${n.size}` : '';
+        const collapsePart = n.collapsed ? ` | collapsed: true` : '';
+        out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${n.text}${urlPart}${sizePart}${collapsePart}`);
+      });
+      out.push(`--- CONNECTIONS ---`);
+      state.lines.forEach(l => {
+        out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`);
+      });
+      return out.join('\n');
+    }
+
+    function buildIndentText(st) {
+      const kids = new Map(), pc = new Map();
+      st.nodes.forEach(n => { kids.set(n.id, []); pc.set(n.id, 0); });
+      st.lines.forEach(l => {
+        const [p, c] = l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
+        if (kids.has(p) && kids.has(c)) { kids.get(p).push(c); pc.set(c, pc.get(c) + 1); }
+      });
+      let roots = st.nodes.filter(n => pc.get(n.id) === 0);
+      if (!roots.length) roots = [...st.nodes];
+      roots.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+      const seen = new Set(), out = [];
+      const walk = (id, lvl) => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        const n = st.nodes.find(x => x.id === id);
+        if (!n) return;
+        out.push('    '.repeat(lvl) + (n.url ? `${n.text} ${n.url}` : n.text));
+        (kids.get(id) || []).forEach(c => walk(c, lvl + 1));
+      };
+      roots.forEach(r => walk(r.id, 0));
+      st.nodes.forEach(n => walk(n.id, 0));
+      return out.join('\n');
+    }
+
+    saveBtn.onclick = async () => {
+      if (!mapState) return;
+      let content = '';
+      const ext = { json: 'json', html: 'html' }[currentFormatType] || 'txt';
+      let filename = `${filePrefix('diagram')}_diagram.${ext}`;
+
+      if (currentFormatType === 'json') {
+        content = JSON.stringify(mapState, null, 2);
+      } else if (currentFormatType === 'lines') {
+        content = formatExtendedLinesData(mapState);
+      } else if (currentFormatType === 'txt-simple') {
+        const out = [];
+        mapState.nodes.forEach(n => {
+          const label = n.url ? `${n.text} ${n.url}` : n.text;
+          out.push(`${n.id} ${label} ${Math.round(n.x)} ${Math.round(n.y)}`);
+        });
+        mapState.lines.forEach(l => {
+          const rev = l.arrow === 'start';
+          out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
+        });
+        content = out.join('\n');
+      } else if (currentFormatType === 'txt-indent') {
+        content = buildIndentText(mapState);
+      } else if (currentFormatType === 'html') {
+        content = `<!DOCTYPE html><html><head><title>Concept Map Export</title></head><body><script>const mapData = ${JSON.stringify(mapState, null, 2)};<\/script></body></html>`;
+      }
+
+      if (currentFileHandle && window.showSaveFilePicker) {
+        try {
+          const writable = await currentFileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          log(`Successfully overwrote file: ${currentFileName}`, 'ok');
+          return;
+        } catch (err) {
+          log('File write permission denied or cancelled. Falling back to download.', 'err');
+        }
+      }
+
+      download(filename, content, currentFormatType === 'json' ? 'application/json' : 'text/plain');
+      log(`Saved file as ${filename} (downloaded).`, 'ok');
+    };
 
     exportBtn.onclick = () => {
       if (!mapState) return;
-      download(`${filePrefix('diagram')}_diagram_${today()}.json`, JSON.stringify(mapState, null, 2), 'application/json');
+      currentFormatType = 'json';
+      currentFileName = `${filePrefix('diagram')}_diagram_${today()}.json`;
+      download(currentFileName, JSON.stringify(mapState, null, 2), 'application/json');
       log('Exported JSON.', 'ok');
+    };
+
+    exportLinesBtn.onclick = () => {
+      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
+      currentFormatType = 'lines';
+      currentFileName = `${filePrefix('extended')}_lines_${today()}.txt`;
+      download(currentFileName, formatExtendedLinesData(mapState), 'text/plain;charset=utf-8');
+      log('Exported Extended Lines with Metadata.', 'ok');
     };
 
     exportTxtSimpleBtn.onclick = () => {
       if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
+      currentFormatType = 'txt-simple';
+      currentFileName = `${filePrefix('simple_nodes')}_simple_${today()}.txt`;
       const out = [];
       mapState.nodes.forEach(n => {
         const label = n.url ? `${n.text} ${n.url}` : n.text;
@@ -230,23 +464,23 @@
         const rev = l.arrow === 'start';
         out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
       });
-      download(`${filePrefix('simple_nodes')}_simple_${today()}.txt`, out.join('\n'), 'text/plain;charset=utf-8');
+      download(currentFileName, out.join('\n'), 'text/plain;charset=utf-8');
       log('Exported TXT Simple.', 'ok');
     };
 
     exportTxtBtn.onclick = () => {
       if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
+      currentFormatType = 'txt-indent';
+      currentFileName = `${filePrefix('outline')}_indented_${today()}.txt`;
+      // Outline export logic
       const childrenMap = new Map();
       const parentCountMap = new Map();
       mapState.nodes.forEach(node => { childrenMap.set(node.id, []); parentCountMap.set(node.id, 0); });
 
       mapState.lines.forEach(line => {
-        let parentId = null, childId = null;
-        if (line.arrow === 'end') { parentId = line.from; childId = line.to; }
-        else if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
-        else if (line.arrow === 'none' || line.arrow === 'both') { parentId = line.from; childId = line.to; }
-
-        if (parentId && childId && childrenMap.has(parentId) && childrenMap.has(childId)) {
+        let parentId = line.from, childId = line.to;
+        if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
+        if (childrenMap.has(parentId) && childrenMap.has(childId)) {
           childrenMap.get(parentId).push(childId);
           parentCountMap.set(childId, parentCountMap.get(childId) + 1);
         }
@@ -273,19 +507,112 @@
       rootNodes.forEach(root => printNode(root.id, 0));
       mapState.nodes.forEach(node => { if (!visited.has(node.id)) printNode(node.id, 0); });
 
-      download(`${filePrefix('outline')}_indented_${today()}.txt`, outputLines.join('\n'), 'text/plain;charset=utf-8');
+      download(currentFileName, outputLines.join('\n'), 'text/plain;charset=utf-8');
       log('Exported TXT Indent.', 'ok');
+    };
+
+    exportHtmlBtn.onclick = () => {
+      if (!mapState) return;
+      currentFormatType = 'html';
+      currentFileName = `${filePrefix('map')}_view_${today()}.html`;
+      const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Concept Map HTML View</title></head>
+<body style="background:#0d1b2a;color:#e0e6ed;font-family:monospace;padding:20px;">
+  <h1>Concept Map Export</h1>
+  <p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p>
+  <pre>${JSON.stringify(mapState, null, 2)}</pre>
+</body>
+</html>`;
+      download(currentFileName, htmlContent, 'text/html;charset=utf-8');
+      log('Exported Full HTML view.', 'ok');
     };
 
     /* ---------------- IMPORTS ---------------- */
 
-    function importJsonText(text, name) {
+    function importJsonText(text, name, handle) {
       try {
         const data = JSON.parse(text);
-        if (!data.nodes || !data.lines) { log(`${name}: JSON is missing "nodes" or "lines".`, 'err'); return; }
-        if (sendToMap({ type: 'cm-import-json', data })) log(`Sent JSON "${name}" to the map...`);
+        if (!data.nodes || !data.lines) { log(`${name}: JSON missing nodes or lines.`, 'err'); return; }
+        currentFileHandle = handle || null;
+        currentFileName = name;
+        currentFormatType = 'json';
+        if (sendToMap({ type: 'cm-import-json', data })) {
+          log(`Sent JSON "${name}" to the map...`);
+          announceTarget(currentFileHandle, name, 'json');
+        }
       } catch (err) {
-        log(`${name}: invalid JSON file structure.`, 'err');
+        log(`${name}: invalid JSON structure.`, 'err');
+      }
+    }
+
+    function parseExtendedLines(textContent, name, handle) {
+      const lines = textContent.split(/\r?\n/);
+      const newNodes = [];
+      const newLines = [];
+      let mode = null;
+
+      lines.forEach(l => {
+        const trimmed = l.trim();
+        if (trimmed === '--- NODES ---') { mode = 'nodes'; return; }
+        if (trimmed === '--- CONNECTIONS ---') { mode = 'lines'; return; }
+
+        if (mode === 'nodes') {
+          const parts = trimmed.split('|').map(p => p.trim());
+          if (parts.length >= 2) {
+            const id = parts[0];
+            const coordPart = parts[1].split(' ');
+            let x = 100, y = 100;
+            coordPart.forEach(c => {
+              if (c.startsWith('x:')) x = parseFloat(c.substring(2));
+              if (c.startsWith('y:')) y = parseFloat(c.substring(2));
+            });
+            let textRaw = '';
+            let url = null;
+            let size = 'auto';
+            let collapsed = false;
+
+            parts.slice(2).forEach(p => {
+              if (p.startsWith('text:')) textRaw = p.substring(5).trim();
+              if (p.startsWith('URL:')) url = p.substring(4).trim();
+              if (p.startsWith('size:')) size = p.substring(5).trim();
+              if (p.startsWith('collapsed:')) collapsed = p.substring(10).trim() === 'true';
+            });
+
+            newNodes.push({ id, text: textRaw || 'Node', url, x, y, size, collapsed });
+          }
+        } else if (mode === 'lines') {
+          if (trimmed.startsWith('LINE')) {
+            const parts = trimmed.split('|').map(p => p.trim());
+            let id = generateId(), from = '', to = '', arrow = 'end', width = 1, color = '#00b4d8', label = '';
+            parts.forEach(p => {
+              if (p.startsWith('id:')) id = p.substring(3).trim();
+              if (p.startsWith('from:')) from = p.substring(5).trim();
+              if (p.startsWith('to:')) to = p.substring(3).trim();
+              if (p.startsWith('arrow:')) arrow = p.substring(6).trim();
+              if (p.startsWith('width:')) width = parseInt(p.substring(6).trim(), 10) || 1;
+              if (p.startsWith('color:')) color = p.substring(6).trim();
+              if (p.startsWith('label:')) label = p.substring(6).trim();
+            });
+            if (from && to) {
+              newLines.push({ id, from, to, arrow, width, color, label });
+            }
+          }
+        }
+      });
+
+      if (newNodes.length === 0) {
+        log(`${name}: No valid extended lines data found.`, 'err');
+        return;
+      }
+
+      currentFileHandle = handle || null;
+      currentFileName = name;
+      currentFormatType = 'lines';
+
+      if (sendToMap({ type: 'cm-import-graph', nodes: newNodes, lines: newLines, replace: replaceChk.checked })) {
+        log(`Imported extended lines "${name}" (${newNodes.length} nodes, ${newLines.length} lines).`);
+        announceTarget(currentFileHandle, name, 'lines');
       }
     }
 
@@ -378,67 +705,116 @@
       return { nodes: newNodes, lines: newLines };
     }
 
-    function sendGraph(parsed, name) {
+    function sendGraph(parsed, name, formatType, handle) {
       if (parsed.nodes.length === 0 && parsed.lines.length === 0) {
         log(`${name}: nothing to import.`, 'err');
         return;
       }
+      currentFileHandle = handle || null;
+      currentFileName = name;
+      currentFormatType = formatType;
       if (sendToMap({ type: 'cm-import-graph', nodes: parsed.nodes, lines: parsed.lines, replace: replaceChk.checked })) {
         log(`Sent "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map...`);
+        announceTarget(currentFileHandle, name, formatType);
       }
     }
 
-    function readFile(file, handler) {
+    function readFile(file, handler, handle) {
       const reader = new FileReader();
-      reader.onload = (evt) => handler(evt.target.result, file.name);
+      reader.onload = (evt) => handler(evt.target.result, file.name, handle || null);
       reader.onerror = () => log(`Could not read ${file.name}.`, 'err');
       reader.readAsText(file);
     }
 
-    importBtn.onclick = () => importFileInput.click();
+    /* Open with the File System Access picker when available, so we keep a handle to the SAME file
+       (that is what lets Save / Ctrl+S overwrite it in place). Falls back to the plain <input type=file>. */
+    async function pickAndRead(description, accept, fallbackInput, handler) {
+      if (!window.showOpenFilePicker) { fallbackInput.click(); return; }
+      try {
+        const [fh] = await window.showOpenFilePicker({ multiple: false, mode: 'readwrite', types: [{ description, accept }] });
+        readFile(await fh.getFile(), handler, fh);
+      } catch (err) {
+        if (err && err.name !== 'AbortError') { log('File picker failed (' + err.message + '). Using basic file chooser.', 'err'); fallbackInput.click(); }
+      }
+    }
+
+    importBtn.onclick = () => pickAndRead('JSON map', { 'application/json': ['.json'] }, importFileInput, importJsonText);
     importFileInput.onchange = (e) => {
       const file = e.target.files[0];
       if (file) readFile(file, importJsonText);
       importFileInput.value = '';
     };
 
-    importTxtSimpleBtn.onclick = () => importTxtSimpleFileInput.click();
+    importLinesBtn.onclick = () => pickAndRead('Extended lines', { 'text/plain': ['.txt', '.json'] }, importLinesFileInput, parseExtendedLines);
+    importLinesFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) readFile(file, parseExtendedLines);
+      importLinesFileInput.value = '';
+    };
+
+    const simpleHandler = (text, name, handle) => sendGraph(parseSimpleTxt(text), name, 'txt-simple', handle);
+    importTxtSimpleBtn.onclick = () => pickAndRead('TXT simple', { 'text/plain': ['.txt'] }, importTxtSimpleFileInput, simpleHandler);
     importTxtSimpleFileInput.onchange = (e) => {
       const file = e.target.files[0];
-      if (file) readFile(file, (text, name) => sendGraph(parseSimpleTxt(text), name));
+      if (file) readFile(file, simpleHandler);
       importTxtSimpleFileInput.value = '';
     };
 
-    importTxtBtn.onclick = () => importTxtFileInput.click();
+    const indentHandler = (text, name, handle) => sendGraph(parseIndentTxt(text), name, 'txt-indent', handle);
+    importTxtBtn.onclick = () => pickAndRead('TXT indent', { 'text/plain': ['.txt'] }, importTxtFileInput, indentHandler);
     importTxtFileInput.onchange = (e) => {
       const file = e.target.files[0];
-      if (file) readFile(file, (text, name) => sendGraph(parseIndentTxt(text), name));
+      if (file) readFile(file, indentHandler);
       importTxtFileInput.value = '';
     };
 
-    /* Drag & drop: .json -> JSON import; .txt -> sniffed (simple if it has "-1"/"-2" link lines or "id ... x y" shape) */
-    function looksSimple(text) {
-      return /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text);
-    }
+    const htmlHandler = (text, name, handle) => {
+      // Attempt to extract JSON from HTML export if embedded
+      const match = text.match(/const mapData = (\{.*?\});/s);
+      if (match) importJsonText(match[1], name, handle);
+      else log(`${name}: No valid embedded map data found in HTML file.`, 'err');
+      if (match) { currentFormatType = 'html'; announceTarget(currentFileHandle, name, 'html'); }
+    };
+    importHtmlBtn.onclick = () => pickAndRead('Map HTML', { 'text/html': ['.html', '.htm'] }, importHtmlFileInput, htmlHandler);
+    importHtmlFileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) readFile(file, htmlHandler);
+      importHtmlFileInput.value = '';
+    };
 
+    /* Drag & drop handling */
     ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
       e.preventDefault(); dropzone.classList.add('over');
     }));
     ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
       e.preventDefault(); dropzone.classList.remove('over');
     }));
-    dropzone.addEventListener('drop', (e) => {
+    dropzone.addEventListener('drop', async (e) => {
       if (!mapState) { log('Not connected to the map.', 'err'); return; }
       const file = e.dataTransfer.files[0];
       if (!file) return;
+      // must be requested synchronously during the drop event; gives a handle to the dropped file (Chromium)
+      let handle = null;
+      try {
+        const item = e.dataTransfer.items && e.dataTransfer.items[0];
+        if (item && item.getAsFileSystemHandle) {
+          const h = await item.getAsFileSystemHandle();
+          if (h && h.kind === 'file') handle = h;
+        }
+      } catch (err) {}
       if (/\.json$/i.test(file.name)) {
-        readFile(file, importJsonText);
+        readFile(file, importJsonText, handle);
+      } else if (/\.html?$/i.test(file.name)) {
+        readFile(file, htmlHandler, handle);
       } else {
-        readFile(file, (text, name) => {
-          const simple = looksSimple(text);
-          log(`${name}: detected ${simple ? 'TXT Simple' : 'TXT Indent'} format.`);
-          sendGraph(simple ? parseSimpleTxt(text) : parseIndentTxt(text), name);
-        });
+        readFile(file, (text, name, h) => {
+          if (text.includes('VERSION: 2.0_METADATA')) {
+            parseExtendedLines(text, name, h);
+          } else {
+            const simple = /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text);
+            sendGraph(simple ? parseSimpleTxt(text) : parseIndentTxt(text), name, simple ? 'txt-simple' : 'txt-indent', h);
+          }
+        }, handle);
       }
     });
     document.body.addEventListener('dragover', (e) => e.preventDefault());

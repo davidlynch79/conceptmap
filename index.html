@@ -187,6 +187,8 @@
   <div class="tool-group" data-panel-id="panel-io">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
+    <button id="save-btn" class="action-btn" title="Overwrite the file that was imported (Ctrl+S)">Save (Ctrl+S)</button>
+    <span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
   </div>
 
   <!-- SETTINGS SUB-PANEL -->
@@ -277,10 +279,10 @@
     <label><input type="radio" name="im" data-k="interactionMode" value="openfile"> Open file if name exists</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="expandfile"> Expand file if name exists</label>
     <label><input type="radio" name="im" data-k="interactionMode" value="opencurrent"> Open file in current window</label>
-    <span class="cap">FILE DIRECTORY</span>
-    <button id="pick-dir-btn" class="action-btn">Pick folder (local files)</button>
-    <label style="margin-top:2px;"><input type="checkbox" data-k="includeSubfolders"> Include subfolders</label>
-    <span class="slider-hint" id="pick-dir-status">Click a box to load its corresponding file.</span>
+    <span class="cap">FILE DIRECTORY (saved in settings)</span>
+    <input type="text" data-k="fileDir" id="file-dir" placeholder="e.g. maps  (blank = same folder as page)">
+    <button id="pick-dir-btn" style="display:none">Pick folder (local files)</button>
+    <span class="slider-hint" id="pick-dir-status">Click a box "hello" to load hello.txt from this directory.</span>
   </div>
 
   <div class="tool-group" data-panel-id="panel-views">
@@ -489,7 +491,7 @@ const DEFAULTS = {
   inputMode: "desktop",
   autoSizeAll: true,
   interactionMode: "all",
-  includeSubfolders: true,
+  fileDir: "",
   touchDragThreshold: 10,
   touchHitPad: 25,
   touchHoldMs: 100,
@@ -543,6 +545,145 @@ function restore(i) {
 }
 $('undo-btn').onclick = () => restore(histIdx - 1);
 $('redo-btn').onclick = () => restore(histIdx + 1);
+
+/* ======================= save (overwrite the imported file) ======================= */
+/* saveTarget = { handle: FileSystemFileHandle, name, format } where format is json | lines | txt-simple | txt-indent | html */
+let saveTarget = null;
+
+function setSaveTarget(t) {
+  saveTarget = t || null;
+  try { if (typeof views !== 'undefined' && views[activeView]) views[activeView].target = saveTarget; } catch (err) {}
+  $('save-target-label').textContent = saveTarget
+    ? `Saves to: ${saveTarget.name} (${saveTarget.format})`
+    : 'No file linked yet. Ctrl+S will ask where to save.';
+}
+
+function serializeLines(s) {
+  const out = ['VERSION: 2.0_METADATA', `CREATED: ${new Date().toISOString()}`, `NODES: ${s.nodes.length}`, `LINES: ${s.lines.length}`, '--- NODES ---'];
+  s.nodes.forEach(n => {
+    out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${n.text}${n.url ? ` | URL: ${n.url}` : ''}${n.size ? ` | size: ${n.size}` : ''}${n.collapsed ? ' | collapsed: true' : ''}`);
+  });
+  out.push('--- CONNECTIONS ---');
+  s.lines.forEach(l => out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`));
+  return out.join('\n');
+}
+function serializeSimple(s) {
+  const out = s.nodes.map(n => `${n.id} ${n.url ? `${n.text} ${n.url}` : n.text} ${Math.round(n.x)} ${Math.round(n.y)}`);
+  s.lines.forEach(l => {
+    const rev = l.arrow === 'start';
+    out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
+  });
+  return out.join('\n');
+}
+function serializeIndent(s) {
+  const kids = new Map(), parentCount = new Map();
+  s.nodes.forEach(n => { kids.set(n.id, []); parentCount.set(n.id, 0); });
+  s.lines.forEach(l => {
+    const [p, c] = l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
+    if (kids.has(p) && kids.has(c)) { kids.get(p).push(c); parentCount.set(c, parentCount.get(c) + 1); }
+  });
+  let roots = s.nodes.filter(n => parentCount.get(n.id) === 0);
+  if (!roots.length) roots = [...s.nodes];
+  roots.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const seen = new Set(), out = [];
+  const walk = (id, lvl) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const n = s.nodes.find(x => x.id === id);
+    if (!n) return;
+    out.push('    '.repeat(lvl) + (n.url ? `${n.text} ${n.url}` : n.text));
+    (kids.get(id) || []).forEach(c => walk(c, lvl + 1));
+  };
+  roots.forEach(r => walk(r.id, 0));
+  s.nodes.forEach(n => walk(n.id, 0));
+  return out.join('\n');
+}
+function serializeFor(fmt) {
+  if (fmt === 'lines') return serializeLines(state);
+  if (fmt === 'txt-simple') return serializeSimple(state);
+  if (fmt === 'txt-indent') return serializeIndent(state);
+  if (fmt === 'html') return `<!DOCTYPE html><html><head><title>Concept Map Export</title></head><body><script>const mapData = ${JSON.stringify(state, null, 2)};<\/script></body></html>`;
+  return JSON.stringify(state, null, 2);
+}
+function graphFormat(text) {
+  return /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text) ? 'txt-simple' : 'txt-indent';
+}
+
+const SAVE_TYPES = {
+  json: { description: 'Concept map JSON', accept: { 'application/json': ['.json'] } },
+  html: { description: 'Concept map HTML', accept: { 'text/html': ['.html', '.htm'] } },
+  lines: { description: 'Extended lines', accept: { 'text/plain': ['.txt'] } },
+  'txt-simple': { description: 'TXT simple', accept: { 'text/plain': ['.txt'] } },
+  'txt-indent': { description: 'TXT indent', accept: { 'text/plain': ['.txt'] } }
+};
+const defaultNameFor = fmt => fmt === 'json' ? 'concept_map.json' : fmt === 'html' ? 'concept_map.html' : 'concept_map.txt';
+
+async function writeHandle(h, content) {
+  let perm = await h.queryPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') perm = await h.requestPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') throw new Error('write permission was not granted');
+  const w = await h.createWritable();
+  await w.write(content);
+  await w.close();
+}
+
+/* Last resort before "Save As": ask the Import/Export window (which opened the file) to write it. */
+function askIoToSave(content, format, name) {
+  return new Promise(res => {
+    if (!ioWin || ioWin.closed) return res(false);
+    const id = uid();
+    const on = ev => {
+      const m = ev.data;
+      if (ev.source !== ioWin || !m || m.type !== 'cm-save-result' || m.id !== id) return;
+      clearTimeout(timer); window.removeEventListener('message', on); res(!!m.ok);
+    };
+    const timer = setTimeout(() => { window.removeEventListener('message', on); res(false); }, 2500);
+    window.addEventListener('message', on);
+    postIo({ type: 'cm-save-request', id, content, format, name });
+  });
+}
+
+let saving = false;
+async function saveCurrent() {
+  if (saving) return;
+  saving = true;
+  try {
+    const t = saveTarget, fmt = t ? t.format : 'json', content = serializeFor(fmt);
+    if (t) {
+      // 1) handle we already hold, or 2) the one the import window stored for us
+      let h = t.handle;
+      if (!h) { const rec = await idbGet('saveTarget'); if (rec && rec.handle && rec.name === t.name) h = rec.handle; }
+      if (h) {
+        try { await writeHandle(h, content); t.handle = h; toast('Saved ' + t.name); return; }
+        catch (err) { if (err && err.name === 'AbortError') return; }
+      }
+      // 3) the import window still has the file open
+      if (await askIoToSave(content, fmt, t.name)) { toast('Saved ' + t.name); return; }
+    }
+    // 4) no usable link: Save As, pre-filled with the imported name and format
+    const name = t ? t.name : defaultNameFor(fmt);
+    if (!window.showSaveFilePicker) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
+      a.download = name; a.click(); URL.revokeObjectURL(a.href);
+      toast('This browser cannot overwrite files. Downloaded ' + name);
+      return;
+    }
+    const picked = await window.showSaveFilePicker({ suggestedName: name, types: [SAVE_TYPES[fmt] || SAVE_TYPES.json] });
+    await writeHandle(picked, content);
+    setSaveTarget({ handle: picked, name: picked.name, format: fmt });
+    toast('Saved ' + picked.name);
+  } catch (err) {
+    if (err && err.name !== 'AbortError') toast('Save failed: ' + (err.message || err));
+  } finally { saving = false; }
+}
+$('save-btn').onclick = saveCurrent;
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    saveCurrent();
+  }
+});
 
 /* ======================= keyboard shortcuts ======================= */
 window.addEventListener('keydown', e => {
@@ -1396,7 +1537,7 @@ viewport.onpointerdown = e => {
   boxing ? startSelect(e, p) : startLine(e, p);
 };
 
-/* ======================= pointer plumbing ======================= */
+/* ---------- pointer plumbing ---------- */
 const touches = new Map(), ignored = new Set();
 let pinch = null, liveTouches = 0, lastTouchDown = 0;
 
@@ -1494,7 +1635,7 @@ function afterExternalChange() {
   saveState(); render();
 }
 function applyImportedJson(src) {
-  const keepTouch = Object.fromEntries([...TOUCH_KEYS, 'includeSubfolders'].map(k => [k, state[k]]));
+  const keepTouch = Object.fromEntries([...TOUCH_KEYS, 'fileDir'].map(k => [k, state[k]]));
   state = { ...structuredClone(DEFAULTS), ...keepTouch, ...src, nodes: src.nodes || [], lines: normalizeLines(src.lines || []) };
   applyPanelOrder();
   afterExternalChange();
@@ -1510,6 +1651,7 @@ window.addEventListener('message', e => {
   }
   if (d.type === 'cm-load-text' && e.source === window.opener) {
     const parsed = parseGraphText(d.text);
+    if (!state.fileDir && d.fileDir) state.fileDir = d.fileDir;
     state.nodes = parsed.nodes; state.lines = parsed.lines;
     views[0].name = d.name || 'Main map';
     afterExternalChange(); renderViews();
@@ -1519,7 +1661,12 @@ window.addEventListener('message', e => {
   if (e.source !== ioWin) return;
   const ack = (ok, message) => postIo({ type: 'cm-ack', ok, message }, e.source);
 
-  if (d.type === 'cm-request-state') {
+  if (d.type === 'cm-save-target') {
+    // plain name + format (always arrives); the handle may follow separately or come from IndexedDB
+    setSaveTarget(d.name ? { handle: d.handle || null, name: d.name, format: d.format || 'json' } : null);
+  } else if (d.type === 'cm-save-handle') {
+    if (saveTarget && d.handle && (!d.name || d.name === saveTarget.name)) saveTarget.handle = d.handle;
+  } else if (d.type === 'cm-request-state') {
     postIo(ioPayload(), e.source);
   } else if (d.type === 'cm-import-json') {
     try {
@@ -1544,7 +1691,7 @@ window.addEventListener('message', e => {
 const FILE_MODES = ['openfile', 'expandfile', 'opencurrent'];
 const isFileMode = () => FILE_MODES.includes(mode());
 const pendingChildren = new Map();
-let dirHandle = null;
+let dirHandle = null, lastReadHandle = null;
 
 function toast(msg) {
   const t = $('toast');
@@ -1570,52 +1717,59 @@ async function idbGet(k) {
 async function idbSet(k, v) {
   try { const db = await idb(); await new Promise(res => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = t.onerror = () => res(); }); } catch (err) {}
 }
-function setDirStatus(msg) {
-  $('pick-dir-status').textContent = msg;
+function setDirStatus(msg) { $('pick-dir-status').textContent = msg; }
+
+/* typed directory -> list of path segments below the picked folder (absolute paths just use their last parts) */
+function dirSegments() {
+  return (state.fileDir || '').trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/').split('/')
+    .filter(s => s && s !== '.' && s !== '..' && !/^[a-zA-Z]:$/.test(s) && !/^file:?$/i.test(s));
 }
-
-// Recursive helper to search a directory and optionally subfolders for a file handle
-async function findFileHandleRecursive(dirH, fname, includeSub) {
-  try {
-    let perm = await dirH.queryPermission({ mode: 'read' });
-    if (perm !== 'granted') perm = await dirH.requestPermission({ mode: 'read' });
-    if (perm !== 'granted') return null;
-  } catch (err) {}
-
-  try {
-    return await dirH.getFileHandle(fname);
-  } catch (err) {
-    if (!includeSub) return null;
-    try {
-      for await (const [name, entry] of dirH.entries()) {
-        if (entry.kind === 'directory') {
-          const found = await findFileHandleRecursive(entry, fname, true);
-          if (found) return found;
-        }
-      }
-    } catch (ex) {}
-  }
-  return null;
-}
-
 async function readFromHandle(fname) {
   if (!dirHandle) return null;
   try {
-    const fileHandle = await findFileHandleRecursive(dirHandle, fname, state.includeSubfolders);
-    if (fileHandle) {
-      return await (await fileHandle.getFile()).text();
-    }
+    let perm = await dirHandle.queryPermission({ mode: 'read' });
+    if (perm !== 'granted') perm = await dirHandle.requestPermission({ mode: 'read' });
+    if (perm !== 'granted') return null;
   } catch (err) {}
+  // try the typed directory as a sub-folder of the picked folder (and its trailing parts), then the folder itself
+  const segs = dirSegments(), tries = [];
+  for (let i = 0; i <= segs.length; i++) tries.push(segs.slice(i));
+  for (const path of tries) {
+    try {
+      let d = dirHandle;
+      for (const s of path) d = await d.getDirectoryHandle(s);
+      const fh = await d.getFileHandle(fname);
+      const txt = await (await fh.getFile()).text();
+      lastReadHandle = fh;
+      return txt;
+    } catch (err) {}
+  }
   return null;
 }
-
+async function readFromUrl(fname) {
+  const raw = (state.fileDir || '').trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const enc = encodeURIComponent(fname), cands = [];
+  if (!raw) cands.push(enc);
+  else if (/^[a-zA-Z]:\//.test(raw)) cands.push('file:///' + encodeURI(raw) + '/' + enc);   // C:/maps
+  else if (/^file:/i.test(raw) || /^https?:/i.test(raw)) cands.push(encodeURI(decodeURI(raw)) + '/' + enc);
+  else if (raw.startsWith('/')) { cands.push(encodeURI(raw) + '/' + enc); if (location.protocol === 'file:') cands.push('file://' + encodeURI(raw) + '/' + enc); }
+  else cands.push(encodeURI(decodeURI(raw)) + '/' + enc);
+  for (const url of cands) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) return await res.text();
+    } catch (err) {}
+  }
+  return null;
+}
 async function fetchMapFile(nodeText) {
   const fname = fileNameFor(nodeText);
+  lastReadHandle = null;
   if (fname === '.txt') return null;
-  return await readFromHandle(fname);
+  return (await readFromHandle(fname)) ?? (await readFromUrl(fname));
 }
-
-/* Pick folder using File System Access API */
+/* Browsers cannot read an arbitrary typed disk path from a page opened from disk. In that case ask for the folder once
+   (remembered afterwards), so the typed directory text alone is enough from then on. */
 async function pickFolder() {
   try {
     dirHandle = await window.showDirectoryPicker({ id: 'conceptmap', mode: 'read' });
@@ -1627,7 +1781,7 @@ async function pickFolder() {
 
 /* TXT parsing (same two formats as the Import/Export window) */
 function parseTextAndUrlLocal(s) { return parseTextAndUrl(s); }
-function lineDefaults() { return { width: +$('line-width').value, color:$('line-color').value }; }
+function lineDefaults() { return { width: +$('line-width').value, color: $('line-color').value }; }
 function parseSimpleTxt(text) {
   const nodes = [], lines = [], idMap = new Map(), d = lineDefaults();
   text.split(/\r?\n/).filter(l => l.trim()).forEach(line => {
@@ -1672,21 +1826,23 @@ function parseGraphText(text) {
 
 async function fileAction(n) {
   const m = mode(), name = n.text;
-  if (!dirHandle && window.showDirectoryPicker) {
-    toast('Choose the folder that holds your .txt files...');
+  // Page opened from disk and no folder remembered yet: browsers can't read a typed path, so ask once.
+  if (!dirHandle && location.protocol === 'file:' && window.showDirectoryPicker) {
+    toast('Choose the folder that holds your .txt files (asked once, then remembered)...');
     if (await pickFolder()) toast('Folder remembered. Click the box again.');
     return;
   }
+  // open the window synchronously so the browser's pop-up blocker allows it
   let w = null;
   if (m === 'openfile') w = window.open('', '_blank');
   const text = await fetchMapFile(name);
   if (text == null) {
     if (w) w.close();
-    return toast(`No file "${fileNameFor(name)}" found.`);
+    return toast(`No file "${fileNameFor(name)}" found${state.fileDir ? ' in ' + state.fileDir : ''}.`);
   }
   if (m === 'openfile') {
     if (!w) return toast('Pop-up blocked. Please allow pop-ups for this page.');
-    pendingChildren.set(w, { text, name });
+    pendingChildren.set(w, { text, name, fileDir: state.fileDir });
     w.location.href = location.href.split('#')[0] + '#child';
   } else if (m === 'expandfile') {
     const parsed = parseGraphText(text);
@@ -1696,7 +1852,8 @@ async function fileAction(n) {
     saveState(); render();
     toast(`Expanded "${name}": ${parsed.nodes.length} nodes.`);
   } else if (m === 'opencurrent') {
-    openInCurrent(name, parseGraphText(text));
+    openInCurrent(name, parseGraphText(text),
+      lastReadHandle ? { handle: lastReadHandle, name: lastReadHandle.name, format: graphFormat(text) } : null);
   }
 }
 
@@ -1711,17 +1868,19 @@ function loadView(v) {
   selected.clear(); selectedLineId = null; editingId = null;
   saveState(); render(); renderViews();
 }
-function openInCurrent(name, parsed) {
+function openInCurrent(name, parsed, target) {
   saveActiveView();
-  const v = { name, depth: views[activeView].depth + 1, nodes: parsed.nodes, lines: parsed.lines };
+  const v = { name, depth: views[activeView].depth + 1, nodes: parsed.nodes, lines: parsed.lines, target: target || null };
   views.splice(activeView + 1, 0, v);
   activeView++;
+  setSaveTarget(v.target);
   loadView(v);
 }
 function gotoView(i) {
   if (i === activeView || !views[i]) return;
   saveActiveView();
   activeView = i;
+  setSaveTarget(views[i].target);
   loadView(views[i]);
 }
 function parentIndex() {
@@ -1739,17 +1898,15 @@ function renderViews() {
     b.onclick = () => gotoView(i);
     list.appendChild(b);
   });
-  $('view-parent-btn').disabled = parentIndex() < 0; }$('view-parent-btn').onclick = () => { const p = parentIndex(); if (p >= 0) gotoView(p); };
+  $('view-parent-btn').disabled = parentIndex() < 0;
+}
+$('view-parent-btn').onclick = () => { const p = parentIndex(); if (p >= 0) gotoView(p); };
 
-/* Initialize folder picker button if supported */
+/* optional: pick a local folder (works when the page is opened from disk) */
 if (window.showDirectoryPicker) {
-  $('pick-dir-btn').style.display = '';$('pick-dir-btn').onclick = pickFolder;
-  idbGet('dir').then(h => { 
-    if (h && !dirHandle) { 
-      dirHandle = h; 
-      setDirStatus('Folder remembered: ' + h.name); 
-    } 
-  });
+  $('pick-dir-btn').style.display = '';
+  $('pick-dir-btn').onclick = pickFolder;
+  idbGet('dir').then(h => { if (h && !dirHandle) { dirHandle = h; setDirStatus('Folder remembered: ' + h.name); } });
 }
 
 /* ======================= start ======================= */
