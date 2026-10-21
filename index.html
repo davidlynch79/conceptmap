@@ -3,175 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Concept Map</title>
+<title>Concept Map with Gemini AI</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-  html { overscroll-behavior: none; }
-  body {
-    --sw: 280px; /* sidebar width, set from JS */
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-    background: #0d1b2a; color: #e0e6ed;
-    position: fixed; inset: 0; overflow: hidden; display: flex; flex-direction: column;
-    touch-action: none; overscroll-behavior: none;
-    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
-  }
-
-  /* ---------- form controls ---------- */
-  input[type=text], select, textarea {
-    background: #1b263b; border: 1px solid #778da9; color: #fff; padding: 6px; font: 11px monospace; outline: none;
-  }
-  input[type=text]:focus { border-color: #00b4d8; }
-  button {
-    background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 8px 12px;
-    font: 11px monospace; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; touch-action: manipulation;
-  }
-  button:hover { background: #0077b6; color: #fff; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
-  .help-btn { background: #0077b6; border-color: #00b4d8; color: #fff; font-weight: bold; }
-  .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
-  .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
-  label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11.5px; }
-  input[type=checkbox], input[type=radio] { cursor: pointer; accent-color: #00b4d8; width: 18px; height: 18px; min-width: 18px; }
-  input[type=color] { border: none; width: 28px; height: 28px; cursor: pointer; background: transparent; padding: 0; }
-  .legend-up { color: #ffb703; font-weight: bold; }
-  .legend-down { color: #ff5d8f; font-weight: bold; }
-
-  /* ---------- toolbar + docking ---------- */
-  #toolbar {
-    background: #1b263b; border: 1px solid #415a77; padding: 8px; font-size: 11px; z-index: 150;
-    display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4);
-    overflow-x: hidden; overflow-y: scroll; max-height: 100vh;
-    scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a;
-    position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 150px; max-width: 85vw; left: 0; border-width: 0 1px 0 0;
-  }
-  #toolbar::-webkit-scrollbar { width: 10px; }
-  #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
-  #toolbar::-webkit-scrollbar-thumb { background: #00b4d8; border: 2px solid #0d1b2a; border-radius: 5px; }
-
-  .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; position: relative; }
-  .panel-grip {
-    display: none; font: 9px monospace; color: #778da9; background: #1b263b; padding: 2px 4px; text-align: center; cursor: grab; border: 1px dotted #415a77; letter-spacing: 1px; margin-bottom: 2px;
-  }
-  .panel-grip:active { cursor: grabbing; color: #00f5d4; }
-  body.draggable-panels-enabled .tool-group .panel-grip { display: block; }
-
-  /* Collapsible sub-panel body content */
-  .panel-body { display: flex; flex-direction: column; gap: 6px; }
-  .panel-body.collapsed { display: none; }
-
-  #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-  .tool-group > button, .tool-group select, .tool-group input[type=text] { flex: 1; }
-  .tool-group label { white-space: nowrap; }
-  .cap { font-size: 9px; color: #00f5d4; font-weight: bold; }
-  .slider-label { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
-  .slider-label input[type=range] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 22px; }
-  .slider-label b { color: #00f5d4; font-weight: normal; }
-  .slider-hint { color: #778da9; font-size: 9px; }
-  .range-wrap { position: relative; width: 100%; min-width: 120px; height: 22px; }
-  .range-wrap input { position: absolute; left: 0; top: 0; width: 100%; background: transparent; pointer-events: none; appearance: none; -webkit-appearance: none; }
-  .range-wrap input::-webkit-slider-thumb {
-    pointer-events: auto; cursor: pointer; appearance: none; -webkit-appearance: none;
-    width: 18px; height: 18px; background: #00b4d8; border-radius: 50%;
-  }
-
-  #sidebar-resizer { display: block; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; left: calc(var(--sw) - 3px); }
-  #sidebar-resizer:hover, #sidebar-resizer.resizing { background: #00b4d8; }
-
-  #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
-
-  /* ---------- canvas ---------- */
-  #viewport {
-    flex: 1; position: relative; overflow: auto; background: #0b132b;
-    scrollbar-color: #415a77 #0d1b2a; touch-action: none; overscroll-behavior: none;
-    margin-left: var(--sw);
-  }
-  #viewport::-webkit-scrollbar { width: 14px; height: 14px; }
-  #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
-  #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
-  #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
-  #world {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0;
-    background-image: linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 2000; background: #1b263b; border: 1px solid #00b4d8; color: #00f5d4; font: 12px monospace; padding: 8px 14px; display: none; pointer-events: none; }
-  .view-btn { text-align: left; text-transform: none; padding: 5px 8px; }
-  .view-btn.active { background: #023e8a; border-color: #00f5d4; color: #00f5d4; font-weight: bold; }
-  #selection-box { position: absolute; display: none; pointer-events: none; z-index: 50; border: 1px dashed #00f5d4; background: rgba(0,245,212,.15); }
-
-  body.menu-hidden #toolbar, body.menu-hidden #sidebar-resizer { display: none; }
-  body.menu-hidden #viewport { margin: 0; }
-  body.menu-hidden #top-bar-controls { display: flex; }
-  @media (max-width: 768px) {
-    #viewport { margin: 0; }
-    #sidebar-resizer { display: none; }
-    #toolbar { width: 280px; z-index: 300; }
-  }
-
-  /* ---------- timeline ---------- */
-  #timeline-container {
-    position: absolute; top: 50px; left: 50px; width: 700px; height: 55px; z-index: 1;
-    display: flex; flex-direction: column; justify-content: flex-end; padding: 4px 10px 4px 4px;
-    background: rgba(27,38,59,.85); border: 1px dashed #778da9; box-shadow: 0 4px 12px rgba(0,0,0,.3); cursor: move; touch-action: none;
-  }
-  #timeline-container.hidden { display: none; }
-  .timeline-title { position: absolute; top: 2px; left: 6px; font: 9px monospace; color: #778da9; letter-spacing: 1px; pointer-events: none; }
-  .timeline-axis { position: absolute; bottom: 18px; left: 10px; right: 15px; height: 2px; background: rgba(0,180,216,.5); pointer-events: none; }
-  .timeline-tick { position: absolute; bottom: 18px; width: 1px; height: 8px; background: rgba(0,180,216,.7); pointer-events: none; }
-  .timeline-label { position: absolute; bottom: 2px; transform: translateX(-50%); font: 9px monospace; color: #90e0ef; white-space: nowrap; pointer-events: none; }
-  .timeline-resize-handle {
-    position: absolute; right: 0; top: 0; bottom: 0; width: 16px; display: flex; align-items: center; justify-content: center;
-    background: rgba(65,90,119,.6); border-left: 1px solid #778da9; cursor: e-resize; font-size: 10px;
-  }
-
-  /* ---------- lines ---------- */
-  #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-  #svg-layer path { pointer-events: stroke; cursor: pointer; }
-  .line-selected { stroke-dasharray: 4, 4; animation: dash 1s linear infinite; }
-  @keyframes dash { to { stroke-dashoffset: -8; } }
-  .line-label-text { font: 10px monospace; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
-
-  /* ---------- nodes ---------- */
-  .node {
-    position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px;
-    background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: nowrap;
-    box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none;
-  }
-  .node.fixed-size { display: block; white-space: normal; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
-  .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
-  .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
-  .node-content { line-height: 1.3; }
-  .node-content.has-url { color: #90e0ef; text-decoration: underline; }
-  .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
-  .collapse-btn { color: #00f5d4; font-weight: bold; cursor: pointer; margin-right: 2px; }
-  .node-resize-handle { display: none; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; z-index: 20; cursor: se-resize; color: #00f5d4; font-size: 12px; line-height: 14px; text-align: right; }
-  .node.selected .node-resize-handle { display: block; }
-  .node-edit-input {
-    width: 100%; height: 100%; min-width: 80px; min-height: 24px; padding: 4px; resize: both; overflow: auto;
-    background: #0d1b2a; border-color: #00f5d4; color: #00f5d4; user-select: text;
-  }
-
-  /* ---------- touch UI ---------- */
-  #zoom-controls { display: none; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 120; flex-direction: column; gap: 6px; }
-  body.touch-mode #zoom-controls { display: flex; }
-  #zoom-controls button { width: 48px; height: 48px; padding: 0; font-size: 22px; line-height: 1; background: rgba(27,38,59,.92); border-color: #00b4d8; color: #00f5d4; border-radius: 6px; }
-  #zoom-controls #zoom-reset-btn { font-size: 11px; }
-  body.touch-mode input[type=text], body.touch-mode select, body.touch-mode textarea { font-size: 16px; }
-
-  /* ---------- help modal ---------- */
-  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; justify-content: center; align-items: center; background: rgba(13,27,42,.85); backdrop-filter: blur(4px); }
-  .modal-overlay.active { display: flex; }
-  .modal-content { display: flex; flex-direction: column; width: 600px; max-width: 90vw; max-height: 85vh; overflow: hidden; background: #1b263b; border: 1px solid #00b4d8; box-shadow: 0 8px 32px rgba(0,0,0,.6); font-family: monospace; }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #0d1b2a; border-bottom: 1px solid #415a77; }
-  .modal-header h2 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; }
-  .modal-close { background: transparent; border: none; color: #ff4d6d; font-size: 20px; }
-  .modal-body { padding: 16px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
-  .help-section { margin-bottom: 16px; }
-  .help-section h3 { color: #90e0ef; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; }
-  .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
-  .help-key { color: #00f5d4; font-weight: bold; }
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none} html{overscroll-behavior:none} body{--sw:320px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#0d1b2a;color:#e0e6ed;position:fixed;inset:0;overflow:hidden;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%} input[type=text],input[type=password],select,textarea{background:#1b263b;border:1px solid #778da9;color:#fff;padding:6px;font:11px monospace;outline:none;width:100%} input[type=text]:focus,input[type=password]:focus,select:focus,textarea:focus{border-color:#00b4d8} button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:7px 10px;font:11px monospace;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;touch-action:manipulation;width:100%;transition:background 0.15s ease} button:hover{background:#0077b6;color:#fff} button:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(0.8)} .action-btn{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold} .ai-btn{background:#240046;border-color:#9d4edd;color:#e0aaff;font-weight:bold} .ai-btn:hover{background:#3c096c;color:#fff} .help-btn{background:#0077b6;border-color:#00b4d8;color:#fff;font-weight:bold} .danger-btn{background:#7209b7;border-color:#f72585;color:#ff4d6d} .fit-active{background:#00f5d4 !important;color:#0d1b2a !important} label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;width:100%} input[type=checkbox],input[type=radio]{cursor:pointer;accent-color:#00b4d8;width:16px;height:16px;min-width:16px} input[type=color]{border:none;width:28px;height:28px;cursor:pointer;background:transparent;padding:0} .legend-up{color:#ffb703;font-weight:bold} .legend-down{color:#ff5d8f;font-weight:bold} #toolbar{background:#1b263b;border:1px solid #415a77;padding:8px;font-size:11px;z-index:150;display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,.4);overflow-x:hidden;overflow-y:scroll;max-height:100vh;scrollbar-width:thin;scrollbar-color:#00b4d8 #0d1b2a;position:absolute;top:0;bottom:0;width:var(--sw);min-width:180px;max-width:85vw;left:0;border-width:0 1px 0 0} #toolbar::-webkit-scrollbar{width:8px} #toolbar::-webkit-scrollbar-track{background:#0d1b2a} #toolbar::-webkit-scrollbar-thumb{background:#00b4d8;border:2px solid #0d1b2a;border-radius:4px} .tool-group{display:flex;flex-direction:column;gap:6px;padding:6px;background:#0d1b2a;border:1px solid #415a77;flex-shrink:0;position:relative} .tool-group.ai-accent{border-color:#9d4edd;background:#130924} .panel-grip{display:none;font:9px monospace;color:#778da9;background:#1b263b;padding:2px 4px;text-align:center;cursor:grab;border:1px dotted #415a77;letter-spacing:1px;margin-bottom:2px} .panel-grip:active{cursor:grabbing;color:#00f5d4} body.draggable-panels-enabled .tool-group .panel-grip{display:block} .panel-body{display:flex;flex-direction:column;gap:6px} .panel-body.collapsed{display:none} #toolbar .row-inline{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:6px} #toolbar .row-inline>*{flex:1} .cap{font-size:9.5px;color:#00f5d4;font-weight:bold;letter-spacing:0.5px} .cap-ai{color:#e0aaff;font-weight:bold} .slider-label{display:flex;flex-direction:column;align-items:stretch;gap:2px} .slider-label input[type=range]{width:100%;cursor:pointer;accent-color:#00b4d8;height:22px} .slider-label b{color:#00f5d4;font-weight:normal} .slider-hint{color:#778da9;font-size:9px;line-height:1.3}.directory-input-row{display:flex;align-items:stretch;gap:5px;width:100%}.directory-input-row input{flex:1 1 auto;min-width:0}.directory-input-row button{width:auto;flex:0 0 auto;padding:6px 9px}.region-mode-row{display:flex;align-items:center;gap:5px;width:100%}.region-mode-row>label{flex:1 1 auto;width:auto;min-width:0;gap:4px;white-space:nowrap}.region-mode-row label:last-of-type{flex:1.25 1 auto}.fake-checkbox:disabled{opacity:1;filter:none;cursor:default;accent-color:#00b4d8} .range-wrap{position:relative;width:100%;min-width:120px;height:22px} .range-wrap input{position:absolute;left:0;top:0;width:100%;background:transparent;pointer-events:none;appearance:none;-webkit-appearance:none} .range-wrap input::-webkit-slider-thumb{pointer-events:auto;cursor:pointer;appearance:none;-webkit-appearance:none;width:18px;height:18px;background:#00b4d8;border-radius:50%} #sidebar-resizer{display:block;position:absolute;top:0;bottom:0;width:10px;background:#415a77;cursor:col-resize;z-index:151;transition:background .2s;left:calc(var(--sw) - 3px)} #sidebar-resizer:hover,#sidebar-resizer.resizing{background:#00b4d8} #top-bar-controls{display:none;position:absolute;top:8px;left:8px;z-index:350} #viewport{flex:1;position:relative;overflow:auto;background:#0b132b;scrollbar-color:#415a77 #0d1b2a;touch-action:none;overscroll-behavior:none;margin-left:var(--sw)} #viewport::-webkit-scrollbar{width:12px;height:12px} #viewport::-webkit-scrollbar-track{background:#0d1b2a} #viewport::-webkit-scrollbar-thumb{background:#415a77;border:2px solid #0d1b2a} #viewport::-webkit-scrollbar-thumb:hover{background:#00b4d8} #world{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:0 0;background-image:linear-gradient(to right,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.05) 1px,transparent 1px);background-size:20px 20px} #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2000;background:#1b263b;border:1px solid #00b4d8;color:#00f5d4;font:12px monospace;padding:8px 16px;display:none;pointer-events:none;max-width:80vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.6)} .view-btn{text-align:left;text-transform:none;padding:5px 8px} .view-btn.active{background:#023e8a;border-color:#00f5d4;color:#00f5d4;font-weight:bold} #selection-box{position:absolute;display:none;pointer-events:none;z-index:50;border:1px dashed #00f5d4;background:rgba(0,245,212,.15)} body.menu-hidden #toolbar,body.menu-hidden #sidebar-resizer{display:none} body.menu-hidden #viewport{margin:0} body.menu-hidden #top-bar-controls{display:flex} @media (max-width:768px){#viewport{margin:0} #sidebar-resizer{display:none} #toolbar{width:300px;z-index:300}} #timeline-container{position:absolute;top:50px;left:50px;width:800px;height:55px;z-index:1;display:flex;flex-direction:column;justify-content:flex-end;padding:4px 10px 4px 4px;background:rgba(27,38,59,.85);border:1px dashed #778da9;box-shadow:0 4px 12px rgba(0,0,0,.3);cursor:move;touch-action:none} #timeline-container.hidden{display:none} .timeline-title{position:absolute;top:2px;left:6px;font:9px monospace;color:#778da9;letter-spacing:1px;pointer-events:none} .timeline-axis{position:absolute;bottom:18px;left:10px;right:15px;height:2px;background:rgba(0,180,216,.5);pointer-events:none} .timeline-tick{position:absolute;bottom:18px;width:1px;height:8px;background:rgba(0,180,216,.7);pointer-events:none} .timeline-label{position:absolute;bottom:2px;transform:translateX(-50%);font:9px monospace;color:#90e0ef;white-space:nowrap;pointer-events:none} .timeline-resize-handle{position:absolute;right:0;top:0;bottom:0;width:16px;display:flex;align-items:center;justify-content:center;background:rgba(65,90,119,.6);border-left:1px solid #778da9;cursor:e-resize;font-size:10px} #svg-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2} #svg-layer path{pointer-events:stroke;cursor:pointer} .line-selected{stroke-dasharray:4,4;animation:dash 1s linear infinite} @keyframes dash{to{stroke-dashoffset:-8}} .line-label-text{font:10px monospace;fill:#e0e6ed;pointer-events:all;cursor:pointer} .node{position:absolute;z-index:10;display:flex;align-items:flex-start;gap:6px;padding:6px 10px;background:#1c2541;border:1px solid #48cae4;color:#fff;font:11px monospace;white-space:nowrap;box-shadow:2px 2px 6px rgba(0,0,0,.6);cursor:move;touch-action:none} .node.fixed-size{display:block;white-space:normal;word-wrap:break-word;overflow-y:auto;padding-bottom:14px} .node.selected{border-color:#00f5d4;box-shadow:0 0 0 2px rgba(0,245,212,.5)} .node.target{border-color:#00f5d4;box-shadow:0 0 0 3px rgba(0,245,212,.7)} .node-content{line-height:1.3} .node-content.has-url{color:#90e0ef;text-decoration:underline} .node-url-text{font-size:9px;color:#778da9;margin-left:4px;word-break:break-all} .collapse-btn{color:#00f5d4;font-weight:bold;cursor:pointer;margin-right:2px} .node-resize-handle{display:none;position:absolute;right:0;bottom:0;width:20px;height:20px;z-index:20;cursor:se-resize;color:#00f5d4;font-size:12px;line-height:14px;text-align:right} .node.selected .node-resize-handle{display:block} .node-edit-input{width:100%;height:100%;min-width:80px;min-height:24px;padding:4px;resize:both;overflow:auto;background:#0d1b2a;border-color:#00f5d4;color:#00f5d4;user-select:text} .node-edit-ball{position:absolute;top:-5px;left:-5px;width:12px;height:12px;background:#ffb703;border:1px solid #000;border-radius:50%;cursor:pointer;z-index:25} .node-edit-ball:hover{background:#ffea75;transform:scale(1.2)} .node-expand-file-ball{position:absolute;bottom:-7px;left:-7px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:#00b4d8;border:1px solid #000;border-radius:50%;cursor:pointer;z-index:25;font: bold 13px/1 monospace;color:#001219;user-select:none}.node-expand-file-ball:hover{background:#90e0ef;transform:scale(1.12)} .node-drag-ball{position:absolute;top:-5px;right:-5px;width:12px;height:12px;background:#00f5d4;border:1px solid #000;border-radius:50%;cursor:pointer;z-index:25} .node-drag-ball:hover{background:#70ffef;transform:scale(1.2)} .node-arrow-ball{position:absolute;bottom:-5px;right:-5px;width:12px;height:12px;background:#9d4edd;border:1px solid #000;border-radius:50%;cursor:pointer;z-index:25} .node-arrow-ball:hover{background:#c77dff;transform:scale(1.2)} #zoom-controls{display:none;position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:120;flex-direction:column;gap:6px} body.touch-mode #zoom-controls{display:flex} #zoom-controls button{width:48px;height:48px;padding:0;font-size:22px;line-height:1;background:rgba(27,38,59,.92);border-color:#00b4d8;color:#00f5d4;border-radius:6px} #zoom-controls #zoom-reset-btn{font-size:11px} body.touch-mode input[type=text],body.touch-mode input[type=password],body.touch-mode select,body.touch-mode textarea{font-size:16px} .modal-overlay{display:none;position:fixed;inset:0;z-index:1000;justify-content:center;align-items:center;background:rgba(13,27,42,.85);backdrop-filter:blur(4px)} .modal-overlay.active{display:flex} .modal-content{display:flex;flex-direction:column;width:620px;max-width:90vw;max-height:85vh;overflow:hidden;background:#1b263b;border:1px solid #00b4d8;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:monospace} .modal-header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#0d1b2a;border-bottom:1px solid #415a77} .modal-header h2{font-size:14px;color:#00f5d4;letter-spacing:1px} .modal-close{background:transparent;border:none;color:#ff4d6d;font-size:20px;width:auto;cursor:pointer} .modal-body{padding:16px;overflow-y:auto;font-size:12px;line-height:1.6} .help-section{margin-bottom:16px} .help-section h3{color:#90e0ef;font-size:12px;text-transform:uppercase;border-bottom:1px solid #415a77;padding-bottom:4px;margin-bottom:8px} .help-grid{display:grid;grid-template-columns:140px 1fr;gap:6px 12px} .help-key{color:#00f5d4;font-weight:bold}
 </style>
 </head>
 <body>
@@ -180,8 +14,57 @@
 
 <div id="toolbar">
   <div class="tool-group row-inline" data-panel-id="panel-header">
-    <span class="cap" style="flex:1;text-align:center">☰ MENU</span>
-    <button id="toolbar-hide-btn" class="danger-btn">Hide</button>
+    <span class="cap" style="text-align:center">☰ MENU</span>
+    <button id="toolbar-hide-btn" class="danger-btn" style="width:auto; padding:4px 8px;">Hide</button>
+  </div>
+
+  <div class="tool-group ai-accent" data-panel-id="panel-gemini">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline">
+      <span class="cap-ai">✨ AI ASSISTANT</span>
+      <div>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-gemini" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
+      </div>
+    </div>
+    <div id="body-gemini" class="panel-body">
+      <label>AI Provider:
+        <select id="ai-provider">
+          <option value="gemini">Gemini</option>
+          <option value="claude">Claude (Anthropic)</option>
+          <option value="openai">ChatGPT / OpenAI API</option>
+        </select>
+      </label>
+      <label><span id="ai-key-caption">Gemini API Key:</span>
+        <input type="password" id="ai-api-key" autocomplete="off" placeholder="Paste selected provider's API key">
+      </label>
+      <label>Model:
+        <select id="ai-model"></select>
+      </label>
+      <span class="slider-hint">Use an API key for the selected provider. OpenAI API usage is billed separately from a ChatGPT subscription; Claude API usage is separate from the Claude app subscription. Keep API keys private; do not export or share settings files that contain them.</span>
+
+      <span class="cap">GENERATE FROM TOPIC</span>
+      <textarea id="gemini-prompt" rows="2" placeholder="e.g. Distributed system consensus protocols..."></textarea>
+      <div class="row-inline">
+        <button id="gemini-generate-btn" class="ai-btn">Generate Map</button>
+        <button id="gemini-append-btn" style="background:#2a9d8f">Append</button>
+      </div>
+      <button id="gemini-roadmap-btn" class="action-btn" title="Creates 1-year timeline sequence">Generate as 1-Year Roadmap</button>
+
+      <span class="cap" style="margin-top:4px">CONTEXTUAL SELECTION TOOLS</span>
+      <button id="gemini-expand-btn" class="ai-btn" disabled title="Select 1 node to branch out">🌱 Expand Selected Node</button>
+      <button id="gemini-drill-btn" class="action-btn" disabled title="Select 1 node to build a dedicated sub-map">🔍 AI Drill-Down (Sub-Map)</button>
+      <button id="gemini-bridge-btn" class="action-btn" disabled title="Select 2 nodes to find relationships">🔗 Connect 2 Selected Nodes</button>
+
+      <span class="cap" style="margin-top:4px">WHITEBOARD / IMAGE TO MAP</span>
+      <input type="file" id="gemini-img-input" accept="image/*" style="font-size:10px">
+      <button id="gemini-img-btn" class="ai-btn">Convert Image to Concept Map</button>
+
+      <span class="cap" style="margin-top:4px">ASK MAP (AI COPILOT)</span>
+      <input type="text" id="gemini-ask-input" placeholder="e.g. What are the key bottlenecks?">
+      <button id="gemini-ask-btn" class="action-btn">Analyze & Highlight</button>
+
+      <span class="slider-hint" id="gemini-status">Choose an AI provider and enter its API key to activate AI features.</span>
+    </div>
   </div>
 
   <div class="tool-group" data-panel-id="panel-io">
@@ -191,16 +74,15 @@
     <span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
   </div>
 
-  <!-- SETTINGS SUB-PANEL -->
   <div class="tool-group" data-panel-id="panel-settings-io">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="row-inline">
       <span class="cap">SETTINGS PREFERENCES</span>
       <div>
-        <button type="button" class="panel-toggle-btn action-btn" data-target="body-settings" style="padding:2px 6px;font-size:9px;">Hide</button>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-settings" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
       </div>
     </div>
-    <div id="body-settings" class="panel-body">
+    <div id="body-settings" class="panel-body collapsed">
       <div class="row-inline">
         <button id="export-settings-btn" class="action-btn">Export Settings</button>
         <button id="import-settings-btn" class="action-btn">Import Settings</button>
@@ -210,13 +92,12 @@
     </div>
   </div>
 
-  <!-- INTERFACE SUB-PANEL (Default Collapsed) -->
   <div class="tool-group" data-panel-id="panel-interface">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="row-inline">
       <span class="cap">INTERFACE OPTIONS</span>
       <div>
-        <button type="button" class="panel-toggle-btn action-btn" data-target="body-interface" style="padding:2px 6px;font-size:9px;">Settings</button>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-interface" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
       </div>
     </div>
     <div id="body-interface" class="panel-body collapsed">
@@ -230,13 +111,12 @@
     </div>
   </div>
 
-  <!-- TOUCH TUNING SUB-PANEL (Default Collapsed) -->
   <div class="tool-group" data-panel-id="panel-touch">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="row-inline">
       <span class="cap">TOUCH TUNING (ANTI-STICKY)</span>
       <div>
-        <button type="button" class="panel-toggle-btn action-btn" data-target="body-touch" style="padding:2px 6px;font-size:9px;">Settings</button>
+        <button type="button" class="panel-toggle-btn action-btn" data-target="body-touch" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
       </div>
     </div>
     <div id="body-touch" class="panel-body collapsed">
@@ -264,30 +144,48 @@
   <div class="tool-group" data-panel-id="panel-add">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <input type="text" id="node-text" placeholder="Box text or URL...">
-    <button id="add-btn">Add Box</button>
-    <button id="add-boxes-btn">Add Boxes</button>
+    <div class="row-inline">
+      <button id="add-btn">Add Box</button>
+      <button id="add-boxes-btn">Add Boxes</button>
+    </div>
   </div>
 
   <div class="tool-group" data-panel-id="panel-interaction">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <span class="cap">INTERACTION MODE</span>
-    <label><input type="radio" name="im" data-k="interactionMode" value="all"> Do Top 4</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Click and Drag Only</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows Only</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="edit"> Edit Cell Only</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="link"> Goto Link Only</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="openfile"> Open file if name exists</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="expandfile"> Expand file if name exists</label>
-    <label><input type="radio" name="im" data-k="interactionMode" value="opencurrent"> Open file in current window</label>
-    <span class="cap">FILE DIRECTORY (saved in settings)</span>
-    <input type="text" data-k="fileDir" id="file-dir" placeholder="e.g. maps  (blank = same folder as page)">
-    <button id="pick-dir-btn" style="display:none">Pick folder (local files)</button>
-    <span class="slider-hint" id="pick-dir-status">Click a box "hello" to load hello.txt from this directory.</span>
+    <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Drag Node/s</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows</label>
+
+    <span class="cap" style="margin-top:6px">DOUBLE-CLICK / LINK ACTION</span>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="new"> Open in new window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="current"> Open in current window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="expand"> Expand in current window (Direct)</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="rotateFlip"> Rotate and or flip</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="openEmptySpace"> Open file in empty space</label>
+
+    <span class="cap" style="margin-top:6px">EDIT MODE</span>
+    <label><input type="radio" name="em" data-k="editMode" value="editInstead"> Edit instead of goto link</label>
+    <label><input type="radio" name="em" data-k="editMode" value="spot"> Edit click spot (ball)</label>
+
+    <span class="cap" style="margin-top:6px">SELECTION & DRAG OPTIONS</span>
+    <label><input type="checkbox" data-k="dragGraphBall" id="drag-graph-ball-chk" checked> Drag Graph (Ball)</label>
+    <div class="region-mode-row" aria-label="Region selection options">
+      <label><input type="checkbox" id="select-region-chk"> Select Region</label>
+      <label title="Hold Ctrl and drag on empty canvas to select a region."><input type="checkbox" id="ctrl-region-indicator" class="fake-checkbox" checked disabled aria-label="Ctrl plus Select Region indicator"> Ctrl+ Select Region</label>
+    </div>
+
+    <span class="cap" style="margin-top:6px">FILE DIRECTORY</span>
+    <div class="directory-input-row">
+      <input type="text" data-k="fileDir" id="file-dir" placeholder="Paste folder path here">
+      <button type="button" id="copy-dir-btn" title="Copy the folder path so you can paste it into the folder chooser">Copy</button>
+    </div>
+    <button id="pick-dir-btn">Select Directory</button>
+    <span class="slider-hint" id="pick-dir-status">To use a typed path: click Copy, click Select Directory, paste the path into the folder chooser’s path/location field (when available), then confirm Select Folder. Browser security requires this manual selection; this page cannot navigate the chooser or grant folder access automatically.</span>
   </div>
 
   <div class="tool-group" data-panel-id="panel-views">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <span class="cap">VIEW HISTORY (current window)</span>
+    <span class="cap">VIEW HISTORY (nested views)</span>
     <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
     <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
   </div>
@@ -342,9 +240,6 @@
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
     <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
-    <label><input type="checkbox" id="edit-text-chk"> Edit Text Mode</label>
-    <label><input type="checkbox" id="select-region-chk"> Select Region</label>
-    <label><input type="checkbox" id="drag-graph-chk"> Drag Subgraph</label>
   </div>
 
   <div class="tool-group" data-panel-id="panel-line-style">
@@ -369,8 +264,10 @@
 
   <div class="tool-group" data-panel-id="panel-history">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <button id="undo-btn" disabled>Undo</button>
-    <button id="redo-btn" disabled>Redo</button>
+    <div class="row-inline">
+      <button id="undo-btn" disabled>Undo</button>
+      <button id="redo-btn" disabled>Redo</button>
+    </div>
   </div>
   <div class="tool-group" data-panel-id="panel-clear">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
@@ -410,24 +307,36 @@
 
 <div id="help-modal" class="modal-overlay">
   <div class="modal-content">
-    <div class="modal-header"><h2>Concept Map Guide</h2><button id="modal-close-btn" class="modal-close">&times;</button></div>
+    <div class="modal-header"><h2>Concept Map with Gemini Guide</h2><button id="modal-close-btn" class="modal-close">&times;</button></div>
     <div class="modal-body">
       <div class="help-section">
-        <h3>Drawing Arrows</h3>
+        <h3>AI Features</h3>
         <div class="help-grid">
-          <span class="help-key">Proximity Arrow</span>
-          <span>Click and drag near a node (outside its bounds) towards another node to grow and steer a live connection arrow. Release over the target node to create the line.</span>
+          <span class="help-key">Generate / Append</span>
+          <span>Builds or appends full knowledge graphs with nodes and directed lines using the selected AI model.</span>
+          <span class="help-key">1-Year Roadmap</span>
+          <span>Creates timeline-aware concepts mapped directly across the 12-month calendar overlay.</span>
+          <span class="help-key">Expand Selected</span>
+          <span>Select 1 node and click "🌱 Expand Selected Node" to branch out sub-topics.</span>
+          <span class="help-key">Connect 2 Nodes</span>
+          <span>Select 2 nodes to find and create missing relationship links or bridge concepts.</span>
+          <span class="help-key">AI Drill-Down</span>
+          <span>Generates an in-depth child map inside the view stack with back-navigation.</span>
+          <span class="help-key">Whiteboard to Map</span>
+          <span>Upload an image or diagram photo to transcribe it into connected digital nodes.</span>
+          <span class="help-key">Ask Map (Copilot)</span>
+          <span>Ask questions about your concept map. Gemini answers and highlights key paths.</span>
         </div>
       </div>
       <div class="help-section">
-        <h3>Touch Gestures</h3>
+        <h3>Shortcuts & Touch</h3>
         <div class="help-grid">
-          <span class="help-key">Pan</span>
-          <span>Drag one finger on empty space away from any node, or drag two fingers anywhere.</span>
-          <span class="help-key">Zoom</span>
-          <span>Pinch with two fingers, or use the + / &minus; buttons (tap the % to reset to 100%). Ctrl/Cmd + mouse wheel also zooms.</span>
-          <span class="help-key">Edit / open</span>
-          <span>Tap an already-selected box (without dragging) to edit it or open its link.</span>
+          <span class="help-key">Pan & Zoom</span>
+          <span>Two-finger pinch to zoom; drag empty space to pan. Ctrl+Wheel zooms.</span>
+          <span class="help-key">Draw Connections</span>
+          <span>Drag from near a node towards another node to link them, or use the bottom-right arrow ball.</span>
+          <span class="help-key">Delete</span>
+          <span>Press Del or Backspace with nodes or lines selected.</span>
         </div>
       </div>
     </div>
@@ -435,7 +344,7 @@
 </div>
 
 <script>
-/* ======================= helpers & elements ======================= */
+// Helpers
 const $ = id => document.getElementById(id);
 const $$ = sel => [...document.querySelectorAll(sel)];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
@@ -448,11 +357,12 @@ const svgDefs = svgLayer.querySelector('defs'), linesGroup = $('lines-group'), l
 const liveArrow = $('live-drag-arrow'), selBox = $('selection-box'), timelineEl = $('timeline-container');
 const tlHandle = timelineEl.querySelector('.timeline-resize-handle'), sidebarResizer = $('sidebar-resizer');
 
-/* ======================= state with custom defaults ======================= */
+// State
 const DEFAULTS = {
   nodes: [], lines: [],
   panelOrder: [
     "panel-header",
+    "panel-gemini",
     "panel-io",
     "panel-settings-io",
     "panel-interface",
@@ -474,10 +384,11 @@ const DEFAULTS = {
     "panel-help"
   ],
   draggablePanels: false,
+  dragGraphBall: true,
   showTimeline: false,
   showUrls: false,
-  timelinePos: { x: 50, y: 50, width: 700 },
-  sidebarWidth: 280,
+  timelinePos: { x: 50, y: 50, width: 800 },
+  sidebarWidth: 320,
   fontMin: 12,
   fontMax: 14,
   maxLinksBound: 1,
@@ -490,13 +401,20 @@ const DEFAULTS = {
   maxDistanceLimit: 10,
   inputMode: "desktop",
   autoSizeAll: true,
-  interactionMode: "all",
+  interactionMode: "drag",
+  linkOpenMode: "current",
+  editMode: "spot",
   fileDir: "",
   touchDragThreshold: 10,
   touchHitPad: 25,
   touchHoldMs: 100,
   touchIgnoreExtra: true,
-  touchAutoClear: true
+  touchAutoClear: true,
+  aiProvider: "gemini",
+  aiModel: "gemini-3.8-flash",
+  geminiKey: "",
+  claudeKey: "",
+  openaiKey: ""
 };
 const TOUCH_KEYS = ['touchDragThreshold', 'touchHitPad', 'touchHoldMs', 'touchIgnoreExtra', 'touchAutoClear'];
 let state = structuredClone(DEFAULTS);
@@ -524,7 +442,6 @@ function parseTextAndUrl(input) {
 const normalizeLines = lines => lines.map(l =>
   l.arrow === 'start' ? { ...l, from: l.to, to: l.from, arrow: 'end' } : l.arrow === 'none' ? l : { ...l, arrow: 'end' });
 
-/* ---------- undo / redo ---------- */
 function updateHistBtns() {
   $('undo-btn').disabled = histIdx <= 0;
   $('redo-btn').disabled = histIdx >= hist.length - 1;
@@ -546,10 +463,402 @@ function restore(i) {
 $('undo-btn').onclick = () => restore(histIdx - 1);
 $('redo-btn').onclick = () => restore(histIdx + 1);
 
-/* ======================= save (overwrite the imported file) ======================= */
-/* saveTarget = { handle: FileSystemFileHandle, name, format } where format is json | lines | txt-simple | txt-indent | html */
-let saveTarget = null;
+// Multi-provider AI adapter
+const AI_PROVIDERS = {
+  gemini: {
+    label: 'Gemini', key: 'geminiKey', defaultModel: 'gemini-3.8-flash',
+    models: [
+      ['gemini-3.8-flash', 'Gemini 3.8 Flash'],
+      ['gemini-3.7-flash', 'Gemini 3.7 Flash'],
+      ['gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview']
+    ]
+  },
+  claude: {
+    label: 'Claude', key: 'claudeKey', defaultModel: 'claude-sonnet-5-5',
+    models: [
+      ['claude-sonnet-5-5', 'Claude Sonnet 5.5'],
+      ['claude-opus-5-5', 'Claude Opus 5.5'],
+      ['claude-haiku-5-5', 'Claude Haiku 5.5']
+    ]
+  },
+  openai: {
+    label: 'ChatGPT / OpenAI', key: 'openaiKey', defaultModel: 'gpt-5.1',
+    models: [
+      ['gpt-5.1', 'GPT-5.1'],
+      ['gpt-5-mini', 'GPT-5 mini'],
+      ['gpt-4.1', 'GPT-4.1']
+    ]
+  }
+};
+const aiProvider = () => AI_PROVIDERS[state.aiProvider] || AI_PROVIDERS.gemini;
+function syncAIControls(forceKey = false) {
+  if (!AI_PROVIDERS[state.aiProvider]) state.aiProvider = 'gemini';
+  const provider = aiProvider();
+  const providerSelect = $('ai-provider'), modelSelect = $('ai-model'), keyInput = $('ai-api-key');
+  if (!providerSelect || !modelSelect || !keyInput) return;
+  providerSelect.value = state.aiProvider in AI_PROVIDERS ? state.aiProvider : 'gemini';
+  const options = provider.models.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+  if (modelSelect.dataset.provider !== state.aiProvider) {
+    modelSelect.innerHTML = options;
+    modelSelect.dataset.provider = state.aiProvider;
+  }
+  if (!provider.models.some(([value]) => value === state.aiModel)) state.aiModel = provider.defaultModel;
+  modelSelect.value = state.aiModel;
+  $('ai-key-caption').textContent = `${provider.label} API Key:`;
+  if (forceKey || document.activeElement !== keyInput) keyInput.value = state[provider.key] || '';
+  keyInput.placeholder = state.aiProvider === 'gemini' ? 'AIzaSy...' : 'Paste API key for ' + provider.label;
+}
+function storeActiveAIKey() {
+  state[aiProvider().key] = $('ai-api-key').value.trim();
+}
+function getAIAuth() {
+  storeActiveAIKey();
+  const provider = aiProvider(), apiKey = state[provider.key];
+  if (!apiKey) throw new Error(`Enter your ${provider.label} API key in the AI settings.`);
+  return { provider: state.aiProvider, apiKey, model: $('ai-model').value || provider.defaultModel, config: provider };
+}
+$('ai-provider').addEventListener('change', () => {
+  storeActiveAIKey();
+  state.aiProvider = $('ai-provider').value in AI_PROVIDERS ? $('ai-provider').value : 'gemini';
+  state.aiModel = aiProvider().defaultModel;
+  syncAIControls(true);
+  $('gemini-status').textContent = `${aiProvider().label} selected. Enter its API key to use AI features.`;
+  saveState();
+});
+$('ai-model').addEventListener('change', () => { state.aiModel = $('ai-model').value; saveState(); });
+$('ai-api-key').addEventListener('input', () => { state[aiProvider().key] = $('ai-api-key').value; });
+$('ai-api-key').addEventListener('change', () => { storeActiveAIKey(); });
 
+function readGeminiParts(contents) {
+  return (contents || []).map(message => ({
+    role: message.role === 'model' ? 'assistant' : (message.role || 'user'),
+    parts: message.parts || []
+  }));
+}
+function parseAIJson(raw) {
+  const clean = String(raw || '{}').replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  try { return JSON.parse(clean); } catch (firstError) {
+    const a = clean.indexOf('{'), b = clean.lastIndexOf('}');
+    if (a >= 0 && b > a) {
+      try { return JSON.parse(clean.slice(a, b + 1)); } catch (secondError) {}
+    }
+    throw new Error('The AI did not return valid JSON. Try again or use a different model.');
+  }
+}
+function responseText(data, provider) {
+  if (provider === 'gemini') return data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '{}';
+  if (provider === 'claude') return data.content?.filter(p => p.type === 'text').map(p => p.text).join('\n') || '{}';
+  if (data.output_text) return data.output_text;
+  return (data.output || []).flatMap(item => item.content || []).filter(part => part.type === 'output_text' || part.type === 'text').map(part => part.text || '').join('\n') || '{}';
+}
+async function requestAI(contents, systemInstruction = null) {
+  const auth = getAIAuth(), { provider, apiKey, model, config } = auth;
+  const statusEl = $('gemini-status');
+  const promptRules = 'Return only one valid JSON object. Do not wrap the JSON in Markdown fences or add explanatory prose.';
+  const instructions = systemInstruction ? `${systemInstruction}\n\n${promptRules}` : promptRules;
+  statusEl.textContent = `Connecting to ${config.label} (${model})...`;
+  let url, headers = { 'Content-Type': 'application/json' }, body;
+  const messages = readGeminiParts(contents);
+
+  if (provider === 'gemini') {
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    body = {
+      contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: m.parts })),
+      generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+      systemInstruction: { parts: [{ text: instructions }] }
+    };
+  } else if (provider === 'claude') {
+    url = 'https://api.anthropic.com/v1/messages';
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    body = {
+      model, max_tokens: 8192, system: instructions,
+      messages: messages.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.parts.map(part => {
+          if (part.text !== undefined) return { type: 'text', text: part.text };
+          if (part.inlineData) return { type: 'image', source: { type: 'base64', media_type: part.inlineData.mimeType || 'image/png', data: part.inlineData.data } };
+          return null;
+        }).filter(Boolean)
+      }))
+    };
+  } else {
+    url = 'https://api.openai.com/v1/responses';
+    headers.Authorization = `Bearer ${apiKey}`;
+    body = {
+      model, instructions,
+      input: messages.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.parts.map(part => {
+          if (part.text !== undefined) return { type: 'input_text', text: part.text };
+          if (part.inlineData) return { type: 'input_image', image_url: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}` };
+          return null;
+        }).filter(Boolean)
+      })),
+      text: { format: { type: 'json_object' } }
+    };
+  }
+
+  let response;
+  try {
+    response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  } catch (err) {
+    throw new Error(`${config.label} request could not reach the API (${err.message}). If this is a browser/CORS block, try opening the HTML from a local web server or using a trusted API proxy.`);
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.error) {
+    const message = data.error?.message || data.message || `HTTP ${response.status}`;
+    const browserHint = provider === 'claude' ? ' If the browser blocks the request, use a local trusted setup that supports Anthropic API access.' : '';
+    throw new Error(`${config.label} API error: ${message}.${browserHint}`);
+  }
+  statusEl.textContent = `Processing ${config.label} response...`;
+  return parseAIJson(responseText(data, provider));
+}
+
+function makeAiNodes(items, position, includeUrls = true) {
+  const idMap = new Map();
+  const nodes = items.map((n, i) => {
+    const id = uid();
+    idMap.set(n.id, id);
+    return { id, text: n.text, url: includeUrls ? (n.url || null) : null,
+      ...position(n, i), size: 'auto', collapsed: false };
+  });
+  return { nodes, idMap };
+}
+function makeAiLines(lines, idMap, nodes, color = '#00b4d8', width = 1) {
+  return (lines || []).map(l => ({
+    id: uid(), from: idMap.get(l.from) || nodes[0]?.id, to: idMap.get(l.to) || nodes[1]?.id,
+    label: l.label || '', arrow: l.arrow || 'end', width, color
+  })).filter(l => l.from && l.to);
+}
+function makeAiMap(data, position, includeUrls = true) {
+  const mapped = makeAiNodes(data.nodes || [], position, includeUrls);
+  return { nodes: mapped.nodes, lines: makeAiLines(data.lines, mapped.idMap, mapped.nodes) };
+}
+const askAIText = (prompt, instruction = null) =>
+  requestAI([{ role: 'user', parts: [{ text: prompt }] }], instruction);
+
+async function generateMapWithAI(promptText, append = false, isRoadmap = false) {
+  if (!promptText.trim()) return alert('Please enter a topic or prompt for the AI.');
+  const statusEl = $('gemini-status');
+  const systemInstruction = `You are a knowledge architect creating concept maps.
+Return ONLY a valid JSON object matching this schema:
+{
+  "nodes": [{ "id": "string", "text": "string", "url": "optional string URL", "month": 0 }],
+  "lines": [{ "from": "id_string", "to": "id_string", "label": "string", "arrow": "end" }]
+}
+${isRoadmap ? 'Assign "month" (0 to 11) for each milestone across the 12 calendar months.' : ''}`;
+  try {
+    const data = await askAIText(promptText, systemInstruction);
+    if (!Array.isArray(data.nodes)) throw new Error('Invalid JSON format received.');
+    const tp = state.timelinePos, usable = tp.width - 25;
+    const count = append ? state.nodes.length : 0;
+    const startX = 100 + (count * 25) % 300, startY = 100 + Math.floor(count / 5) * 140;
+    const mapped = makeAiMap(data, (n, i) => {
+      if (isRoadmap) {
+        const month = clamp(typeof n.month === 'number' ? n.month : i % 12, 0, 11);
+        return { x: Math.round(tp.x + 10 + month / 11 * usable), y: Math.round(tp.y + 70 + i % 3 * 60) };
+      }
+      return { x: startX + i % 4 * 230, y: startY + Math.floor(i / 4) * 110 };
+    });
+    if (isRoadmap) state.showTimeline = true;
+    if (append) { state.nodes.push(...mapped.nodes); state.lines.push(...mapped.lines); }
+    else { state.nodes = mapped.nodes; state.lines = mapped.lines; }
+    saveState(); render();
+    statusEl.textContent = `Generated ${data.nodes.length} nodes successfully.`;
+    toast(`Generated ${data.nodes.length} nodes via ${aiProvider().label}`);
+  } catch (err) {
+    statusEl.textContent = 'AI error: ' + err.message;
+    toast('AI error: ' + err.message);
+  }
+}
+$('gemini-generate-btn').onclick = () => generateMapWithAI($('gemini-prompt').value, false, false);
+$('gemini-append-btn').onclick = () => generateMapWithAI($('gemini-prompt').value, true, false);
+$('gemini-roadmap-btn').onclick = () => generateMapWithAI($('gemini-prompt').value || '1-Year Milestone Roadmap', false, true);
+
+async function expandSelectedNode() {
+  if (selected.size !== 1) return alert('Select exactly 1 node to expand.');
+  const parentNode = nodeById([...selected][0]);
+  const statusEl = $('gemini-status');
+  statusEl.textContent = `Expanding "${parentNode.text}" with ${aiProvider().label}...`;
+
+  const prompt = `Given the core concept "${parentNode.text}", provide 4 to 5 direct sub-concepts or key aspects that branch out from it.
+Return JSON:
+{
+  "nodes": [{ "id": "string", "text": "string", "url": "optional url" }],
+  "lines": [{ "from": "parent", "to": "string", "label": "string" }]
+}`;
+
+  try {
+    const data = await askAIText(prompt);
+    if (!data.nodes) throw new Error('Bad response structure');
+    const count = data.nodes.length, radius = 180;
+    const { nodes: newNodes } = makeAiNodes(data.nodes, (_, i) => {
+      const angle = i / count * 2 * Math.PI;
+      return { x: Math.round(parentNode.x + Math.cos(angle) * radius), y: Math.round(parentNode.y + Math.sin(angle) * radius) };
+    });
+    const newLines = newNodes.map((n, i) => ({
+      id: uid(), from: parentNode.id, to: n.id,
+      label: data.lines?.[i]?.label || 'branches to', arrow: 'end', width: 1, color: '#9d4edd'
+    }));
+
+    state.nodes.push(...newNodes);
+    state.lines.push(...newLines);
+    saveState(); render();
+    statusEl.textContent = `Expanded with ${newNodes.length} sub-concepts.`;
+    toast(`Expanded concept with ${newNodes.length} nodes`);
+  } catch (err) {
+    statusEl.textContent = 'AI error: ' + err.message;
+  }
+}
+$('gemini-expand-btn').onclick = expandSelectedNode;
+
+async function connectSelectedNodes() {
+  if (selected.size !== 2) return alert('Select exactly 2 nodes to connect.');
+  const [n1, n2] = [...selected].map(nodeById);
+  const statusEl = $('gemini-status');
+  statusEl.textContent = `Analyzing connection between "${n1.text}" and "${n2.text}" with ${aiProvider().label}...`;
+
+  const prompt = `Analyze how concept "${n1.text}" relates to concept "${n2.text}".
+Return JSON with the relationship and an optional intermediary bridge node if helpful:
+{
+  "bridgeText": "optional middle concept if needed, or null",
+  "label1": "relationship from 1 to bridge/2",
+  "label2": "relationship from bridge to 2 (if bridge exists)"
+}`;
+
+  try {
+    const data = await askAIText(prompt);
+    if (data.bridgeText) {
+      const bridgeNode = {
+        id: uid(), text: data.bridgeText, url: null,
+        x: Math.round((n1.x + n2.x) / 2),
+        y: Math.round((n1.y + n2.y) / 2) + 20,
+        size: 'auto', collapsed: false
+      };
+      state.nodes.push(bridgeNode);
+      state.lines.push({ id: uid(), from: n1.id, to: bridgeNode.id, label: data.label1 || '', arrow: 'end', width: 2, color: '#00f5d4' });
+      state.lines.push({ id: uid(), from: bridgeNode.id, to: n2.id, label: data.label2 || '', arrow: 'end', width: 2, color: '#00f5d4' });
+    } else {
+      state.lines.push({ id: uid(), from: n1.id, to: n2.id, label: data.label1 || 'relates to', arrow: 'end', width: 2, color: '#00f5d4' });
+    }
+    saveState(); render();
+    statusEl.textContent = 'Connection established!';
+    toast(`Connected nodes with ${aiProvider().label}`);
+  } catch (err) {
+    statusEl.textContent = 'AI error: ' + err.message;
+  }
+}
+$('gemini-bridge-btn').onclick = connectSelectedNodes;
+
+async function drillDownSelectedNode() {
+  if (selected.size !== 1) return alert('Select 1 node to drill down into.');
+  const node = nodeById([...selected][0]);
+  const statusEl = $('gemini-status');
+  statusEl.textContent = `Creating deep-dive map for "${node.text}"...`;
+
+  const prompt = `Create an in-depth standalone concept map exploring: "${node.text}".
+Return JSON:
+{
+  "nodes": [{ "id": "string", "text": "string" }],
+  "lines": [{ "from": "id", "to": "id", "label": "string", "arrow": "end" }]
+}`;
+
+  try {
+    const parsed = await askAIText(prompt);
+    if (!parsed.nodes) throw new Error('Bad data');
+    const { nodes: newNodes, lines: newLines } = makeAiMap(parsed,
+      (_, i) => ({ x: 100 + i % 3 * 240, y: 120 + Math.floor(i / 3) * 120 }), false);
+
+    openInCurrent(node.text, { nodes: newNodes, lines: newLines }, null);
+    statusEl.textContent = `Opened sub-map for "${node.text}".`;
+    toast(`Drilled down into "${node.text}"`);
+  } catch (err) {
+    statusEl.textContent = 'AI error: ' + err.message;
+  }
+}
+$('gemini-drill-btn').onclick = drillDownSelectedNode;
+
+async function convertImageToMap() {
+  const fileInput = $('gemini-img-input');
+  if (!fileInput.files || !fileInput.files[0]) return alert('Please choose an image file first.');
+  const file = fileInput.files[0];
+  const statusEl = $('gemini-status');
+  statusEl.textContent = `Transcribing diagram image with ${aiProvider().label}...`;
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const base64Data = reader.result.split(',')[1];
+      const contents = [
+        {
+          role: 'user',
+          parts: [
+            { inlineData: { mimeType: file.type, data: base64Data } },
+            { text: 'Transcribe this diagram/whiteboard/sketch into a concept map JSON with "nodes" and "lines".' }
+          ]
+        }
+      ];
+      const parsed = await requestAI(contents);
+      if (!parsed.nodes) throw new Error('Invalid transcription structure.');
+
+      const { nodes: newNodes, lines: newLines } = makeAiMap(parsed,
+        (_, i) => ({ x: 120 + i % 4 * 220, y: 140 + Math.floor(i / 4) * 110 }), false);
+
+      state.nodes = newNodes;
+      state.lines = newLines;
+      saveState(); render();
+      statusEl.textContent = `Transcribed ${newNodes.length} nodes from image!`;
+      toast(`Whiteboard transcribed: ${newNodes.length} nodes created`);
+    } catch (err) {
+      statusEl.textContent = 'Image error: ' + err.message;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+$('gemini-img-btn').onclick = convertImageToMap;
+
+async function askMapCopilot() {
+  const question = $('gemini-ask-input').value.trim();
+  if (!question) return alert('Enter a question about the current map.');
+  if (!state.nodes.length) return alert('The canvas is empty.');
+  const statusEl = $('gemini-status');
+  statusEl.textContent = `Analyzing map with ${aiProvider().label} Copilot...`;
+
+  const mapSummary = {
+    nodes: state.nodes.map(n => ({ id: n.id, text: n.text })),
+    lines: state.lines.map(l => ({ from: l.from, to: l.to, label: l.label }))
+  };
+
+  const prompt = `Current Concept Map Data:
+${JSON.stringify(mapSummary)}
+
+User Question: "${question}"
+Answer the question based on the map and identify the relevant node IDs to highlight.
+Return JSON:
+{
+  "answer": "string explanation",
+  "highlightNodeIds": ["id1", "id2"]
+}`;
+
+  try {
+    const res = await askAIText(prompt);
+    selected.clear();
+    (res.highlightNodeIds || []).forEach(id => {
+      if (nodeById(id)) selected.add(id);
+    });
+    render();
+    statusEl.textContent = res.answer || 'Analysis complete.';
+    alert('Copilot Answer:\n\n' + (res.answer || 'Relevant nodes highlighted on map.'));
+  } catch (err) {
+    statusEl.textContent = 'Copilot error: ' + err.message;
+  }
+}
+$('gemini-ask-btn').onclick = askMapCopilot;
+
+// Save/export
+let saveTarget = null;
 function setSaveTarget(t) {
   saveTarget = t || null;
   try { if (typeof views !== 'undefined' && views[activeView]) views[activeView].target = saveTarget; } catch (err) {}
@@ -627,46 +936,23 @@ async function writeHandle(h, content) {
   await w.close();
 }
 
-/* Last resort before "Save As": ask the Import/Export window (which opened the file) to write it. */
-function askIoToSave(content, format, name) {
-  return new Promise(res => {
-    if (!ioWin || ioWin.closed) return res(false);
-    const id = uid();
-    const on = ev => {
-      const m = ev.data;
-      if (ev.source !== ioWin || !m || m.type !== 'cm-save-result' || m.id !== id) return;
-      clearTimeout(timer); window.removeEventListener('message', on); res(!!m.ok);
-    };
-    const timer = setTimeout(() => { window.removeEventListener('message', on); res(false); }, 2500);
-    window.addEventListener('message', on);
-    postIo({ type: 'cm-save-request', id, content, format, name });
-  });
-}
-
 let saving = false;
 async function saveCurrent() {
   if (saving) return;
   saving = true;
   try {
     const t = saveTarget, fmt = t ? t.format : 'json', content = serializeFor(fmt);
-    if (t) {
-      // 1) handle we already hold, or 2) the one the import window stored for us
-      let h = t.handle;
-      if (!h) { const rec = await idbGet('saveTarget'); if (rec && rec.handle && rec.name === t.name) h = rec.handle; }
-      if (h) {
-        try { await writeHandle(h, content); t.handle = h; toast('Saved ' + t.name); return; }
-        catch (err) { if (err && err.name === 'AbortError') return; }
-      }
-      // 3) the import window still has the file open
-      if (await askIoToSave(content, fmt, t.name)) { toast('Saved ' + t.name); return; }
+    if (t && t.handle) {
+      await writeHandle(t.handle, content);
+      toast('Saved ' + t.name);
+      return;
     }
-    // 4) no usable link: Save As, pre-filled with the imported name and format
     const name = t ? t.name : defaultNameFor(fmt);
     if (!window.showSaveFilePicker) {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
       a.download = name; a.click(); URL.revokeObjectURL(a.href);
-      toast('This browser cannot overwrite files. Downloaded ' + name);
+      toast('Downloaded ' + name);
       return;
     }
     const picked = await window.showSaveFilePicker({ suggestedName: name, types: [SAVE_TYPES[fmt] || SAVE_TYPES.json] });
@@ -685,11 +971,9 @@ window.addEventListener('keydown', e => {
   }
 });
 
-/* ======================= keyboard shortcuts ======================= */
+// Keyboard
 window.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingId !== null) {
-    return;
-  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable || editingId !== null) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
     e.preventDefault();
     if (histIdx > 0) restore(histIdx - 1);
@@ -714,14 +998,11 @@ window.addEventListener('keydown', e => {
       selected.clear();
       changed = true;
     }
-    if (changed) {
-      saveState();
-      render();
-    }
+    if (changed) { saveState(); render(); }
   }
 });
 
-/* ======================= graph queries & geom ======================= */
+// Graph/geometry
 const dir = l => l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
 const edges = l => (l.arrow === 'end' || l.arrow === 'start') ? [dir(l)] : [[l.from, l.to], [l.to, l.from]];
 
@@ -803,6 +1084,42 @@ function closestNode(p, maxDist) {
   return best;
 }
 
+function findBestEmptyDirection(node, allNodes) {
+  const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4];
+  let bestAngle = 0;
+  let maxMinDist = -1;
+  angles.forEach(angle => {
+    const dirX = Math.cos(angle);
+    const dirY = Math.sin(angle);
+    let minDist = Infinity;
+    allNodes.forEach(other => {
+      if (other.id === node.id) return;
+      const ox = other.x - node.x;
+      const oy = other.y - node.y;
+      const dist = Math.hypot(ox, oy);
+      if (dist === 0) return;
+      const dot = (ox * dirX + oy * dirY) / dist;
+      if (dot > 0.2) {
+        if (dist < minDist) minDist = dist;
+      }
+    });
+    if (minDist > maxMinDist) {
+      maxMinDist = minDist;
+      bestAngle = angle;
+    }
+  });
+  return bestAngle;
+}
+
+function findEmptySpaceForGraph() {
+  if (!state.nodes.length) return { x: 150, y: 150 };
+  let maxX = 0;
+  state.nodes.forEach(n => {
+    if (n.x > maxX) maxX = n.x;
+  });
+  return { x: maxX + 350, y: 150 };
+}
+
 function arrangeGrid(nodes, r) {
   if (!nodes.length) return;
   const sizes = nodes.map(n => rect(n)), maxW = Math.max(...sizes.map(s => s.width)), maxH = Math.max(...sizes.map(s => s.height));
@@ -829,7 +1146,77 @@ function arrangeSequence(nodes, r) {
   });
 }
 
-/* ======================= rendering ======================= */
+function collapseFileGraph(anchor) {
+  const expansion = anchor.fileExpansion;
+  if (!expansion) return false;
+  const nodeIds = new Set(expansion.nodeIds || []);
+  const lineIds = new Set(expansion.lineIds || []);
+  state.nodes = state.nodes.filter(n => !nodeIds.has(n.id));
+  state.lines = state.lines.filter(l => !lineIds.has(l.id) && !nodeIds.has(l.from) && !nodeIds.has(l.to));
+  nodeIds.forEach(id => selected.delete(id));
+  delete anchor.fileExpansion;
+  return true;
+}
+
+function insertFileGraph(anchor, parsed, placement = state.linkOpenMode) {
+  if (!parsed?.nodes?.length || anchor.fileExpansion) return false;
+  if (placement === 'new' || placement === 'current') placement = 'expand';
+  const target = parsed.nodes.find(x => x.text.trim().toLowerCase() === anchor.text.trim().toLowerCase()) || parsed.nodes[0];
+  const idMap = new Map(), nodeIds = [], lineIds = [];
+  const addNode = node => { state.nodes.push(node); nodeIds.push(node.id); };
+  const addLine = line => { state.lines.push(line); lineIds.push(line.id); };
+
+  if (placement === 'openEmptySpace') {
+    const empty = findEmptySpaceForGraph(), rootId = uid();
+    const minX = Math.min(...parsed.nodes.map(x => x.x));
+    const minY = Math.min(...parsed.nodes.map(x => x.y));
+    parsed.nodes.forEach(x => {
+      const id = x.id === target.id ? rootId : uid();
+      idMap.set(x.id, id);
+      addNode({ ...x, id, x: Math.round(empty.x + x.x - minX), y: Math.round(empty.y + x.y - minY) });
+    });
+    parsed.lines.forEach(l => {
+      const from = idMap.get(l.from), to = idMap.get(l.to);
+      if (from && to) addLine({ ...l, id: uid(), from, to });
+    });
+    addLine({ id: uid(), from: anchor.id, to: rootId, label: 'submap link', arrow: 'end', width: 2, color: '#00f5d4' });
+  } else {
+    idMap.set(target.id, anchor.id);
+    if (placement === 'rotateFlip') {
+      const bestAngle = findBestEmptyDirection(anchor, state.nodes);
+      let sx = 0, sy = 0, count = 0;
+      parsed.nodes.forEach(x => {
+        if (x.id !== target.id) { sx += x.x - target.x; sy += x.y - target.y; count++; }
+      });
+      const subAngle = count ? Math.atan2(sy / count, sx / count) : 0;
+      const angle = bestAngle - subAngle;
+      parsed.nodes.forEach(x => {
+        if (x.id === target.id) return;
+        const dx = x.x - target.x, dy = x.y - target.y;
+        const id = uid();
+        idMap.set(x.id, id);
+        addNode({ ...x, id, x: Math.round(anchor.x + dx * Math.cos(angle) - dy * Math.sin(angle)), y: Math.round(anchor.y + dx * Math.sin(angle) + dy * Math.cos(angle)) });
+      });
+    } else {
+      const dx = anchor.x - target.x, dy = anchor.y - target.y;
+      parsed.nodes.forEach(x => {
+        if (x.id === target.id) return;
+        const id = uid();
+        idMap.set(x.id, id);
+        addNode({ ...x, id, x: x.x + dx, y: x.y + dy });
+      });
+    }
+    parsed.lines.forEach(l => {
+      const from = idMap.get(l.from), to = idMap.get(l.to);
+      if (from && to) addLine({ ...l, id: uid(), from, to });
+    });
+  }
+  if (!nodeIds.length && !lineIds.length) return false;
+  anchor.fileExpansion = { nodeIds, lineIds, placement };
+  return true;
+}
+
+// Rendering
 function render() {
   view.links = new Map(state.nodes.map(n => [n.id, 0]));
   state.lines.forEach(l => [l.from, l.to].forEach(id => view.links.has(id) && view.links.set(id, view.links.get(id) + 1)));
@@ -845,11 +1232,16 @@ function render() {
   drawTimeline();
   drawLineControls();
 
+  $('gemini-expand-btn').disabled = (selected.size !== 1);
+  $('gemini-drill-btn').disabled = (selected.size !== 1);
+  $('gemini-bridge-btn').disabled = (selected.size !== 2);
+
   els.forEach(el => el.remove());
   els.clear();
   const parents = new Set(state.lines.map(l => dir(l)[0]));
   state.nodes.forEach(n => {
     if (view.hidden.has(n.id)) return;
+    if (!n.fileExpansion) ensureFileAvailability(n);
     const el = makeNode(n, parents);
     world.appendChild(el);
     els.set(n.id, el);
@@ -879,6 +1271,83 @@ function makeNode(n, parents) {
     btn.onclick = e => { e.stopPropagation(); if (isLocked) return; n.collapsed = !n.collapsed; saveState(); render(); };
     el.appendChild(btn);
   }
+
+  if (state.editMode === 'spot') {
+    const ball = document.createElement('div');
+    ball.className = 'node-edit-ball';
+    ball.title = 'Click to edit cell';
+    ball.onpointerdown = e => e.stopPropagation();
+    ball.onclick = e => {
+      e.stopPropagation();
+      editingId = n.id;
+      render();
+    };
+    el.appendChild(ball);
+  }
+  const isExpandedFile = !!n.fileExpansion;
+  const fileState = fileAvailability.get(fileAvailabilityKey(n));
+  if (isExpandedFile || fileState?.status === 'yes') {
+    const expandFileBall = document.createElement('div');
+    expandFileBall.className = 'node-expand-file-ball';
+    expandFileBall.textContent = isExpandedFile ? '−' : '+';
+    expandFileBall.title = isExpandedFile ? 'Collapse linked concept map' : 'Expand linked file as a concept map';
+    expandFileBall.setAttribute('aria-label', expandFileBall.title);
+    expandFileBall.onpointerdown = e => e.stopPropagation();
+    expandFileBall.onclick = async e => {
+      e.stopPropagation();
+      if (n.fileExpansion) {
+        collapseFileGraph(n);
+        saveState(); render();
+        return;
+      }
+      try {
+        const { text, handle } = await getFileContent(n.text);
+        const parsed = parseGraphText(text);
+        if (state.linkOpenMode === 'current') {
+          openInCurrent(n.text, parsed, handle ? { handle, name: handle.name, format: graphFormat(text) } : null);
+          return;
+        } else if (state.linkOpenMode === 'new') {
+          const currentFile = location.pathname.split('/').pop() || 'index.html';
+          const child = window.open(`${currentFile}#child`, '_blank');
+          if (child) pendingChildren.set(child, { name: n.text, text, fileDir: state.fileDir });
+          return;
+        }
+        const placement = state.linkOpenMode;
+        if (!parsed.nodes.length || !insertFileGraph(n, parsed, placement)) {
+          toast('No additional concept-map nodes found in this file');
+          return;
+        }
+        saveState(); render();
+      } catch (err) {
+        toast('Could not open linked file map: ' + err.message);
+      }
+    };
+    expandFileBall.ondblclick = e => { e.preventDefault(); e.stopPropagation(); };
+    el.appendChild(expandFileBall);
+  }
+
+  if (state.dragGraphBall) {
+    const dragBall = document.createElement('div');
+    dragBall.className = 'node-drag-ball';
+    dragBall.title = 'Drag graph / subgraph';
+    dragBall.onpointerdown = e => {
+      e.stopPropagation();
+      if (!isLocked && !selected.has(n.id)) { selected.clear(); selected.add(n.id); render(); }
+      const ids = isLocked ? new Set([n.id]) : new Set(selected);
+      componentOf(n.id).forEach(c => ids.add(c));
+      startNodeDragWithIds(e, n, ids);
+    };
+    el.appendChild(dragBall);
+  }
+
+  const arrowBall = document.createElement('div');
+  arrowBall.className = 'node-arrow-ball';
+  arrowBall.title = 'Drag to create arrow';
+  arrowBall.onpointerdown = e => {
+    e.stopPropagation();
+    startArrow(e, n);
+  };
+  el.appendChild(arrowBall);
 
   if (editingId === n.id) {
     const input = document.createElement('textarea');
@@ -913,19 +1382,45 @@ function makeNode(n, parents) {
   handle.onpointerdown = e => startResize(e, n, el);
   el.appendChild(handle);
 
-  el.ondblclick = e => {
+  el.ondblclick = async e => {
+    clearTimeout(selectionRenderTimer); selectionRenderTimer = null;
     e.stopPropagation();
-    if (mode() !== 'drag' && mode() !== 'arrow' && !isFileMode() && activateNode(n)) render();
+    if (mode() === 'arrow') return;
+    if (state.editMode === 'editInstead') {
+      editingId = n.id;
+      render();
+      return;
+    }
+    if (n.url) {
+      if (state.linkOpenMode === 'current') window.location.href = n.url;
+      else if (['expand', 'rotateFlip', 'openEmptySpace'].includes(state.linkOpenMode)) {
+        selected.clear(); selected.add(n.id); expandSelectedNode();
+      } else window.open(n.url, '_blank');
+      return;
+    }
+    try {
+      const { text, handle } = await getFileContent(n.text);
+      const parsed = parseGraphText(text);
+      if (state.linkOpenMode === 'current') {
+        openInCurrent(n.text, parsed, handle ? { handle, name: handle.name, format: graphFormat(text) } : null);
+      } else if (state.linkOpenMode === 'new') {
+        const currentFile = location.pathname.split('/').pop() || 'index.html';
+        const child = window.open(`${currentFile}#child`, '_blank');
+        if (child) pendingChildren.set(child, { name: n.text, text, fileDir: state.fileDir });
+      } else if (['expand', 'rotateFlip', 'openEmptySpace'].includes(state.linkOpenMode)) {
+        if (parsed.nodes.length && insertFileGraph(n, parsed, state.linkOpenMode)) { saveState(); render(); }
+      }
+    } catch (err) {
+      if (state.linkOpenMode === 'current' || state.linkOpenMode === 'new') {
+        openInCurrent(n.text, { nodes: [{ id: uid(), text: n.text, url: null, x: 150, y: 150, size: 'auto', collapsed: false }], lines: [] }, null);
+      } else {
+        editingId = n.id;
+        render();
+      }
+    }
   };
-  el.onclick = e => { if (isFileMode()) { e.stopPropagation(); fileAction(n); } };
   el.onpointerdown = e => nodeDown(e, n);
   return el;
-}
-
-function activateNode(n) {
-  if (mode() === 'edit' || $('edit-text-chk').checked || !n.url) { editingId = n.id; return true; }
-  window.open(n.url, '_blank');
-  return false;
 }
 
 function drawLines() {
@@ -1031,13 +1526,33 @@ function drawTimeline() {
 }
 
 function updateExtent() {
-  let r = 0, b = 0;
-  els.forEach(el => { r = Math.max(r, el.offsetLeft + el.offsetWidth); b = Math.max(b, el.offsetTop + el.offsetHeight); });
-  world.style.width = Math.max(Math.floor(viewport.clientWidth / zoom), r + 200) + 'px';
-  world.style.height = Math.max(Math.floor(viewport.clientHeight / zoom), b + 200) + 'px';
+  let minX = 100, minY = 100, maxX = viewport.clientWidth / zoom, maxY = viewport.clientHeight / zoom;
+  state.nodes.forEach(n => {
+    const el = els.get(n.id);
+    const w = el ? el.offsetWidth : 120;
+    const h = el ? el.offsetHeight : 50;
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + w + 400);
+    maxY = Math.max(maxY, n.y + h + 400);
+  });
+
+  if (minX < 100 || minY < 100) {
+    const dx = minX < 100 ? 100 - minX : 0;
+    const dy = minY < 100 ? 100 - minY : 0;
+    state.nodes.forEach(n => {
+      n.x += dx;
+      n.y += dy;
+    });
+    maxX += dx;
+    maxY += dy;
+  }
+
+  world.style.width = Math.round(maxX) + 'px';
+  world.style.height = Math.round(maxY) + 'px';
 }
 
-/* ======================= toolbar: settings, dock, menu ======================= */
+// Toolbar/settings
 const controls = $$('[data-k]');
 controls.forEach(el => {
   const k = el.dataset.k, live = el.type === 'range' || el.type === 'color';
@@ -1048,9 +1563,7 @@ controls.forEach(el => {
     if (k === 'fontMin') v = Math.min(v, state.fontMax);
     if (k === 'fontMax') v = Math.max(v, state.fontMin);
     state[k] = v;
-    if (k === 'draggablePanels') {
-      document.body.classList.toggle('draggable-panels-enabled', !!v);
-    }
+    if (k === 'draggablePanels') document.body.classList.toggle('draggable-panels-enabled', !!v);
     if (!live) saveState();
     render();
   });
@@ -1070,6 +1583,8 @@ function syncControls() {
   });
   document.body.classList.toggle('touch-mode', isTouchActive());
   document.body.classList.toggle('draggable-panels-enabled', !!state.draggablePanels);
+  syncAIControls();
+  if ($('file-dir')) $('file-dir').value = state.fileDir || '';
 }
 
 const narrow = matchMedia('(max-width: 768px)');
@@ -1084,7 +1599,6 @@ $('help-btn').onclick = () => helpModal.classList.add('active');
 $('modal-close-btn').onclick = () => helpModal.classList.remove('active');
 helpModal.onclick = e => { if (e.target === helpModal) helpModal.classList.remove('active'); };
 
-/* ---------- Collapsible Sub-Panels ---------- */
 $$('.panel-toggle-btn').forEach(btn => {
   btn.onclick = () => {
     const targetId = btn.dataset.target;
@@ -1095,7 +1609,6 @@ $$('.panel-toggle-btn').forEach(btn => {
   };
 });
 
-/* ---------- Sub-Panels Sortable Dragging ---------- */
 function getPanelOrder() {
   return $$('#toolbar .tool-group').map(el => el.dataset.panelId).filter(Boolean);
 }
@@ -1127,10 +1640,7 @@ $$('.panel-grip').forEach(grip => {
       let nextSibling = null;
       for (const sib of siblings) {
         const box = sib.getBoundingClientRect();
-        if (y < box.top + box.height / 2) {
-          nextSibling = sib;
-          break;
-        }
+        if (y < box.top + box.height / 2) { nextSibling = sib; break; }
       }
       toolbar.insertBefore(placeholder, nextSibling);
     };
@@ -1150,49 +1660,36 @@ $$('.panel-grip').forEach(grip => {
   });
 });
 
-/* ---------- Settings Import / Export ---------- */
 const SETTING_KEYS = Object.keys(DEFAULTS).filter(k => k !== 'nodes' && k !== 'lines');
-
 $('export-settings-btn').onclick = () => {
   const settingsObj = {};
   SETTING_KEYS.forEach(k => { settingsObj[k] = state[k]; });
-  const blob = new Blob([JSON.stringify(settingsObj, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(settingsObj, null, 2)], { type: 'application/json' }));
   a.download = 'concept_map_settings.json';
   a.click();
-  URL.revokeObjectURL(url);
 };
-
 $('import-settings-btn').onclick = () => $('import-settings-file').click();
 $('import-settings-file').onchange = e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = event => {
+  reader.onload = ev => {
     try {
-      const parsed = JSON.parse(event.target.result);
-      SETTING_KEYS.forEach(k => {
-        if (parsed[k] !== undefined) state[k] = parsed[k];
-      });
-      applyPanelOrder();
-      saveState();
-      render();
-      alert('Settings imported successfully!');
-    } catch (err) {
-      alert('Failed to parse settings JSON file.');
-    }
+      const parsed = JSON.parse(ev.target.result);
+      SETTING_KEYS.forEach(k => { if (parsed[k] !== undefined) state[k] = parsed[k]; });
+      applyPanelOrder(); saveState(); render();
+      alert('Settings loaded!');
+    } catch (err) { alert('Invalid settings JSON.'); }
     e.target.value = '';
   };
   reader.readAsText(file);
 };
 
-/* ---------- adding / clearing ---------- */
 function addBoxes(texts) {
   texts.forEach(t => {
     const i = state.nodes.length;
-    state.nodes.push({ id: uid(), ...parseTextAndUrl(t), x: 80 + (i % 10) * 20, y: 140 + (i % 10) * 20, size: 'auto', collapsed: false });
+    state.nodes.push({ id: uid(), ...parseTextAndUrl(t), x: 120 + (i % 10) * 20, y: 140 + (i % 10) * 20, size: 'auto', collapsed: false });
   });
   $('node-text').value = '';
   saveState(); render();
@@ -1210,7 +1707,6 @@ $('clear-btn').onclick = () => {
   saveState(); render();
 };
 
-/* ---------- lock view ---------- */
 function setLock(on) {
   isLocked = on;
   $('lock-btn').disabled = on;
@@ -1229,7 +1725,6 @@ $('unlock-btn').onclick = () => {
   render();
 };
 
-/* ---------- fit / arrange ---------- */
 function setFitMode(m) {
   fitMode = m;
   $('fit-box-btn').classList.toggle('fit-active', m === 'grid');
@@ -1253,7 +1748,6 @@ $('fit-screen-btn').onclick = () => {
   saveState(); render();
 };
 
-/* ---------- selected line editing ---------- */
 function updateSelectedLine(prop, value) {
   const l = state.lines.find(x => x.id === selectedLineId);
   if (l) { l[prop] = value; render(); saveState(); }
@@ -1272,7 +1766,6 @@ $('delete-line-btn').onclick = () => {
   selectedLineId = null; saveState(); render();
 };
 
-/* ======================= zoom ======================= */
 function setZoom(z, cx, cy, anchor) {
   z = clamp(z, MIN_ZOOM, MAX_ZOOM);
   const vp = viewport.getBoundingClientRect();
@@ -1283,17 +1776,19 @@ function setZoom(z, cx, cy, anchor) {
   updateExtent();
   viewport.scrollLeft = a.x * z - (cx - vp.left);
   viewport.scrollTop = a.y * z - (cy - vp.top);
-  $('zoom-reset-btn').textContent = Math.round(z * 100) + '\%'; }$('zoom-in-btn').onclick = () => setZoom(zoom * 1.25);
-$('zoom-out-btn').onclick = () => setZoom(zoom / 1.25);$('zoom-reset-btn').onclick = () => setZoom(1);
+  $('zoom-reset-btn').textContent = Math.round(z * 100) + '\%';
+}
+$('zoom-in-btn').onclick = () => setZoom(zoom * 1.25);
+$('zoom-out-btn').onclick = () => setZoom(zoom / 1.25);
+$('zoom-reset-btn').onclick = () => setZoom(1);
 viewport.addEventListener('wheel', e => {
   if (!(e.ctrlKey || e.metaKey)) return;
   e.preventDefault();
   setZoom(zoom * (e.deltaY < 0 ? 1.15 : 0.87), e.clientX, e.clientY);
 }, { passive: false });
 
-/* ======================= gestures ======================= */
+// Gestures
 let g = null;
-
 function capture(id) {
   try { if (!viewport.hasPointerCapture(id)) viewport.setPointerCapture(id); } catch (err) {}
 }
@@ -1402,27 +1897,72 @@ function startSelect(e, p) {
   });
 }
 
+function startNodeDragWithIds(e, n, ids) {
+  const touch = e.pointerType === 'touch';
+  if (touch) capture(e.pointerId);
+  const starts = [...ids].map(nodeById).filter(Boolean).map(x => ({ n: x, x: x.x, y: x.y }));
+  const thresh = touch ? state.touchDragThreshold : 0, hold = touch ? state.touchHoldMs : 0, t0 = performance.now();
+  let active = thresh === 0 && hold === 0, ox = e.clientX, oy = e.clientY;
+  const gest = {
+    type: 'node', protect: true, moved: false,
+    move(p) {
+      if (!active) {
+        if (Math.hypot(p.clientX - e.clientX, p.clientY - e.clientY) <= thresh) return;
+        active = true; ox = p.clientX; oy = p.clientY;
+      }
+      const dx = (p.clientX - ox) / zoom, dy = (p.clientY - oy) / zoom;
+      starts.forEach(s => {
+        s.n.x = s.x + dx; s.n.y = s.y + dy;
+        const el = els.get(s.n.id);
+        if (el) { el.style.left = s.n.x + 'px'; el.style.top = s.n.y + 'px'; }
+      });
+      gest.moved = true;
+      queueLines();
+    },
+    up() {
+      if (gest.moved) saveState();
+      if (gest.moved) render();
+    }
+  };
+  begin(e, gest);
+}
+
+let selectionRenderTimer = null;
+function refreshSelectionOnly() {
+  els.forEach((el, id) => el.classList.toggle('selected', selected.has(id)));
+  view.lineDist = bfs([...selected]).lineDist;
+  view.chain = ($('highlight-chain-chk').checked && selected.size === 1 && !selectedLineId)
+    ? { up: bfs([...selected], true).lineDist, down: bfs([...selected]).lineDist } : null;
+  $('gemini-expand-btn').disabled = selected.size !== 1;
+  $('gemini-drill-btn').disabled = selected.size !== 1;
+  $('gemini-bridge-btn').disabled = selected.size !== 2;
+  drawLineControls();
+  drawLines();
+  if (state.maxDistanceLimit < 10) {
+    clearTimeout(selectionRenderTimer);
+    selectionRenderTimer = setTimeout(() => { selectionRenderTimer = null; render(); }, 700);
+  }
+}
+
 function nodeDown(e, n) {
   if (editingId === n.id) return;
+  clearTimeout(selectionRenderTimer);
+  selectionRenderTimer = null;
   e.stopPropagation();
   selectedLineId = null;
   const touch = e.pointerType === 'touch';
   if (touch) capture(e.pointerId);
 
   const m = mode();
-  if (isFileMode()) return; // handled by the node's click handler (no re-render, so the click survives)
-  if (m === 'edit') { editingId = n.id; return render(); }
-  if (m === 'link') { if (n.url) window.open(n.url, '_blank'); return; }
   if (m === 'arrow') return startArrow(e, n);
 
-  const tap = isTouchActive() && selected.size === 1 && selected.has(n.id);
   if (!isLocked) {
-    if (e.ctrlKey || e.metaKey) { selected.has(n.id) ? selected.delete(n.id) : selected.add(n.id); render(); }
-    else if (!selected.has(n.id)) { selected.clear(); selected.add(n.id); render(); }
+    if (e.ctrlKey || e.metaKey) selected.has(n.id) ? selected.delete(n.id) : selected.add(n.id);
+    else if (!selected.has(n.id)) { selected.clear(); selected.add(n.id); }
   }
+  refreshSelectionOnly();
 
   const ids = isLocked ? new Set([n.id]) : new Set(selected);
-  if (!isLocked && $('drag-graph-chk').checked) selected.forEach(id => componentOf(id).forEach(c => ids.add(c)));
   const starts = [...ids].map(nodeById).filter(Boolean).map(x => ({ n: x, x: x.x, y: x.y }));
 
   const thresh = touch ? state.touchDragThreshold : 0, hold = touch ? state.touchHoldMs : 0, t0 = performance.now();
@@ -1447,9 +1987,7 @@ function nodeDown(e, n) {
     },
     up(p) {
       if (gest.moved) saveState();
-      const isTap = tap && p.type === 'pointerup' && Math.hypot(p.clientX - e.clientX, p.clientY - e.clientY) < 8;
-      if (isTap) activateNode(n);
-      if (gest.moved || isTap) render();
+      if (gest.moved) render();
     }
   };
   begin(e, gest);
@@ -1493,51 +2031,83 @@ sidebarResizer.onpointerdown = e => {
   sidebarResizer.classList.add('resizing');
   begin(e, { type: 'sidebar',
     move(m) {
-      const w = m.clientX;
-      state.sidebarWidth = clamp(w, 150, 600);
+      state.sidebarWidth = clamp(m.clientX, 180, 600);
       render();
     },
     up() { sidebarResizer.classList.remove('resizing'); saveState(); } });
 };
 
-// Double click empty space on canvas -> create node with text field ready
-viewport.addEventListener('dblclick', e => {
+viewport.addEventListener('dblclick', async e => {
+  clearTimeout(selectionRenderTimer); selectionRenderTimer = null;
+  const n = nearNode(toWorld(e.clientX, e.clientY), 30 / zoom);
+  if (n) {
+    e.stopPropagation();
+    if (mode() === 'arrow') return;
+    if (state.editMode === 'editInstead') {
+      editingId = n.id;
+      render();
+      return;
+    }
+    if (n.url) {
+      if (state.linkOpenMode === 'current') window.location.href = n.url;
+      else if (['expand', 'rotateFlip', 'openEmptySpace'].includes(state.linkOpenMode)) {
+        selected.clear(); selected.add(n.id); expandSelectedNode();
+      } else window.open(n.url, '_blank');
+      return;
+    }
+    try {
+      const { text, handle } = await getFileContent(n.text);
+      const parsed = parseGraphText(text);
+      if (state.linkOpenMode === 'current') {
+        openInCurrent(n.text, parsed, handle ? { handle, name: handle.name, format: graphFormat(text) } : null);
+      } else if (state.linkOpenMode === 'new') {
+        const currentFile = location.pathname.split('/').pop() || 'index.html';
+        const child = window.open(`${currentFile}#child`, '_blank');
+        if (child) pendingChildren.set(child, { name: n.text, text, fileDir: state.fileDir });
+      } else if (['expand', 'rotateFlip', 'openEmptySpace'].includes(state.linkOpenMode)) {
+        if (parsed.nodes.length && insertFileGraph(n, parsed, state.linkOpenMode)) { saveState(); render(); }
+      }
+    } catch (err) {
+      if (state.linkOpenMode === 'current' || state.linkOpenMode === 'new') {
+        openInCurrent(n.text, { nodes: [{ id: uid(), text: n.text, url: null, x: 150, y: 150, size: 'auto', collapsed: false }], lines: [] }, null);
+      } else {
+        editingId = n.id;
+        render();
+      }
+    }
+    return;
+  }
+
   if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
   const p = toWorld(e.clientX, e.clientY);
   const newNode = {
-    id: uid(),
-    text: '',
-    url: null,
-    x: Math.round(p.x - 40),
-    y: Math.round(p.y - 15),
-    size: 'auto',
-    collapsed: false
+    id: uid(), text: '', url: null,
+    x: Math.round(p.x - 40), y: Math.round(p.y - 15),
+    size: 'auto', collapsed: false
   };
   state.nodes.push(newNode);
   editingId = newNode.id;
   selected.clear();
-  saveState();
-  render();
+  saveState(); render();
 });
 
 viewport.onpointerdown = e => {
   if (e.target !== viewport && e.target !== world && e.target !== svgLayer) return;
   if (selectedLineId) { selectedLineId = null; render(); }
   const m = mode();
-  if (m === 'edit' || m === 'link') return;
-  if (isFileMode()) return nearNode(toWorld(e.clientX, e.clientY), 20 / zoom) ? undefined : startPan(e);
-
   const p = toWorld(e.clientX, e.clientY);
+
+  const boxing = $('select-region-chk').checked || e.ctrlKey || fitMode;
+  if (boxing) return startSelect(e, p);
+
   const near = nearNode(p, (m === 'drag' ? state.touchHitPad : 60) / zoom);
   if (near) return m === 'drag' ? nodeDown(e, near) : startArrow(e, near);
   if (m === 'arrow') return;
 
-  const boxing = $('select-region-chk').checked || fitMode;
   if (m === 'drag' || (e.pointerType === 'touch' && !boxing)) return startPan(e);
-  boxing ? startSelect(e, p) : startLine(e, p);
+  startLine(e, p);
 };
 
-/* ---------- pointer plumbing ---------- */
 const touches = new Map(), ignored = new Set();
 let pinch = null, liveTouches = 0, lastTouchDown = 0;
 
@@ -1592,26 +2162,16 @@ viewport.addEventListener('pointerdown', e => {
 }, true);
 
 viewport.addEventListener('touchmove', e => { if (!e.target.closest('.node-edit-input')) e.preventDefault(); }, { passive: false });
-['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
-
 const stuck = () => touches.size || ignored.size || pinch || (g && g.touch);
-function resetTouchState() {
-  touches.clear(); ignored.clear(); pinch = null;
-  cancelGesture();
-}
+function resetTouchState() { touches.clear(); ignored.clear(); pinch = null; cancelGesture(); }
 $('tt-reset-btn').onclick = () => { resetTouchState(); render(); };
 const sweep = () => { if (!liveTouches && stuck()) { resetTouchState(); render(); } };
-
 ['touchstart', 'touchend', 'touchcancel'].forEach(t => window.addEventListener(t, e => {
   liveTouches = e.touches.length;
   if (t !== 'touchstart' && !liveTouches && state.touchAutoClear && stuck()) setTimeout(sweep, 60);
 }, { passive: true, capture: true }));
 
-setInterval(() => { if (state.touchAutoClear && performance.now() - lastTouchDown > 800) sweep(); }, 700);
-window.addEventListener('blur', () => { if (state.touchAutoClear) resetTouchState(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && state.touchAutoClear) resetTouchState(); });
-
-/* ======================= import / export bridge ======================= */
+// Import/export bridge
 let ioWin = null, ioTimer = null;
 const ioPayload = () => ({
   type: 'cm-state', state,
@@ -1628,14 +2188,14 @@ function scheduleIoSync() {
 $('io-btn').onclick = () => {
   if (ioWin && !ioWin.closed) { ioWin.focus(); return postIo(ioPayload()); }
   ioWin = window.open('conceptmap_io.html', 'conceptmap_io', 'width=560,height=760');
-  if (!ioWin) alert('The Import / Export window was blocked. Please allow pop-ups for this page.');
+  if (!ioWin) alert('Allow pop-ups to open the Import/Export tool.');
 };
 function afterExternalChange() {
   selected.clear(); selectedLineId = null; editingId = null;
   saveState(); render();
 }
 function applyImportedJson(src) {
-  const keepTouch = Object.fromEntries([...TOUCH_KEYS, 'fileDir'].map(k => [k, state[k]]));
+  const keepTouch = Object.fromEntries([...TOUCH_KEYS, 'fileDir', 'geminiKey', 'claudeKey', 'openaiKey'].map(k => [k, state[k]]));
   state = { ...structuredClone(DEFAULTS), ...keepTouch, ...src, nodes: src.nodes || [], lines: normalizeLines(src.lines || []) };
   applyPanelOrder();
   afterExternalChange();
@@ -1659,37 +2219,19 @@ window.addEventListener('message', e => {
   }
   if (d.type === 'cm-io-ready') { ioWin = e.source; return postIo(ioPayload(), e.source); }
   if (e.source !== ioWin) return;
-  const ack = (ok, message) => postIo({ type: 'cm-ack', ok, message }, e.source);
-
   if (d.type === 'cm-save-target') {
-    // plain name + format (always arrives); the handle may follow separately or come from IndexedDB
     setSaveTarget(d.name ? { handle: d.handle || null, name: d.name, format: d.format || 'json' } : null);
-  } else if (d.type === 'cm-save-handle') {
-    if (saveTarget && d.handle && (!d.name || d.name === saveTarget.name)) saveTarget.handle = d.handle;
   } else if (d.type === 'cm-request-state') {
     postIo(ioPayload(), e.source);
   } else if (d.type === 'cm-import-json') {
     try {
       if (!d.data || !d.data.nodes || !d.data.lines) throw new Error('bad structure');
       applyImportedJson(d.data);
-      ack(true, `JSON imported: ${state.nodes.length} nodes, ${state.lines.length} lines.`);
-    } catch (err) { ack(false, 'Invalid JSON file structure.'); }
-  } else if (d.type === 'cm-import-graph') {
-    const nodes = Array.isArray(d.nodes) ? d.nodes : [], lines = Array.isArray(d.lines) ? d.lines : [];
-    state.nodes = d.replace ? nodes : state.nodes.concat(nodes);
-    state.lines = d.replace ? lines : state.lines.concat(lines);
-    afterExternalChange();
-    ack(true, `${d.replace ? 'Replaced map with' : 'Added'} ${nodes.length} nodes and ${lines.length} lines.`);
-  } else if (d.type === 'cm-state-update' && d.data) {
-    Object.assign(state, d.data);
-    applyPanelOrder();
-    afterExternalChange();
+    } catch (err) {}
   }
 });
 
-/* ======================= file loading: open / expand / current window ======================= */
-const FILE_MODES = ['openfile', 'expandfile', 'opencurrent'];
-const isFileMode = () => FILE_MODES.includes(mode());
+// Files/nested views
 const pendingChildren = new Map();
 let dirHandle = null, lastReadHandle = null;
 
@@ -1697,93 +2239,70 @@ function toast(msg) {
   const t = $('toast');
   t.textContent = msg; t.style.display = 'block';
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => { t.style.display = 'none'; }, 2500);
+  toast.t = setTimeout(() => { t.style.display = 'none'; }, 2600);
 }
 
 function fileNameFor(text) { return text.trim().replace(/[\\/:*?"<>|]/g, '') + '.txt'; }
 
-/* --- remembered folder (File System Access API handle kept in IndexedDB, so it survives reloads) --- */
-function idb() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open('conceptmap-files', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('h');
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
+const fileAvailability = new Map();
+let fileAvailabilityRenderTimer = null;
+function fileAvailabilityKey(node) {
+  return `${dirHandle?.name || ''}\u0000${state.fileDir || ''}\u0000${fileNameFor(node.text)}`;
 }
-async function idbGet(k) {
-  try { const db = await idb(); return await new Promise(res => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (err) { return null; }
+function queueFileAvailabilityRender() {
+  clearTimeout(fileAvailabilityRenderTimer);
+  fileAvailabilityRenderTimer = setTimeout(() => {
+    fileAvailabilityRenderTimer = null;
+    render();
+  }, 80);
 }
-async function idbSet(k, v) {
-  try { const db = await idb(); await new Promise(res => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = t.onerror = () => res(); }); } catch (err) {}
+function ensureFileAvailability(node) {
+  const key = fileAvailabilityKey(node);
+  const cached = fileAvailability.get(key);
+  if (cached && (cached.status !== 'no' || Date.now() - cached.checkedAt < 30000)) return;
+  if (cached) fileAvailability.delete(key);
+  const entry = { status: 'checking' };
+  fileAvailability.set(key, entry);
+  entry.promise = (async () => {
+    const fileName = fileNameFor(node.text);
+    const activeDirHandle = dirHandle;
+    const activeFolder = state.fileDir || '';
+    let exists = false;
+    if (activeDirHandle) {
+      try {
+        const handle = await activeDirHandle.getFileHandle(fileName);
+        await handle.getFile();
+        exists = true;
+      } catch (err) {}
+    }
+    if (!exists) {
+      const relPath = activeFolder ? `${activeFolder.replace(/\/$/, '')}/${fileName}` : fileName;
+      try {
+        const response = await fetch(relPath, { cache: 'no-store' });
+        if (response.ok) {
+          const type = response.headers.get('content-type') || '';
+          if (!/text\/html/i.test(type)) exists = true;
+          else {
+            const preview = (await response.text()).trimStart();
+            exists = !/^<!doctype html\b|^<html\b/i.test(preview);
+          }
+        }
+      } catch (err) {
+        exists = false;
+      }
+    }
+    if (fileAvailability.get(key) !== entry) return;
+    entry.status = exists ? 'yes' : 'no';
+    entry.checkedAt = Date.now();
+    if (state.nodes.some(current => current.id === node.id && fileAvailabilityKey(current) === key)) {
+      queueFileAvailabilityRender();
+    }
+  })();
 }
-function setDirStatus(msg) { $('pick-dir-status').textContent = msg; }
+function clearFileAvailability() { fileAvailability.clear(); }
 
-/* typed directory -> list of path segments below the picked folder (absolute paths just use their last parts) */
-function dirSegments() {
-  return (state.fileDir || '').trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/').split('/')
-    .filter(s => s && s !== '.' && s !== '..' && !/^[a-zA-Z]:$/.test(s) && !/^file:?$/i.test(s));
-}
-async function readFromHandle(fname) {
-  if (!dirHandle) return null;
-  try {
-    let perm = await dirHandle.queryPermission({ mode: 'read' });
-    if (perm !== 'granted') perm = await dirHandle.requestPermission({ mode: 'read' });
-    if (perm !== 'granted') return null;
-  } catch (err) {}
-  // try the typed directory as a sub-folder of the picked folder (and its trailing parts), then the folder itself
-  const segs = dirSegments(), tries = [];
-  for (let i = 0; i <= segs.length; i++) tries.push(segs.slice(i));
-  for (const path of tries) {
-    try {
-      let d = dirHandle;
-      for (const s of path) d = await d.getDirectoryHandle(s);
-      const fh = await d.getFileHandle(fname);
-      const txt = await (await fh.getFile()).text();
-      lastReadHandle = fh;
-      return txt;
-    } catch (err) {}
-  }
-  return null;
-}
-async function readFromUrl(fname) {
-  const raw = (state.fileDir || '').trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/').replace(/\/+$/, '');
-  const enc = encodeURIComponent(fname), cands = [];
-  if (!raw) cands.push(enc);
-  else if (/^[a-zA-Z]:\//.test(raw)) cands.push('file:///' + encodeURI(raw) + '/' + enc);   // C:/maps
-  else if (/^file:/i.test(raw) || /^https?:/i.test(raw)) cands.push(encodeURI(decodeURI(raw)) + '/' + enc);
-  else if (raw.startsWith('/')) { cands.push(encodeURI(raw) + '/' + enc); if (location.protocol === 'file:') cands.push('file://' + encodeURI(raw) + '/' + enc); }
-  else cands.push(encodeURI(decodeURI(raw)) + '/' + enc);
-  for (const url of cands) {
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) return await res.text();
-    } catch (err) {}
-  }
-  return null;
-}
-async function fetchMapFile(nodeText) {
-  const fname = fileNameFor(nodeText);
-  lastReadHandle = null;
-  if (fname === '.txt') return null;
-  return (await readFromHandle(fname)) ?? (await readFromUrl(fname));
-}
-/* Browsers cannot read an arbitrary typed disk path from a page opened from disk. In that case ask for the folder once
-   (remembered afterwards), so the typed directory text alone is enough from then on. */
-async function pickFolder() {
-  try {
-    dirHandle = await window.showDirectoryPicker({ id: 'conceptmap', mode: 'read' });
-    await idbSet('dir', dirHandle);
-    setDirStatus('Folder remembered: ' + dirHandle.name);
-    return true;
-  } catch (err) { return false; }
-}
-
-/* TXT parsing (same two formats as the Import/Export window) */
-function parseTextAndUrlLocal(s) { return parseTextAndUrl(s); }
-function lineDefaults() { return { width: +$('line-width').value, color: $('line-color').value }; }
 function parseSimpleTxt(text) {
-  const nodes = [], lines = [], idMap = new Map(), d = lineDefaults();
+  const nodes = [], lines = [], idMap = new Map(), d = { width: +$('line-width').value, color: $('line-color').value };
   text.split(/\r?\n/).filter(l => l.trim()).forEach(line => {
     const tk = line.trim().split(/\s+/);
     if (tk.length < 3) return;
@@ -1791,7 +2310,7 @@ function parseSimpleTxt(text) {
       lines.push({ id: uid(), from: idMap.get(tk[1]) || tk[1], to: idMap.get(tk[2]) || tk[2], arrow: tk[0] === '-2' ? 'none' : 'end', width: d.width, color: d.color, label: '' });
       return;
     }
-    let x = 80 + (nodes.length % 8) * 140, y = 140 + Math.floor(nodes.length / 8) * 60, content = tk.slice(1);
+    let x = 120 + (nodes.length % 8) * 140, y = 140 + Math.floor(nodes.length / 8) * 60, content = tk.slice(1);
     const py = parseFloat(tk[tk.length - 1]), px = parseFloat(tk[tk.length - 2]);
     if (!isNaN(px) && !isNaN(py)) { x = px; y = py; content = tk.slice(1, -2); }
     const id = uid(); idMap.set(tk[0], id);
@@ -1800,7 +2319,7 @@ function parseSimpleTxt(text) {
   return { nodes, lines };
 }
 function parseIndentTxt(text) {
-  const nodes = [], lines = [], stack = [], d = lineDefaults();
+  const nodes = [], lines = [], stack = [], d = { width: +$('line-width').value, color: $('line-color').value };
   let y = 140;
   text.split(/\r?\n/).filter(l => l.trim()).forEach(line => {
     let lvl = 0, i = 0;
@@ -1810,7 +2329,7 @@ function parseIndentTxt(text) {
       else if (line.substr(i, 2) === '  ') { lvl++; i += 2; }
       else break;
     }
-    const node = { id: uid(), ...parseTextAndUrl(line.trim()), x: 80 + lvl * 180, y, size: 'auto', collapsed: false };
+    const node = { id: uid(), ...parseTextAndUrl(line.trim()), x: 120 + lvl * 180, y, size: 'auto', collapsed: false };
     y += 50;
     nodes.push(node);
     stack[lvl] = node; stack.length = lvl + 1;
@@ -1824,40 +2343,95 @@ function parseGraphText(text) {
   return /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text) ? parseSimpleTxt(text) : parseIndentTxt(text);
 }
 
-async function fileAction(n) {
-  const m = mode(), name = n.text;
-  // Page opened from disk and no folder remembered yet: browsers can't read a typed path, so ask once.
-  if (!dirHandle && location.protocol === 'file:' && window.showDirectoryPicker) {
-    toast('Choose the folder that holds your .txt files (asked once, then remembered)...');
-    if (await pickFolder()) toast('Folder remembered. Click the box again.');
+$('copy-dir-btn').onclick = async () => {
+  const path = $('file-dir').value.trim();
+  if (!path) {
+    $('pick-dir-status').textContent = 'Enter or paste a folder path into the directory field first.';
     return;
   }
-  // open the window synchronously so the browser's pop-up blocker allows it
-  let w = null;
-  if (m === 'openfile') w = window.open('', '_blank');
-  const text = await fetchMapFile(name);
-  if (text == null) {
-    if (w) w.close();
-    return toast(`No file "${fileNameFor(name)}" found${state.fileDir ? ' in ' + state.fileDir : ''}.`);
+  state.fileDir = path;
+  clearFileAvailability();
+  saveState();
+  const copiedMessage = 'Path copied. Click Select Directory, paste it into the chooser’s path/location field when available, then confirm Select Folder.';
+  try {
+    await navigator.clipboard.writeText(path);
+    $('pick-dir-status').textContent = copiedMessage;
+    toast('Folder path copied');
+  } catch (err) {
+    const temp = document.createElement('textarea');
+    temp.value = path;
+    temp.setAttribute('readonly', '');
+    temp.style.position = 'fixed';
+    temp.style.left = '-10000px';
+    temp.style.top = '0';
+    document.body.appendChild(temp);
+    temp.focus();
+    temp.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch (_) {}
+    temp.remove();
+    if (copied) {
+      $('pick-dir-status').textContent = copiedMessage;
+      toast('Folder path copied');
+    } else {
+      $('pick-dir-status').textContent = 'Clipboard access was blocked. Select the path in the directory field and copy it manually, then paste it into the folder chooser if it has a path/location field.';
+    }
   }
-  if (m === 'openfile') {
-    if (!w) return toast('Pop-up blocked. Please allow pop-ups for this page.');
-    pendingChildren.set(w, { text, name, fileDir: state.fileDir });
-    w.location.href = location.href.split('#')[0] + '#child';
-  } else if (m === 'expandfile') {
-    const parsed = parseGraphText(text);
-    parsed.nodes.forEach(p => { p.x += n.x; p.y += n.y; });
-    state.nodes = state.nodes.concat(parsed.nodes);
-    state.lines = state.lines.concat(parsed.lines);
-    saveState(); render();
-    toast(`Expanded "${name}": ${parsed.nodes.length} nodes.`);
-  } else if (m === 'opencurrent') {
-    openInCurrent(name, parseGraphText(text),
-      lastReadHandle ? { handle: lastReadHandle, name: lastReadHandle.name, format: graphFormat(text) } : null);
+};
+
+$('pick-dir-btn').onclick = async () => {
+  if (!window.showDirectoryPicker) {
+    alert('Folder selection is not supported in this browser. Try a recent Chromium-based browser such as Chrome or Edge.');
+    return;
   }
+  try {
+    const options = { id: 'concept-map-directory', mode: 'read' };
+    if (dirHandle) options.startIn = dirHandle;
+    else options.startIn = 'documents';
+    $('pick-dir-status').textContent = 'Opening folder chooser at the last-used location when supported…';
+    const chosen = await window.showDirectoryPicker(options);
+    dirHandle = chosen;
+    clearFileAvailability();
+    $('file-dir').value = chosen.name;
+    state.fileDir = chosen.name;
+    $('pick-dir-status').textContent = `Active folder: ${chosen.name}`;
+    lastReadHandle = null;
+    saveState();
+    render();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      $('pick-dir-status').textContent = 'Could not open folder chooser. Try clicking Select Directory again.';
+      toast('Directory selection failed: ' + err.message);
+    }
+  }
+};
+
+$('file-dir').onchange = e => {
+  state.fileDir = e.target.value.trim();
+  clearFileAvailability();
+  saveState();
+  render();
+};
+
+async function getFileContent(name) {
+  const fileName = fileNameFor(name);
+  if (dirHandle) {
+    try {
+      const handle = await dirHandle.getFileHandle(fileName);
+      lastReadHandle = handle;
+      const file = await handle.getFile();
+      return { text: await file.text(), handle };
+    } catch (err) {
+      console.warn('Directory handle file lookup failed:', err);
+    }
+  }
+  const relPath = state.fileDir ? `${state.fileDir.replace(/\/$/, '')}/${fileName}` : fileName;
+  const res = await fetch(relPath);
+  if (!res.ok) throw new Error(`Could not load ${relPath} (${res.status})`);
+  lastReadHandle = null;
+  return { text: await res.text(), handle: null };
 }
 
-/* ---------- nested view history for "open in current window" ---------- */
 const views = [{ name: 'Main map', depth: 0, nodes: null, lines: null }];
 let activeView = 0;
 const cloneJ = o => JSON.parse(JSON.stringify(o));
@@ -1902,14 +2476,7 @@ function renderViews() {
 }
 $('view-parent-btn').onclick = () => { const p = parentIndex(); if (p >= 0) gotoView(p); };
 
-/* optional: pick a local folder (works when the page is opened from disk) */
-if (window.showDirectoryPicker) {
-  $('pick-dir-btn').style.display = '';
-  $('pick-dir-btn').onclick = pickFolder;
-  idbGet('dir').then(h => { if (h && !dirHandle) { dirHandle = h; setDirStatus('Folder remembered: ' + h.name); } });
-}
-
-/* ======================= start ======================= */
+// Initialize
 applyPanelOrder();
 saveState();
 render();
