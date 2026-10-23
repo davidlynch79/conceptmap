@@ -182,7 +182,10 @@
     <!--0281--><div class="tool-group" data-panel-id="panel-io">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <!--0282--><button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
-      <!--0283--><button id="save-btn" class="action-btn" title="Save the current map">Save (Ctrl+S)</button>
+      <!--0283--><button id="save-btn" class="action-btn" title="Save the current map using its existing filename and format">Save as existing name (Ctrl+S)</button>
+      <!--0371--><div class="row-inline"><button id="save-node-new-file-btn" class="action-btn" title="Save the entire canvas as a new extended-lines TXT file named after the selected node">Save canvas as new name</button><button id="save-connected-new-file-btn" class="action-btn" title="Save only the selected node and all nodes connected to it as a new extended-lines TXT file">Save connected graph only as new file</button></div>
+      <!--0375--><button id="resave-all-file-nodes-btn" class="action-btn" title="Resave the connected graph for every canvas node whose TXT file exists in the selected directory, into a new/new2/new3 subfolder">Resave all file nodes in canvas inside new subfolder named new
+</button>
       <!--0368--><div class="row-inline"><button id="iphone-save-btn" class="action-btn" type="button">Save on iPhone</button><button id="iphone-load-btn" class="action-btn" type="button">Load on iPhone</button></div>
       <!--0369--><input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
       <!--0284--><span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
@@ -1028,6 +1031,106 @@ toast('Saved '+picked.name);
 if(err&&err.name!=='AbortError')toast('Save failed: '+(err.message||err));
 }finally{saving=false;}
 }
+//0372
+function connectedGraphFrom(nodeId){
+const byId=new Map(state.nodes.map(n=>[n.id,n])),seen=new Set([nodeId]),queue=[nodeId];
+while(queue.length){const id=queue.shift();state.lines.forEach(l=>{let other=null;if(l.from===id)other=l.to;else if(l.to===id)other=l.from;if(other!==null&&byId.has(other)&&!seen.has(other)){seen.add(other);queue.push(other);}});}
+const nodes=state.nodes.filter(n=>seen.has(n.id));
+const ids=new Set(nodes.map(n=>n.id));
+return {...state,nodes,lines:state.lines.filter(l=>ids.has(l.from)&&ids.has(l.to))};
+}
+async function saveGraphAsNewFile(connectedOnly=false){
+if(saving)return;
+if(selected.size!==1){alert('Select exactly one node first. Its text will name the new file.');return;}
+const node=state.nodes.find(n=>n.id===[...selected][0]);
+if(!node)return;
+saving=true;
+try{
+const original=(node.text||'concept_map').trim().replace(/\.txt$/i,'').replace(/[\\/:*?"<>|]/g,'').trim()||'concept_map';
+const existingNames=new Set(state.nodes.filter(n=>n.id!==node.id).map(n=>fileNameFor(n.text).toLowerCase()));
+const inDirectory=async name=>{if(!dirHandle)return false;try{await dirHandle.getFileHandle(name);return true;}catch(err){if(err.name==='NotFoundError')return false;throw err;}};
+let candidate=original,number=1,filename=fileNameFor(candidate);
+if(dirHandle){
+let permission=await dirHandle.queryPermission({mode:'readwrite'});
+if(permission!=='granted')permission=await dirHandle.requestPermission({mode:'readwrite'});
+if(permission!=='granted')throw new Error('Write permission for the selected directory was not granted.');
+while(existingNames.has(filename.toLowerCase())||await inDirectory(filename)){number++;candidate=original+number;filename=fileNameFor(candidate);}
+node.text=candidate;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+const handle=await dirHandle.getFileHandle(filename,{create:true});
+await writeHandle(handle,serializeLines(graph));
+setSaveTarget({handle,name:filename,format:'lines'});
+}else if(window.showSaveFilePicker){
+while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
+const picked=await window.showSaveFilePicker({suggestedName:filename,types:[SAVE_TYPES.lines],excludeAcceptAllOption:false});
+const pickedName=picked.name||filename;
+const pickedBase=pickedName.replace(/\.txt$/i,'');
+node.text=pickedBase;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+await writeHandle(picked,serializeLines(graph));
+setSaveTarget({handle:picked,name:pickedName,format:'lines'});
+}else{
+// iOS share sheets do not reveal the destination folder or whether a file already exists there.
+while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
+node.text=candidate;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+const content=serializeLines(graph),file=new File([content],filename,{type:'text/plain'});
+if(!navigator.share||navigator.canShare&&!navigator.canShare({files:[file]}))throw new Error('This browser cannot create a shareable TXT file. Use Save on iPhone or a browser that supports file saving.');
+await navigator.share({files:[file],title:filename});
+setSaveTarget({handle:null,name:filename,format:'lines'});
+toast('Prepared '+filename+'. iOS does not let the page check whether that name already exists in Files.');
+}
+saveState();render();renderViews();
+if(dirHandle||window.showSaveFilePicker)toast((connectedOnly?'Saved connected graph: ':'Saved canvas: ')+filename);
+}catch(err){if(err&&err.name!=='AbortError')toast('Could not save new file: '+(err.message||err));}
+finally{saving=false;}
+}
+async function saveNodeAsNewFile(){return saveGraphAsNewFile(false);}
+async function saveConnectedGraphAsNewFile(){return saveGraphAsNewFile(true);}
+$('save-node-new-file-btn').onclick=saveNodeAsNewFile;
+$('save-connected-new-file-btn').onclick=saveConnectedGraphAsNewFile;
+//0376
+async function resaveAllFileNodesInCanvas(){
+if(saving)return;
+if(!dirHandle){alert('Select the source directory first. This feature needs folder access to create a subfolder and write the files.');return;}
+saving=true;
+try{
+let permission=await dirHandle.queryPermission({mode:'readwrite'});
+if(permission!=='granted')permission=await dirHandle.requestPermission({mode:'readwrite'});
+if(permission!=='granted')throw new Error('Write permission for the selected directory was not granted.');
+const fileNodes=[];
+for(const node of state.nodes){
+  try{await dirHandle.getFileHandle(fileNameFor(node.text));fileNodes.push(node);}catch(err){if(err.name!=='NotFoundError')throw err;}
+}
+if(!fileNodes.length){toast('No file nodes found: no canvas node names match TXT files in the selected directory.');return;}
+let folderName='new',suffix=1,destination=null;
+while(!destination){
+  try{await dirHandle.getDirectoryHandle(folderName);suffix++;folderName='new'+suffix;}
+  catch(err){if(err.name!=='NotFoundError')throw err;destination=await dirHandle.getDirectoryHandle(folderName,{create:true});}
+}
+let saved=0,failed=[];
+for(const node of fileNodes){
+  try{
+    const graph=connectedGraphFrom(node.id);
+    let filename=fileNameFor(node.text),base=(node.text||'concept_map').trim().replace(/\.txt$/i,'').replace(/[\\/:*?"<>|]/g,'').trim()||'concept_map';
+    let candidate=base,n=1;
+    while(true){
+      try{await destination.getFileHandle(filename);n++;candidate=base+n;filename=fileNameFor(candidate);}
+      catch(err){if(err.name==='NotFoundError')break;throw err;}
+    }
+    const handle=await destination.getFileHandle(filename,{create:true});
+    await writeHandle(handle,serializeLines(graph));
+    saved++;
+  }catch(err){failed.push((node.text||'(unnamed)')+': '+(err.message||err));}
+}
+clearFileAvailability();
+const message=`Resaved ${saved} of ${fileNodes.length} file nodes to subfolder "${folderName}".`+(failed.length?' Failed: '+failed.join(' | '):'');
+toast(message);
+if(failed.length)alert(message);
+}catch(err){if(err&&err.name!=='AbortError')toast('Could not resave file nodes: '+(err.message||err));}
+finally{saving=false;}
+}
+$('resave-all-file-nodes-btn').onclick=resaveAllFileNodesInCanvas;
 //0368
 async function saveOnIphone(){
 if(saving)return;
@@ -3254,4 +3357,10 @@ Every entry has a matching numbered marker near the source item. Search for 0039
 <!-- COMMENT 0365 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: graphFormat | PURPOSE: Detects the extended metadata-lines format as well as simple and indented text, so Save can preserve the imported file type. -->
 <!-- COMMENT 0366 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: parseExtendedLines | PURPOSE: Reads the app's extended-lines format, preserving node IDs, coordinates, text, URLs, sizes, collapsed state, and connection properties. -->
 <!-- COMMENT 0367 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: parseGraphText | PURPOSE: Routes extended-lines imports to their dedicated parser and keeps the existing simple/indented text parsers. -->
+<!-- COMMENT 0371 | TYPE: HTML control | SUBSYSTEM: File save/load | ANCHOR: save-node-new-file-btn | PURPOSE: Saves the entire canvas as a new extended-lines TXT file named from the selected node. -->
+<!-- COMMENT 0372 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: saveGraphAsNewFile | PURPOSE: Saves either the whole canvas or the selected node’s undirected connected component as extended-lines TXT, adds a numeric suffix for known filename collisions, and updates the selected node text to match. iOS share sheets cannot report destination-folder collisions. -->
+<!-- COMMENT 0373 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: connectedGraphFrom | PURPOSE: Finds every node reachable from the selected node by following connections in either direction, then includes only connections whose endpoints are in that component. -->
+<!-- COMMENT 0374 | TYPE: HTML control | SUBSYSTEM: File save/load | ANCHOR: save-connected-new-file-btn | PURPOSE: Saves only the selected node’s connected component as a new extended-lines TXT file. -->
+<!-- COMMENT 0375 | TYPE: HTML control | SUBSYSTEM: File save/load | ANCHOR: resave-all-file-nodes-btn | PURPOSE: Resaves the connected graph for every canvas node whose matching TXT file exists in the selected directory into the first available subfolder named new, new2, new3, and so on. -->
+<!-- COMMENT 0376 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: resaveAllFileNodesInCanvas | PURPOSE: Detects canvas file nodes by checking for matching TXT files in the selected directory, creates the first available new/new2/new3 subfolder, and writes each node’s connected graph there. -->
 <!-- END COMMENT LOOKUP APPENDIX -->
