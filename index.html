@@ -182,8 +182,11 @@
     <!--0281--><div class="tool-group" data-panel-id="panel-io">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <!--0282--><button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
-      <!--0283--><button id="save-btn" class="action-btn" title="Overwrite the file that was imported (Ctrl+S)">Save (Ctrl+S)</button>
+      <!--0283--><button id="save-btn" class="action-btn" title="Save the current map">Save (Ctrl+S)</button>
+      <!--0368--><div class="row-inline"><button id="iphone-save-btn" class="action-btn" type="button">Save on iPhone</button><button id="iphone-load-btn" class="action-btn" type="button">Load on iPhone</button></div>
+      <!--0369--><input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
       <!--0284--><span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
+      <!--0370--><span class="slider-hint">iPhone tip: Save opens the iOS share sheet; choose Save to Files and pick a folder you recognize. Load opens the Files picker. Keep your maps in one folder, such as On My iPhone / Concept Maps or iCloud Drive / Concept Maps.</span>
     </div>
     <!--0285--><div class="tool-group" data-panel-id="panel-settings-io">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
@@ -284,7 +287,7 @@
     <label><input type="radio" name="em" data-k="editMode" value="spot"> Edit click spot (ball)</label>
     <span class="cap" style="margin-top:6px">SELECTION & DRAG OPTIONS</span>
     <label><!--0306--><input type="checkbox" data-k="dragGraphBall" id="drag-graph-ball-chk" checked> Drag Graph (Ball)</label>
-    <label><!--0307--><input type="checkbox" data-k="singleTouchExpand" id="single-touch-expand-chk"> Single touch or click expand balls</label>
+    <label><!--0307--><input type="checkbox" data-k="singleTouchExpand" id="single-touch-expand-chk" checked> Single touch or click expand balls</label>
     <div class="region-mode-row" aria-label="Region selection options">
       <label><!--0308--><input type="checkbox" id="select-region-chk"> Select Region</label>
       <label title="Hold Ctrl and drag on empty canvas to select a region."><!--0309--><input type="checkbox" id="ctrl-region-indicator" class="fake-checkbox" checked disabled aria-label="Ctrl plus Select Region indicator"> Ctrl+ Select Region</label>
@@ -478,7 +481,7 @@ panelOrder:[
 ],
 draggablePanels:false,
 dragGraphBall:true,
-singleTouchExpand:false,
+singleTouchExpand:true,
 showTimeline:false,
 showUrls:false,
 timelinePos:{x:50,y:50,width:800},
@@ -1025,6 +1028,46 @@ toast('Saved '+picked.name);
 if(err&&err.name!=='AbortError')toast('Save failed: '+(err.message||err));
 }finally{saving=false;}
 }
+//0368
+async function saveOnIphone(){
+if(saving)return;
+saving=true;
+try{
+const t=saveTarget,fmt=t?.format||'lines',content=serializeFor(fmt);
+const name=t?.name||'concept_map.txt';
+const mime=fmt==='json'?'application/json':fmt==='html'?'text/html':'text/plain';
+const file=new File([content],name,{type:mime});
+if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+await navigator.share({files:[file],title:name});
+toast('Choose Save to Files in the iPhone share sheet');
+}else{
+const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+toast('File prepared. Check Downloads or the browser share options.');
+}
+}catch(err){if(err&&err.name!=='AbortError')toast('iPhone save failed: '+(err.message||err));}
+finally{saving=false;}
+}
+function loadOnIphone(){ $('iphone-load-input').click(); }
+$('iphone-save-btn').onclick=saveOnIphone;
+$('iphone-load-btn').onclick=loadOnIphone;
+$('iphone-load-input').addEventListener('change',async e=>{
+const file=e.target.files?.[0];if(!file)return;
+try{
+const text=await file.text(),trim=text.trim();
+if(!trim)throw new Error('The selected file is empty.');
+if(/^\s*<!doctype html|^\s*<html/i.test(trim))throw new Error('This is an HTML file. Choose a .txt map or a .json map file instead.');
+if(trim.startsWith('{')||trim.startsWith('[')){
+const data=JSON.parse(trim);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('JSON file does not contain a concept map with nodes and lines.');
+applyImportedJson(data);setSaveTarget({handle:null,name:file.name,format:'json'});
+}else{
+const parsed=parseGraphText(text);if(!parsed.nodes.length)throw new Error('No map nodes were found. Make sure this is an extended-lines, simple TXT, or indented TXT map.');
+state.nodes=parsed.nodes;state.lines=normalizeLines(parsed.lines||[]);afterExternalChange();
+setSaveTarget({handle:null,name:file.name,format:graphFormat(text)});
+}
+render();renderViews();toast('Loaded '+file.name);
+}catch(err){alert('Could not load this map: '+(err.message||err));}
+finally{e.target.value='';}
+});
 //0220
 $('save-btn').onclick=saveCurrent;
 //0208
