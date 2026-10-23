@@ -184,8 +184,7 @@
       <!--0282--><button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
       <!--0283--><button id="save-btn" class="action-btn" title="Save the current map using its existing filename and format">Save as existing name (Ctrl+S)</button>
       <!--0371--><div class="row-inline"><button id="save-node-new-file-btn" class="action-btn" title="Save the entire canvas as a new extended-lines TXT file named after the selected node">Save canvas as new name</button><button id="save-connected-new-file-btn" class="action-btn" title="Save only the selected node and all nodes connected to it as a new extended-lines TXT file">Save connected graph only as new file</button></div>
-      <!--0375--><button id="resave-all-file-nodes-btn" class="action-btn" title="Resave the connected graph for every canvas node whose TXT file exists in the selected directory, into a new/new2/new3 subfolder">Resave all file nodes in canvas inside new subfolder named new
-</button>
+      <!--0375--><button id="resave-all-file-nodes-btn" class="action-btn" title="Resave every file node’s connected graph into a new subfolder named new (or new2, new3, etc. if needed)">Resave all file nodes in canvas inside new subfolder named new</button>
       <!--0368--><div class="row-inline"><button id="iphone-save-btn" class="action-btn" type="button">Save on iPhone</button><button id="iphone-load-btn" class="action-btn" type="button">Load on iPhone</button></div>
       <!--0369--><input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
       <!--0284--><span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
@@ -1092,15 +1091,20 @@ $('save-connected-new-file-btn').onclick=saveConnectedGraphAsNewFile;
 //0376
 async function resaveAllFileNodesInCanvas(){
 if(saving)return;
-if(!dirHandle){alert('Select the source directory first. This feature needs folder access to create a subfolder and write the files.');return;}
+if(!dirHandle){alert('Select the source directory first. This feature needs folder access to create a subfolder and copy the files.');return;}
 saving=true;
 try{
 let permission=await dirHandle.queryPermission({mode:'readwrite'});
 if(permission!=='granted')permission=await dirHandle.requestPermission({mode:'readwrite'});
 if(permission!=='granted')throw new Error('Write permission for the selected directory was not granted.');
-const fileNodes=[];
+// Match canvas file nodes to real files in the selected directory, then copy those files verbatim.
+// Do not serialize the current canvas or connected graphs here: each source file must remain unchanged.
+const fileNodes=[],seenNames=new Set(),missing=[];
 for(const node of state.nodes){
-  try{await dirHandle.getFileHandle(fileNameFor(node.text));fileNodes.push(node);}catch(err){if(err.name!=='NotFoundError')throw err;}
+  const filename=fileNameFor(node.text);
+  if(!filename||seenNames.has(filename.toLowerCase()))continue;
+  try{await dirHandle.getFileHandle(filename);fileNodes.push({node,filename});seenNames.add(filename.toLowerCase());}
+  catch(err){if(err.name==='NotFoundError')missing.push(filename);else throw err;}
 }
 if(!fileNodes.length){toast('No file nodes found: no canvas node names match TXT files in the selected directory.');return;}
 let folderName='new',suffix=1,destination=null;
@@ -1109,25 +1113,23 @@ while(!destination){
   catch(err){if(err.name!=='NotFoundError')throw err;destination=await dirHandle.getDirectoryHandle(folderName,{create:true});}
 }
 let saved=0,failed=[];
-for(const node of fileNodes){
+for(const item of fileNodes){
   try{
-    const graph=connectedGraphFrom(node.id);
-    let filename=fileNameFor(node.text),base=(node.text||'concept_map').trim().replace(/\.txt$/i,'').replace(/[\\/:*?"<>|]/g,'').trim()||'concept_map';
-    let candidate=base,n=1;
-    while(true){
-      try{await destination.getFileHandle(filename);n++;candidate=base+n;filename=fileNameFor(candidate);}
-      catch(err){if(err.name==='NotFoundError')break;throw err;}
-    }
-    const handle=await destination.getFileHandle(filename,{create:true});
-    await writeHandle(handle,serializeLines(graph));
+    const sourceHandle=await dirHandle.getFileHandle(item.filename);
+    const sourceFile=await sourceHandle.getFile();
+    const contents=await sourceFile.arrayBuffer();
+    const destinationHandle=await destination.getFileHandle(item.filename,{create:true});
+    await writeHandle(destinationHandle,contents);
     saved++;
-  }catch(err){failed.push((node.text||'(unnamed)')+': '+(err.message||err));}
+  }catch(err){failed.push(item.filename+': '+(err.message||err));}
 }
+state.fileSubfolder=folderName;
+saveState();
 clearFileAvailability();
-const message=`Resaved ${saved} of ${fileNodes.length} file nodes to subfolder "${folderName}".`+(failed.length?' Failed: '+failed.join(' | '):'');
+const message=`Copied ${saved} of ${fileNodes.length} original files unchanged into subfolder "${folderName}". Original filenames and contents were preserved; the current canvas graph was not written over them.`+(missing.length?'\nCanvas nodes with no matching source file were skipped: '+missing.join(', '):'')+(failed.length?'\nFailed: '+failed.join(' | '):'');
 toast(message);
-if(failed.length)alert(message);
-}catch(err){if(err&&err.name!=='AbortError')toast('Could not resave file nodes: '+(err.message||err));}
+if(failed.length||missing.length)alert(message);
+}catch(err){if(err&&err.name!=='AbortError')toast('Could not copy file nodes: '+(err.message||err));}
 finally{saving=false;}
 }
 $('resave-all-file-nodes-btn').onclick=resaveAllFileNodesInCanvas;
@@ -2912,6 +2914,20 @@ render();
 async function getFileContent(name){
 const fileName=fileNameFor(name);
 if(dirHandle){
+// Prefer the most recently resaved subfolder so a node opens the updated graph,
+// rather than an older same-named file still present in the source directory.
+const preferredFolder=(state.fileSubfolder||'').trim();
+if(preferredFolder){
+try{
+const subfolder=await dirHandle.getDirectoryHandle(preferredFolder);
+const handle=await subfolder.getFileHandle(fileName);
+lastReadHandle=handle;
+const file=await handle.getFile();
+return{text:await file.text(),handle};
+}catch(err){
+if(err.name!=='NotFoundError')console.warn('Resaved subfolder lookup failed:',err);
+}
+}
 try{
 const handle=await dirHandle.getFileHandle(fileName);
 lastReadHandle=handle;
@@ -3362,5 +3378,5 @@ Every entry has a matching numbered marker near the source item. Search for 0039
 <!-- COMMENT 0373 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: connectedGraphFrom | PURPOSE: Finds every node reachable from the selected node by following connections in either direction, then includes only connections whose endpoints are in that component. -->
 <!-- COMMENT 0374 | TYPE: HTML control | SUBSYSTEM: File save/load | ANCHOR: save-connected-new-file-btn | PURPOSE: Saves only the selected node’s connected component as a new extended-lines TXT file. -->
 <!-- COMMENT 0375 | TYPE: HTML control | SUBSYSTEM: File save/load | ANCHOR: resave-all-file-nodes-btn | PURPOSE: Resaves the connected graph for every canvas node whose matching TXT file exists in the selected directory into the first available subfolder named new, new2, new3, and so on. -->
-<!-- COMMENT 0376 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: resaveAllFileNodesInCanvas | PURPOSE: Detects canvas file nodes by checking for matching TXT files in the selected directory, creates the first available new/new2/new3 subfolder, and writes each node’s connected graph there. -->
+<!-- COMMENT 0376 | TYPE: Function | SUBSYSTEM: File save/load | ANCHOR: resaveAllFileNodesInCanvas | PURPOSE: Matches canvas file nodes to existing source TXT files, then copies each original file byte-for-byte into the first available new/new2/new3 subfolder without serializing or overwriting it with the current canvas graph. -->
 <!-- END COMMENT LOOKUP APPENDIX -->
