@@ -2395,8 +2395,11 @@ const boxing=$('select-region-chk').checked||e.ctrlKey||fitMode;
 if(boxing)return startSelect(e,p);
 const near=nearNode(p,(m==='drag'?state.touchHitPad:60)/zoom);
 if(near)return m==='drag'?nodeDown(e,near):startArrow(e,near);
+// On touch devices, a blank-canvas drag always pans unless Select Region is explicitly active.
+// This takes priority over Arrow mode so the canvas remains movable on iPhone.
+if(e.pointerType==='touch'&&!boxing)return startPan(e);
+if(m==='drag')return startPan(e);
 if(m==='arrow')return;
-if(m==='drag'||(e.pointerType==='touch'&&!boxing))return startPan(e);
 startLine(e,p);
 };
 const touches=new Map(),ignored=new Set();
