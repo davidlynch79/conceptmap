@@ -93,6 +93,7 @@
       /*0079*/ .node.fixed-size { display: block; white-space: normal; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
       /*0080*/ .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
       /*0081*/ .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
+      .node.duplicate-node { border: 3px solid #ff2d55 !important; background: #5a1024 !important; box-shadow: 0 0 0 4px rgba(255,45,85,.35), 0 0 18px rgba(255,45,85,.9) !important; }
       /*0082*/ .node-content { line-height: 1.3; }
       /*0083*/ .node-content.has-url { color: #90e0ef; text-decoration: underline; }
       /*0084*/ .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
@@ -183,8 +184,13 @@
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <!--0282--><button id="io-btn" class="action-btn">Import / Export Data &#8599;</button>
       <!--0283--><button id="save-btn" class="action-btn" title="Save the current map using its existing filename and format">Save as existing name (Ctrl+S)</button>
+      <label for="filename-input">Filename</label>
+      <input type="text" id="filename-input" spellcheck="false" autocomplete="off" placeholder="Current file name (e.g. map.txt)" title="Current file filename; connected-graph saves do not change this save target.">
       <!--0371--><div class="row-inline"><button id="save-node-new-file-btn" class="action-btn" title="Save the entire canvas as a new extended-lines TXT file named after the selected node">Save canvas as new name</button><button id="save-connected-new-file-btn" class="action-btn" title="Save only the selected node and all nodes connected to it as a new extended-lines TXT file">Save connected graph only as new file</button></div>
-      <!--0375--><button id="resave-all-file-nodes-btn" class="action-btn" title="Resave every file node’s connected graph into a new subfolder named new (or new2, new3, etc. if needed)">Resave all file nodes in canvas inside new subfolder named new</button>
+      <details id="bulk-save-options">
+        <summary style="cursor:pointer;color:#00f5d4;padding:5px 0;font-weight:bold">Bulk Save Options</summary>
+        <!--0375--><button id="resave-all-file-nodes-btn" class="action-btn" title="Resave every file node’s connected graph into a new subfolder named new (or new2, new3, etc. if needed)">Resave all file nodes in canvas inside new subfolder named new</button>
+      </details>
       <!--0368--><div class="row-inline"><button id="iphone-save-btn" class="action-btn" type="button">Save on iPhone</button><button id="iphone-load-btn" class="action-btn" type="button">Load on iPhone</button></div>
       <!--0369--><input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
       <!--0284--><span class="slider-hint" id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
@@ -270,6 +276,15 @@
     <div class="row-inline">
       <!--0303--><button id="add-btn">Add Box</button>
       <!--0304--><button id="add-boxes-btn">Add Boxes</button>
+      <details id="duplicate-detector-options" style="flex-basis:100%;width:100%">
+        <summary style="cursor:pointer;color:#00f5d4;padding:5px 0;font-weight:bold">Duplicate Detector Options</summary>
+        <button id="duplicate-node-detect-btn" class="action-btn" title="Find exact duplicate graph instances">Detect Duplicates</button>
+        <label title="When enabled, dragging any highlighted node moves its entire duplicate graph instance as one unit"><input type="checkbox" id="duplicate-node-drag-chk"> Drag Duplicates</label>
+        <button id="duplicate-node-delete-btn" class="action-btn" title="Delete extra copies only when the entire graph instance matches exactly">Delete Duplicates</button>
+        <button id="duplicate-node-segregate-btn" class="action-btn" title="Move extra copies of exact duplicate graph instances into empty canvas space">Segregate Duplicates</button>
+        <button id="duplicate-node-clear-btn" title="Clear duplicated-instance highlights without deleting graph data">Clear Duplicated Instances</button>
+        <span id="duplicate-node-status" class="slider-hint">Highlights exact duplicate graph instances. Deletion keeps one copy and removes only structurally identical instances.</span>
+      </details>
     </div>
   </div>
   <!--0305--><div class="tool-group" data-panel-id="panel-interaction">
@@ -924,13 +939,21 @@ statusEl.textContent='Copilot error: '+err.message;
 }
 $('gemini-ask-btn').onclick=askMapCopilot;
 let saveTarget=null;
-function setSaveTarget(t){
+function setSaveTarget(t,syncFilename=true){
 saveTarget=t||null;
 try{if(typeof views!=='undefined'&&views[activeView])views[activeView].target=saveTarget;}catch(err){}
+const filenameBox=$('filename-input');
+if(syncFilename&&filenameBox)filenameBox.value=saveTarget?.name||'';
 $('save-target-label').textContent=saveTarget
 ?`Saves to: ${saveTarget.name} (${saveTarget.format})`
 :'No file linked yet. Ctrl+S will ask where to save.';
 }
+$('filename-input').addEventListener('change',()=>{
+const value=$('filename-input').value.trim();
+if(!value)return;
+const old=saveTarget||{};
+setSaveTarget({...old,name:value},false);
+});
 function serializeLines(s){
 const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${s.nodes.length}`,`LINES: ${s.lines.length}`,'--- NODES ---'];
 s.nodes.forEach(n=>{
@@ -1058,7 +1081,7 @@ node.text=candidate;
 const graph=connectedOnly?connectedGraphFrom(node.id):state;
 const handle=await dirHandle.getFileHandle(filename,{create:true});
 await writeHandle(handle,serializeLines(graph));
-setSaveTarget({handle,name:filename,format:'lines'});
+if(!connectedOnly)setSaveTarget({handle,name:filename,format:'lines'});
 }else if(window.showSaveFilePicker){
 while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
 const picked=await window.showSaveFilePicker({suggestedName:filename,types:[SAVE_TYPES.lines],excludeAcceptAllOption:false});
@@ -1067,7 +1090,7 @@ const pickedBase=pickedName.replace(/\.txt$/i,'');
 node.text=pickedBase;
 const graph=connectedOnly?connectedGraphFrom(node.id):state;
 await writeHandle(picked,serializeLines(graph));
-setSaveTarget({handle:picked,name:pickedName,format:'lines'});
+if(!connectedOnly)setSaveTarget({handle:picked,name:pickedName,format:'lines'});
 }else{
 // iOS share sheets do not reveal the destination folder or whether a file already exists there.
 while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
@@ -1076,7 +1099,7 @@ const graph=connectedOnly?connectedGraphFrom(node.id):state;
 const content=serializeLines(graph),file=new File([content],filename,{type:'text/plain'});
 if(!navigator.share||navigator.canShare&&!navigator.canShare({files:[file]}))throw new Error('This browser cannot create a shareable TXT file. Use Save on iPhone or a browser that supports file saving.');
 await navigator.share({files:[file],title:filename});
-setSaveTarget({handle:null,name:filename,format:'lines'});
+if(!connectedOnly)setSaveTarget({handle:null,name:filename,format:'lines'});
 toast('Prepared '+filename+'. iOS does not let the page check whether that name already exists in Files.');
 }
 saveState();render();renderViews();
@@ -1433,6 +1456,128 @@ if(!nodeIds.length&&!lineIds.length)return false;
 anchor.fileExpansion={nodeIds,lineIds,placement};
 return true;
 }
+// Exact duplicate-instance detector. Components are compared by node content,
+// relative layout, and their complete internal connection structure.
+let duplicateNodeIds=new Set();
+let duplicateComponentGroups=[];
+function duplicateNodeData(n){
+  const data={...n};
+  delete data.id; delete data.x; delete data.y;
+  return data;
+}
+function getGraphComponents(){
+  const nodeByKey=new Map(state.nodes.map(n=>[n.id,n]));
+  const adjacency=new Map(state.nodes.map(n=>[n.id,[]]));
+  state.lines.forEach((line,index)=>{
+    if(adjacency.has(line.from)&&adjacency.has(line.to)){
+      adjacency.get(line.from).push({id:line.to,line,index});
+      adjacency.get(line.to).push({id:line.from,line,index});
+    }
+  });
+  const seen=new Set(),components=[];
+  for(const node of state.nodes){
+    if(seen.has(node.id))continue;
+    const stack=[node.id],ids=[]; seen.add(node.id);
+    while(stack.length){
+      const id=stack.pop(); ids.push(id);
+      for(const edge of adjacency.get(id)||[])if(!seen.has(edge.id)){seen.add(edge.id);stack.push(edge.id);}
+    }
+    const idSet=new Set(ids),nodes=ids.map(id=>nodeByKey.get(id)).filter(Boolean);
+    const lines=state.lines.filter(l=>idSet.has(l.from)&&idSet.has(l.to));
+    components.push({ids:ids.slice(),nodes,lines});
+  }
+  return components;
+}
+function signatureForComponent(component){
+  const minX=Math.min(...component.nodes.map(n=>Number(n.x)||0));
+  const minY=Math.min(...component.nodes.map(n=>Number(n.y)||0));
+  const entries=component.nodes.map(n=>({
+    id:n.id, x:Math.round((Number(n.x)||0)-minX), y:Math.round((Number(n.y)||0)-minY),
+    data:JSON.stringify(duplicateNodeData(n))
+  })).sort((a,b)=>a.x-b.x||a.y-b.y||a.data.localeCompare(b.data));
+  const indexById=new Map(entries.map((entry,i)=>[entry.id,i]));
+  const nodes=entries.map(({x,y,data})=>({x,y,data}));
+  const lines=component.lines.map(line=>{
+    const data={...line}; delete data.id; delete data.from; delete data.to;
+    return {from:indexById.get(line.from),to:indexById.get(line.to),data:JSON.stringify(data)};
+  }).sort((a,b)=>a.from-b.from||a.to-b.to||a.data.localeCompare(b.data));
+  return JSON.stringify({nodes,lines});
+}
+function detectDuplicateNodes(){
+  const bySignature=new Map();
+  getGraphComponents().forEach(component=>{
+    const signature=signatureForComponent(component);
+    if(!bySignature.has(signature))bySignature.set(signature,[]);
+    bySignature.get(signature).push(component);
+  });
+  // Exact duplicate groups are safe candidates for deletion. Near-matches are
+  // highlighted separately and must never be removed automatically.
+  duplicateComponentGroups=[...bySignature.values()].filter(group=>group.length>1);
+  duplicateNodeIds=new Set();
+  duplicateComponentGroups.forEach(group=>group.forEach(component=>component.ids.forEach(id=>duplicateNodeIds.add(id))));
+  render();
+  const instances=duplicateComponentGroups.reduce((sum,group)=>sum+group.length,0);
+  $('duplicate-node-status').textContent=duplicateComponentGroups.length
+    ? `Found ${duplicateComponentGroups.length} exact duplicate group(s), covering ${instances} graph instances and ${duplicateNodeIds.size} nodes. Extra copies can be moved with “Segregate Duplicates”.`
+    : 'No exact duplicated graph instances found.';
+}
+function deleteDuplicateInstances(){
+  if(!duplicateComponentGroups.length)detectDuplicateNodes();
+  if(!duplicateComponentGroups.length){$('duplicate-node-status').textContent='No exact duplicate graph instances to delete.';return;}
+  const copiesToDelete=duplicateComponentGroups.flatMap(group=>group.slice(1));
+  const nodeCount=copiesToDelete.reduce((sum,component)=>sum+component.ids.length,0);
+  if(!copiesToDelete.length){$('duplicate-node-status').textContent='No extra duplicate instances to delete.';return;}
+  if(!confirm(`Delete ${copiesToDelete.length} extra graph instance(s) containing ${nodeCount} nodes? Only exact structural/content matches are eligible. One copy of each graph will be kept.`))return;
+  const deleteIds=new Set(copiesToDelete.flatMap(component=>component.ids));
+  // Remove every edge touching a deleted node, including edges to other components.
+  state.lines=state.lines.filter(line=>!deleteIds.has(line.from)&&!deleteIds.has(line.to));
+  state.nodes=state.nodes.filter(node=>!deleteIds.has(node.id));
+  deleteIds.forEach(id=>selected.delete(id));
+  duplicateNodeIds.clear(); duplicateComponentGroups=[];
+  saveState(); render();
+  $('duplicate-node-status').textContent=`Deleted ${copiesToDelete.length} exact duplicate graph instance(s) (${nodeCount} nodes). One copy of each exact graph was retained.`;
+}
+function duplicateComponentForNode(nodeId){
+  if(!$('duplicate-node-drag-chk').checked)return null;
+  for(const group of duplicateComponentGroups){
+    const component=group.find(item=>item.ids.includes(nodeId));
+    if(component)return component;
+  }
+  return null;
+}
+function clearDuplicateNodeHighlights(){
+  duplicateNodeIds.clear();
+  duplicateComponentGroups=[];
+  render();
+  $('duplicate-node-status').textContent='Duplicated-instance highlights cleared. No nodes or connections were deleted.';
+}
+function segregateDuplicateInstances(){
+  if(!duplicateComponentGroups.length)detectDuplicateNodes();
+  if(!duplicateComponentGroups.length){$('duplicate-node-status').textContent='No exact duplicated graph instances to segregate.';return;}
+  const moving=[];
+  // Keep the first copy of each exact graph in place; move every additional copy.
+  duplicateComponentGroups.forEach(group=>group.slice(1).forEach(component=>moving.push(component)));
+  if(!moving.length){$('duplicate-node-status').textContent='No extra duplicate instances to move.';return;}
+  const allNodes=state.nodes;
+  let cursorX=Math.max(0,...allNodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)))+180;
+  let cursorY=Math.max(0,...allNodes.map(n=>Number(n.y)||0));
+  const rowGap=50, colGap=180;
+  moving.forEach(component=>{
+    const nodes=component.nodes;
+    const minX=Math.min(...nodes.map(n=>Number(n.x)||0));
+    const minY=Math.min(...nodes.map(n=>Number(n.y)||0));
+    const maxX=Math.max(...nodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)));
+    const maxY=Math.max(...nodes.map(n=>(Number(n.y)||0)+Math.max(40,Number(n.customHeight)||60)));
+    const width=Math.max(120,maxX-minX),height=Math.max(60,maxY-minY);
+    const dx=cursorX-minX,dy=cursorY-minY;
+    nodes.forEach(n=>{n.x=Math.round((Number(n.x)||0)+dx);n.y=Math.round((Number(n.y)||0)+dy);});
+    cursorY+=height+rowGap;
+    if(cursorY>Math.max(1200, ...allNodes.map(n=>(Number(n.y)||0)+500))){cursorY=0;cursorX+=width+colGap;}
+  });
+  saveState();
+  render();
+  $('duplicate-node-status').textContent=`Moved ${moving.length} extra duplicate graph instance(s) into empty canvas space. Original copies were left in place; use Clear Duplicated Instances to remove highlights.`;
+}
 //0136
 function render(){
 view.links=new Map(state.nodes.map(n=>[n.id,0]));
@@ -1469,6 +1614,7 @@ function makeNode(n,parents){
 const font=nodeFont(n.id),k=font/11;
 const el=document.createElement('div');
 el.className='node'+(selected.has(n.id)?' selected':'')+(n.ballsExpanded?' balls-expanded':'');
+if(duplicateNodeIds.has(n.id))el.classList.add('duplicate-node');
 el.dataset.id=n.id;
 if(editingId===n.id){el.style.minWidth='180px';el.style.minHeight='46px';}
 el.style.cssText+=`left:${n.x}px;top:${n.y}px;font-size:${font}px;padding:${(6 * k).toFixed(1)}px ${(10 * k).toFixed(1)}px`;
@@ -2362,7 +2508,9 @@ refreshSelectionOnly();
 return;
 }
 refreshSelectionOnly();
-const ids=isLocked?new Set([n.id]):new Set(selected);
+const duplicateComponent=duplicateComponentForNode(n.id);
+const ids=duplicateComponent?new Set(duplicateComponent.ids):(isLocked?new Set([n.id]):new Set(selected));
+// Drag Duplicates moves the complete detected instance, not just the grabbed node.
 const starts=[...ids].map(nodeById).filter(Boolean).map(x=>({n:x,x:x.x,y:x.y}));
 const thresh=touch?state.touchDragThreshold:0,hold=touch?state.touchHoldMs:0,t0=performance.now();
 let active=thresh===0&&hold===0,ox=e.clientX,oy=e.clientY;
@@ -3001,11 +3149,13 @@ restoreDirectoryHandle();
 if(window.opener&&location.hash==='#child'){
 try{window.opener.postMessage({type:'cm-child-ready'},'*');}catch(err){}
 }
+$('duplicate-node-detect-btn').addEventListener('click',detectDuplicateNodes);
+$('duplicate-node-delete-btn').addEventListener('click',deleteDuplicateInstances);
+$('duplicate-node-clear-btn').addEventListener('click',clearDuplicateNodeHighlights);
+$('duplicate-node-segregate-btn').addEventListener('click',segregateDuplicateInstances);
 </script> </body> </html>
 <!-- COMMENT LOOKUP APPENDIX
-SYSTEM: Numbered reference index for the HTML application. Ask for COMMENT 0001 or search by subsystem, anchor, or kind.
-The index points to real CSS selectors, HTML IDs, JavaScript functions, helpers, and event bindings. JavaScript line numbers are relative to the script block in this version. CSS and HTML entries use anchors because formatting changes line positions. Numbers are index identifiers, not execution order.
-Every entry has a matching numbered marker near the source item. Search for 0039 to jump to code, then find COMMENT 0039 in this appendix to read its description. JavaScript uses //0039, CSS uses /*0039*/, and HTML uses <!--0039-->. Markers are intentionally short to minimize clutter. Read the referenced implementation before changing behavior. -->
+SYSTEM: Compact numbered index for code locations. Search for COMMENT 0039 to find its description and source marker. Numbers are index identifiers, not execution order. Review the referenced implementation before changing behavior. -->
 <!-- COMMENT 0001 | TYPE: CSS selector | SUBSYSTEM: Layout and appearance | ANCHOR: * | PURPOSE: Style rule for selector *. Inspect this rule before changing its visual, layout, sizing, or interaction-related presentation. -->
 <!-- COMMENT 0002 | TYPE: CSS selector | SUBSYSTEM: Layout and appearance | ANCHOR: html | PURPOSE: Style rule for selector html. Inspect this rule before changing its visual, layout, sizing, or interaction-related presentation. -->
 <!-- COMMENT 0003 | TYPE: CSS selector | SUBSYSTEM: Layout and appearance | ANCHOR: body | PURPOSE: Style rule for selector body. Inspect this rule before changing its visual, layout, sizing, or interaction-related presentation. -->
