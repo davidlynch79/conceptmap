@@ -1,824 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Concept Map - Import / Export</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-      background: #0d1b2a;
-      color: #e0e6ed;
-      min-height: 100vh;
-      padding: 14px;
-      font-size: 12px;
-    }
-    h1 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; margin-bottom: 10px; font-family: monospace; }
-    h2 {
-      font-size: 11px; color: #90e0ef; text-transform: uppercase; font-family: monospace;
-      border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; letter-spacing: 1px;
-    }
-    .panel { background: #1b263b; border: 1px solid #415a77; padding: 10px; margin-bottom: 12px; }
-    #status {
-      display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 12px;
-      border: 1px solid #415a77; background: #0d1b2a; font-family: monospace; font-size: 11px;
-    }
-    #status-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff4d6d; flex: none; }
-    #status.connected #status-dot { background: #00f5d4; }
-    #status-text { flex: 1; }
-    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-    button {
-      background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 6px 10px;
-      font-size: 11px; font-family: monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    button:hover:not(:disabled) { background: #0077b6; color: #fff; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
-    .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
-    .hint { color: #778da9; font-size: 10.5px; line-height: 1.5; margin-bottom: 6px; }
-    label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; margin-bottom: 4px; }
-    input[type="checkbox"] { accent-color: #00b4d8; }
-    #log {
-      background: #0b132b; border: 1px solid #415a77; padding: 6px 8px; height: 90px; overflow-y: auto;
-      font-family: monospace; font-size: 10.5px; color: #90e0ef; white-space: pre-wrap;
-    }
-    .ok { color: #00f5d4; }
-    .err { color: #ff4d6d; }
-    #dropzone {
-      border: 1px dashed #778da9; padding: 14px; text-align: center; color: #778da9;
-      font-family: monospace; font-size: 11px; margin-bottom: 8px;
-    }
-    #dropzone.over { border-color: #00f5d4; color: #00f5d4; background: rgba(0,245,212,0.08); }
-    .history-item {
-      display: flex; justify-content: space-between; align-items: center; background: #0d1b2a;
-      border: 1px solid #415a77; padding: 4px 8px; margin-bottom: 4px; font-family: monospace; font-size: 10px;
-    }
-    .history-item.active { border-color: #00f5d4; color: #00f5d4; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concept Map — Import, Export & Save</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#0d1b2a;color:#e0e6ed;min-height:100vh;padding:14px;font-size:12px}h1{font-size:14px;color:#00f5d4;letter-spacing:1px;margin-bottom:10px}h2{font-size:11px;color:#90e0ef;text-transform:uppercase;border-bottom:1px solid #415a77;padding-bottom:4px;margin-bottom:8px;letter-spacing:1px}.panel{background:#1b263b;border:1px solid #415a77;padding:10px;margin-bottom:12px}#status{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:12px;border:1px solid #415a77;background:#0d1b2a;font-size:11px}#status-dot{width:9px;height:9px;border-radius:50%;background:#ff4d6d;flex:none}#status.connected #status-dot{background:#00f5d4}#status-text{flex:1;min-width:0}.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:6px 10px;font-size:11px;font-family:monospace;cursor:pointer;text-transform:uppercase;letter-spacing:.35px}button:hover:not(:disabled){background:#0077b6;color:#fff}button:disabled{opacity:.4;cursor:not-allowed}.action-btn{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold}.danger-btn{background:#7209b7;border-color:#f72585;color:#ff4d6d}.hint{color:#778da9;font-size:10.5px;line-height:1.5;margin-bottom:7px}label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:5px}input[type=checkbox]{accent-color:#00b4d8}input[type=text],select{width:100%;background:#1b263b;border:1px solid #778da9;color:#fff;padding:7px;font:11px monospace;min-width:0}input:focus{outline:1px solid #00b4d8}#log{background:#0b132b;border:1px solid #415a77;padding:6px 8px;max-height:110px;overflow:auto;font-size:10.5px;color:#90e0ef;white-space:pre-wrap}.ok{color:#00f5d4}.err{color:#ff4d6d}#dropzone{border:1px dashed #778da9;padding:14px;text-align:center;color:#778da9;font-size:11px;margin-bottom:8px}#dropzone.over{border-color:#00f5d4;color:#00f5d4;background:rgba(0,245,212,.08)}.history-item{display:flex;justify-content:space-between;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #415a77;padding:5px 7px;margin-bottom:4px;font-size:10px}.history-item.active{border-color:#00f5d4;color:#00f5d4}.history-item>span{flex:1;min-width:0}.history-item button{padding:3px 6px;font-size:9px}.dropdown{border:1px solid #415a77;background:#101c31;margin-bottom:7px}.dropdown>summary{cursor:pointer;list-style:none;color:#00f5d4;font-weight:bold;padding:9px 10px;letter-spacing:.4px}.dropdown>summary::-webkit-details-marker{display:none}.dropdown>summary:after{content:'＋';float:right;color:#90e0ef}.dropdown[open]>summary:after{content:'−'}.dropdown-body{padding:9px;border-top:1px solid #415a77;display:flex;flex-direction:column;gap:7px}.field-label{display:block;color:#90e0ef;font-size:10px;margin-bottom:4px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:6px}.filename-row{display:flex;gap:6px;align-items:stretch}.filename-row input{flex:1;min-width:0}.filename-row button{flex:none}.status-note{font-size:10px;color:#778da9;line-height:1.4}.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:430px){body{padding:8px}.two-col,.format-grid{grid-template-columns:1fr}.history-item{align-items:flex-start}}
+</style>
 </head>
 <body>
-  <h1>:: IMPORT / EXPORT & HISTORY MANAGER ::</h1>
+<h1>:: IMPORT / EXPORT &amp; SAVE MANAGER ::</h1>
+<div id="status"><span id="status-dot"></span><span id="status-text">Connecting to the main concept map…</span><button id="refresh-btn" title="Request latest map state">Refresh</button></div>
 
-  <div id="status">
-    <span id="status-dot"></span>
-    <span id="status-text">Not connected. Open this page from the map's "Import / Export" button.</span>
-    <button id="refresh-btn" title="Request the latest map from the main window">Refresh</button>
-  </div>
-
-  <div class="panel">
-    <h2>Export & Save</h2>
-    <div class="hint">Export data or overwrite the currently loaded file while maintaining its active format.</div>
-    <div class="btn-row">
-      <button id="save-btn" class="action-btn" disabled title="Overwrites the previously imported/saved file">Save File (Overwrite)</button>
-      <button id="export-btn" class="action-btn" disabled>Export JSON</button>
-      <button id="export-lines-btn" class="action-btn" disabled>Export Lines (Extended)</button>
-      <button id="export-txt-simple-btn" class="action-btn" disabled>Export TXT Simple</button>
-      <button id="export-txt-btn" class="action-btn" disabled>Export TXT Indent</button>
-      <button id="export-html-btn" class="action-btn" disabled>Export Full HTML</button>
+<div class="panel">
+  <h2>Save &amp; Export</h2>
+  <div class="hint">Save actions operate on the main concept map, so its active file target and filename stay consistent with Ctrl+S.</div>
+  <details class="dropdown" id="save-options">
+    <summary>Save Options</summary>
+    <div class="dropdown-body">
+      <div class="status-note" id="format-note">Save format: TXT Extended Lines (change it in the main menu).</div>
+      <button id="save-btn" class="action-btn" disabled>Save File (Overwrite / Ctrl+S)</button>
+      <div>
+        <span class="field-label">Active filename</span>
+        <div class="filename-row"><input id="filename-input" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. project_map.txt"><button id="set-filename-btn" class="action-btn">Apply</button></div>
+        <div class="status-note" id="target-label">No file linked yet. Save will ask where to save.</div>
+      </div>
+      <div class="two-col">
+        <button id="save-canvas-new-btn" class="action-btn" disabled title="Save the entire canvas as a new TXT file named after the selected node">Save Canvas as New Name</button>
+        <button id="save-connected-new-btn" class="action-btn" disabled title="Save only the selected node's connected graph as a new file">Save Connected Graph Only</button>
+      </div>
+      <details class="dropdown" id="bulk-save-options">
+        <summary>Bulk Save Options</summary>
+        <div class="dropdown-body">
+          <button id="resave-all-btn" class="action-btn" disabled>Resave All File Nodes into a New Subfolder</button>
+          <div class="hint">Copies matching source files byte-for-byte into the first available <code>new</code>, <code>new2</code>, etc. folder. It does not replace those source files with the current canvas.</div>
+        </div>
+      </details>
+      <div class="two-col"><button id="iphone-save-btn" class="action-btn" disabled>Save on iPhone / Mobile</button><button id="iphone-load-btn" class="action-btn" disabled>Load on iPhone / Mobile</button></div>
+      <input id="mobile-file-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
+      <div class="hint">Mobile tip: Save may open the share sheet; choose Save to Files and pick a folder you recognize.</div>
     </div>
-  </div>
-
-  <div class="panel">
-    <h2>Import</h2>
-    <div id="dropzone">Drop a file here (.json, .txt, .html), or use the buttons below</div>
-    <label><input type="checkbox" id="replace-chk"> Replace the map when importing TXT / Lines (otherwise added)</label>
-    <div class="hint">JSON and HTML imports replace the map.</div>
-    <div class="btn-row">
-      <button id="import-btn" disabled>Import JSON</button>
-      <button id="import-lines-btn" disabled>Import Lines (Extended)</button>
-      <button id="import-txt-simple-btn" disabled>Import TXT Simple</button>
-      <button id="import-txt-btn" disabled>Import TXT Indent</button>
-      <button id="import-html-btn" disabled>Import Full HTML</button>
+  </details>
+  <details class="dropdown" id="export-options">
+    <summary>Export Options</summary>
+    <div class="dropdown-body">
+      <div class="format-grid">
+        <button id="export-json-btn" class="action-btn" disabled>Export JSON</button>
+        <button id="export-lines-btn" class="action-btn" disabled>Export Lines (Extended)</button>
+        <button id="export-simple-btn" class="action-btn" disabled>Export TXT Simple</button>
+        <button id="export-indent-btn" class="action-btn" disabled>Export TXT Indent</button>
+        <button id="export-html-btn" class="action-btn" disabled>Export Full HTML</button>
+      </div>
+      <div class="hint">Extended Lines stores node coordinates, connections and metadata. TXT Simple stores node rows and line identifiers. TXT Indent stores a hierarchical outline.</div>
     </div>
-    <input type="file" id="import-file" accept=".json" style="display:none">
-    <input type="file" id="import-lines-file" accept=".txt,.json" style="display:none">
-    <input type="file" id="import-txt-simple-file" accept=".txt" style="display:none">
-    <input type="file" id="import-txt-file" accept=".txt" style="display:none">
-    <input type="file" id="import-html-file" accept=".html,.htm" style="display:none">
+  </details>
+</div>
+
+<div class="panel">
+  <h2>Import</h2>
+  <div id="dropzone">Drop a map file here (.json, .txt, .html), or choose an import format below.</div>
+  <label><input type="checkbox" id="replace-chk"> Replace the current map for TXT / Lines imports (otherwise append)</label>
+  <div class="hint">Opening/dropping any map file auto-detects format (JSON, TXT Extended, TXT Simple, TXT Indent, HTML).</div>
+  <div class="format-grid">
+    <button id="import-json-btn" disabled>Import JSON</button>
+    <button id="import-lines-btn" disabled>Import Lines (Extended)</button>
+    <button id="import-simple-btn" disabled>Import TXT Simple</button>
+    <button id="import-indent-btn" disabled>Import TXT Indent</button>
+    <button id="import-html-btn" disabled>Import Full HTML</button>
   </div>
-
-  <div class="panel">
-    <h2>History States (Viewer & Deleter)</h2>
-    <div class="hint">Inspect, jump to, or delete recorded history states from the mapping session.</div>
-    <div id="history-list" style="max-height: 100px; overflow-y: auto; margin-bottom: 6px;"></div>
-    <div class="btn-row">
-      <button id="clear-history-btn" class="danger-btn" disabled>Clear All History States</button>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>Format Notes</h2>
-    <div class="hint">
-      <b>Lines Extended:</b> Contains nodes, lines, plus rich metadata (viewports, settings, layout metadata).<br>
-      <b>TXT Simple:</b> node rows and arrow line identifiers.<br>
-      <b>TXT Indent:</b> hierarchical outline format.
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>Log</h2>
-    <div id="log"></div>
-  </div>
-
-  <script>
-    let mapState = null;
-    let historyStates = [];
-    let historyIdx = -1;
-    let currentFileHandle = null; // File System Access API handle if available
-    let currentFileName = null;
-    let currentFormatType = 'json';
-    let defaults = { width: 1, color: '#00b4d8', arrow: 'end' };
-    const opener_ = window.opener;
-
-    const statusEl = document.getElementById('status');
-    const statusText = document.getElementById('status-text');
-    const logEl = document.getElementById('log');
-    const refreshBtn = document.getElementById('refresh-btn');
-    const replaceChk = document.getElementById('replace-chk');
-    const dropzone = document.getElementById('dropzone');
-    const historyListEl = document.getElementById('history-list');
-
-    const saveBtn = document.getElementById('save-btn');
-    const exportBtn = document.getElementById('export-btn');
-    const exportLinesBtn = document.getElementById('export-lines-btn');
-    const exportTxtSimpleBtn = document.getElementById('export-txt-simple-btn');
-    const exportTxtBtn = document.getElementById('export-txt-btn');
-    const exportHtmlBtn = document.getElementById('export-html-btn');
-
-    const importBtn = document.getElementById('import-btn');
-    const importLinesBtn = document.getElementById('import-lines-btn');
-    const importTxtSimpleBtn = document.getElementById('import-txt-simple-btn');
-    const importTxtBtn = document.getElementById('import-txt-btn');
-    const importHtmlBtn = document.getElementById('import-html-btn');
-
-    const importFileInput = document.getElementById('import-file');
-    const importLinesFileInput = document.getElementById('import-lines-file');
-    const importTxtSimpleFileInput = document.getElementById('import-txt-simple-file');
-    const importTxtFileInput = document.getElementById('import-txt-file');
-    const importHtmlFileInput = document.getElementById('import-html-file');
-
-    function log(msg, cls) {
-      const line = document.createElement('div');
-      if (cls) line.className = cls;
-      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-      logEl.appendChild(line);
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function generateId() {
-      return 'id_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    function parseTextAndUrl(input) {
-      const urlRegex = /(https?:\/\/[^\s]+)/gi;
-      const match = input.match(urlRegex);
-      if (match) {
-        const url = match[0];
-        let text = input.replace(url, '').trim();
-        if (!text) text = url;
-        return { text, url };
-      }
-      return { text: input.trim() || 'Node', url: null };
-    }
-
-    function setConnected(connected) {
-      statusEl.classList.toggle('connected', connected);
-      const btns = [exportBtn, exportLinesBtn, exportTxtSimpleBtn, exportTxtBtn, exportHtmlBtn];
-      btns.forEach(b => b.disabled = !connected || !mapState);
-      [importBtn, importLinesBtn, importTxtSimpleBtn, importTxtBtn, importHtmlBtn].forEach(b => b.disabled = !connected);
-      saveBtn.disabled = !connected || !mapState;
-    }
-
-    function updateStatus() {
-      if (!mapState) return;
-      statusText.textContent = `Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;
-      renderHistoryList();
-    }
-
-    function sendToMap(msg) {
-      if (!opener_ || opener_.closed) {
-        log('Main map window is closed or unreachable.', 'err');
-        setConnected(false);
-        statusText.textContent = 'Main map window not reachable.';
-        return false;
-      }
-      opener_.postMessage(msg, '*');
-      return true;
-    }
-
-    /* ---- remember the picked file handle in IndexedDB (same DB the map window reads) ---- */
-    function idbOpen() {
-      return new Promise((res, rej) => {
-        const r = indexedDB.open('conceptmap-files', 1);
-        r.onupgradeneeded = () => r.result.createObjectStore('h');
-        r.onsuccess = () => res(r.result);
-        r.onerror = () => rej(r.error);
-      });
-    }
-    async function idbPut(k, v) {
-      try {
-        const db = await idbOpen();
-        await new Promise(res => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = t.onerror = () => res(); });
-      } catch (err) {}
-    }
-
-    /* The file the map should overwrite on Save / Ctrl+S. Kept separate from currentFileName,
-       which the Export buttons overwrite. */
-    let linked = null;
-
-    /* Name + format are sent as plain data (always arrives). The handle is sent separately and also stored
-       in IndexedDB, because browsers often refuse to pass file handles between windows (e.g. pages opened from disk). */
-    function announceTarget(handle, name, format) {
-      linked = handle ? { handle, name, format } : null;
-      sendToMap({ type: 'cm-save-target', name, format });
-      idbPut('saveTarget', handle ? { handle, name, format } : null);
-      if (!handle) return;
-      try { sendToMap({ type: 'cm-save-handle', handle, name }); } catch (err) { /* map falls back to IndexedDB / asking this window */ }
-    }
-
-    window.addEventListener('message', (e) => {
-      if (e.source !== opener_) return;
-      const d = e.data;
-      if (!d || typeof d !== 'object') return;
-      if (d.type === 'cm-state') {
-        mapState = d.state;
-        if (d.history) historyStates = d.history;
-        if (d.historyIdx !== undefined) historyIdx = d.historyIdx;
-        if (d.defaults) defaults = d.defaults;
-        setConnected(true);
-        updateStatus();
-      } else if (d.type === 'cm-ack') {
-        log(d.message, d.ok === false ? 'err' : 'ok');
-      } else if (d.type === 'cm-save-request') {
-        (async () => {
-          let ok = false;
-          try {
-            if (!linked) throw new Error('no imported file is linked in this window');
-            if (d.name && d.name !== linked.name) throw new Error(`linked file is ${linked.name}, not ${d.name}`);
-            let perm = await linked.handle.queryPermission({ mode: 'readwrite' });
-            if (perm !== 'granted') perm = await linked.handle.requestPermission({ mode: 'readwrite' });
-            if (perm !== 'granted') throw new Error('write permission not granted (click Save in the map after allowing)');
-            const w = await linked.handle.createWritable();
-            await w.write(d.content);
-            await w.close();
-            ok = true;
-            log(`Saved ${linked.name} (requested by the map).`, 'ok');
-          } catch (err) { log('Map save request failed: ' + err.message, 'err'); }
-          sendToMap({ type: 'cm-save-result', id: d.id, ok });
-        })();
-      }
-    });
-
-    refreshBtn.onclick = () => sendToMap({ type: 'cm-request-state' });
-
-    window.addEventListener('load', () => {
-      if (!opener_) {
-        log('No main window found. Use the map\'s "Import / Export" button to open this page.', 'err');
-        return;
-      }
-      sendToMap({ type: 'cm-io-ready' });
-      setTimeout(() => { if (!mapState) log('No response yet from the map. Try Refresh.', 'err'); }, 1500);
-    });
-
-    function download(filename, content, type) {
-      const blob = new Blob([content], { type });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    function filePrefix(fallback) {
-      let prefix = fallback;
-      if (mapState && mapState.nodes.length > 0) {
-        const highest = mapState.nodes.reduce((min, n) => n.y < min.y ? n : min, mapState.nodes[0]);
-        if (highest && highest.text.trim()) prefix = highest.text.trim().replace(/[^a-z0-9_-]/gi, '_');
-      }
-      return prefix;
-    }
-
-    function today() { return new Date().toISOString().split('T')[0]; }
-
-    /* ---------------- HISTORY VIEWER & DELETER ---------------- */
-    function renderHistoryList() {
-      historyListEl.innerHTML = '';
-      if (!historyStates || historyStates.length === 0) {
-        historyListEl.innerHTML = '<div class="hint" style="padding:4px;">No history states recorded.</div>';
-        document.getElementById('clear-history-btn').disabled = true;
-        return;
-      }
-      document.getElementById('clear-history-btn').disabled = false;
-      historyStates.forEach((stateStr, idx) => {
-        let parsedNodes = 0, parsedLines = 0;
-        try {
-          const parsed = JSON.parse(stateStr);
-          parsedNodes = parsed.nodes ? parsed.nodes.length : 0;
-          parsedLines = parsed.lines ? parsed.lines.length : 0;
-        } catch (e) {}
-
-        const item = document.createElement('div');
-        item.className = 'history-item' + (idx === historyIdx ? ' active' : '');
-        item.innerHTML = `
-          <span>State #${idx + 1} (${parsedNodes} nodes, ${parsedLines} lines)</span>
-          <div style="display:flex;gap:4px;">
-            <button onclick="jumpToHistory(${idx})" class="action-btn" style="padding:2px 6px;font-size:9px;">Jump</button>
-            <button onclick="deleteHistory(${idx})" class="danger-btn" style="padding:2px 6px;font-size:9px;">Delete</button>
-          </div>
-        `;
-        historyListEl.appendChild(item);
-      });
-    }
-
-    window.jumpToHistory = function(idx) {
-      sendToMap({ type: 'cm-jump-history', index: idx });
-      log(`Jumped to history state #${idx + 1}.`);
-    };
-
-    window.deleteHistory = function(idx) {
-      sendToMap({ type: 'cm-delete-history', index: idx });
-      log(`Deleted history state #${idx + 1}.`);
-    };
-
-    document.getElementById('clear-history-btn').onclick = () => {
-      sendToMap({ type: 'cm-clear-history' });
-      log('Cleared all history states.');
-    };
-
-    /* ---------------- SAVE (OVERWRITE) & EXPORTS ---------------- */
-
-    function formatExtendedLinesData(state) {
-      const out = [];
-      out.push(`VERSION: 2.0_METADATA`);
-      out.push(`CREATED: ${new Date().toISOString()}`);
-      out.push(`NODES: ${state.nodes.length}`);
-      out.push(`LINES: ${state.lines.length}`);
-      out.push(`--- NODES ---`);
-      state.nodes.forEach(n => {
-        const urlPart = n.url ? ` | URL: ${n.url}` : '';
-        const sizePart = n.size ? ` | size: ${n.size}` : '';
-        const collapsePart = n.collapsed ? ` | collapsed: true` : '';
-        out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${n.text}${urlPart}${sizePart}${collapsePart}`);
-      });
-      out.push(`--- CONNECTIONS ---`);
-      state.lines.forEach(l => {
-        out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`);
-      });
-      return out.join('\n');
-    }
-
-    function buildIndentText(st) {
-      const kids = new Map(), pc = new Map();
-      st.nodes.forEach(n => { kids.set(n.id, []); pc.set(n.id, 0); });
-      st.lines.forEach(l => {
-        const [p, c] = l.arrow === 'start' ? [l.to, l.from] : [l.from, l.to];
-        if (kids.has(p) && kids.has(c)) { kids.get(p).push(c); pc.set(c, pc.get(c) + 1); }
-      });
-      let roots = st.nodes.filter(n => pc.get(n.id) === 0);
-      if (!roots.length) roots = [...st.nodes];
-      roots.sort((a, b) => (a.y - b.y) || (a.x - b.x));
-      const seen = new Set(), out = [];
-      const walk = (id, lvl) => {
-        if (seen.has(id)) return;
-        seen.add(id);
-        const n = st.nodes.find(x => x.id === id);
-        if (!n) return;
-        out.push('    '.repeat(lvl) + (n.url ? `${n.text} ${n.url}` : n.text));
-        (kids.get(id) || []).forEach(c => walk(c, lvl + 1));
-      };
-      roots.forEach(r => walk(r.id, 0));
-      st.nodes.forEach(n => walk(n.id, 0));
-      return out.join('\n');
-    }
-
-    saveBtn.onclick = async () => {
-      if (!mapState) return;
-      let content = '';
-      const ext = { json: 'json', html: 'html' }[currentFormatType] || 'txt';
-      let filename = `${filePrefix('diagram')}_diagram.${ext}`;
-
-      if (currentFormatType === 'json') {
-        content = JSON.stringify(mapState, null, 2);
-      } else if (currentFormatType === 'lines') {
-        content = formatExtendedLinesData(mapState);
-      } else if (currentFormatType === 'txt-simple') {
-        const out = [];
-        mapState.nodes.forEach(n => {
-          const label = n.url ? `${n.text} ${n.url}` : n.text;
-          out.push(`${n.id} ${label} ${Math.round(n.x)} ${Math.round(n.y)}`);
-        });
-        mapState.lines.forEach(l => {
-          const rev = l.arrow === 'start';
-          out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
-        });
-        content = out.join('\n');
-      } else if (currentFormatType === 'txt-indent') {
-        content = buildIndentText(mapState);
-      } else if (currentFormatType === 'html') {
-        content = `<!DOCTYPE html><html><head><title>Concept Map Export</title></head><body><script>const mapData = ${JSON.stringify(mapState, null, 2)};<\/script></body></html>`;
-      }
-
-      if (currentFileHandle && window.showSaveFilePicker) {
-        try {
-          const writable = await currentFileHandle.createWritable();
-          await writable.write(content);
-          await writable.close();
-          log(`Successfully overwrote file: ${currentFileName}`, 'ok');
-          return;
-        } catch (err) {
-          log('File write permission denied or cancelled. Falling back to download.', 'err');
-        }
-      }
-
-      download(filename, content, currentFormatType === 'json' ? 'application/json' : 'text/plain');
-      log(`Saved file as ${filename} (downloaded).`, 'ok');
-    };
-
-    exportBtn.onclick = () => {
-      if (!mapState) return;
-      currentFormatType = 'json';
-      currentFileName = `${filePrefix('diagram')}_diagram_${today()}.json`;
-      download(currentFileName, JSON.stringify(mapState, null, 2), 'application/json');
-      log('Exported JSON.', 'ok');
-    };
-
-    exportLinesBtn.onclick = () => {
-      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
-      currentFormatType = 'lines';
-      currentFileName = `${filePrefix('extended')}_lines_${today()}.txt`;
-      download(currentFileName, formatExtendedLinesData(mapState), 'text/plain;charset=utf-8');
-      log('Exported Extended Lines with Metadata.', 'ok');
-    };
-
-    exportTxtSimpleBtn.onclick = () => {
-      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
-      currentFormatType = 'txt-simple';
-      currentFileName = `${filePrefix('simple_nodes')}_simple_${today()}.txt`;
-      const out = [];
-      mapState.nodes.forEach(n => {
-        const label = n.url ? `${n.text} ${n.url}` : n.text;
-        out.push(`${n.id} ${label} ${Math.round(n.x)} ${Math.round(n.y)}`);
-      });
-      mapState.lines.forEach(l => {
-        const rev = l.arrow === 'start';
-        out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
-      });
-      download(currentFileName, out.join('\n'), 'text/plain;charset=utf-8');
-      log('Exported TXT Simple.', 'ok');
-    };
-
-    exportTxtBtn.onclick = () => {
-      if (!mapState || mapState.nodes.length === 0) { alert('No nodes to export.'); return; }
-      currentFormatType = 'txt-indent';
-      currentFileName = `${filePrefix('outline')}_indented_${today()}.txt`;
-      // Outline export logic
-      const childrenMap = new Map();
-      const parentCountMap = new Map();
-      mapState.nodes.forEach(node => { childrenMap.set(node.id, []); parentCountMap.set(node.id, 0); });
-
-      mapState.lines.forEach(line => {
-        let parentId = line.from, childId = line.to;
-        if (line.arrow === 'start') { parentId = line.to; childId = line.from; }
-        if (childrenMap.has(parentId) && childrenMap.has(childId)) {
-          childrenMap.get(parentId).push(childId);
-          parentCountMap.set(childId, parentCountMap.get(childId) + 1);
-        }
-      });
-
-      let rootNodes = mapState.nodes.filter(n => parentCountMap.get(n.id) === 0);
-      if (rootNodes.length === 0) rootNodes = [...mapState.nodes];
-      rootNodes.sort((a, b) => (a.y - b.y) || (a.x - b.x));
-
-      const visited = new Set();
-      const outputLines = [];
-
-      function printNode(nodeId, indentLevel) {
-        if (visited.has(nodeId)) return;
-        visited.add(nodeId);
-        const node = mapState.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-        const indent = '    '.repeat(indentLevel);
-        const label = node.url ? `${node.text} ${node.url}` : node.text;
-        outputLines.push(`${indent}${label}`);
-        (childrenMap.get(nodeId) || []).forEach(childId => printNode(childId, indentLevel + 1));
-      }
-
-      rootNodes.forEach(root => printNode(root.id, 0));
-      mapState.nodes.forEach(node => { if (!visited.has(node.id)) printNode(node.id, 0); });
-
-      download(currentFileName, outputLines.join('\n'), 'text/plain;charset=utf-8');
-      log('Exported TXT Indent.', 'ok');
-    };
-
-    exportHtmlBtn.onclick = () => {
-      if (!mapState) return;
-      currentFormatType = 'html';
-      currentFileName = `${filePrefix('map')}_view_${today()}.html`;
-      const htmlContent = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Concept Map HTML View</title></head>
-<body style="background:#0d1b2a;color:#e0e6ed;font-family:monospace;padding:20px;">
-  <h1>Concept Map Export</h1>
-  <p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p>
-  <pre>${JSON.stringify(mapState, null, 2)}</pre>
-</body>
-</html>`;
-      download(currentFileName, htmlContent, 'text/html;charset=utf-8');
-      log('Exported Full HTML view.', 'ok');
-    };
-
-    /* ---------------- IMPORTS ---------------- */
-
-    function importJsonText(text, name, handle) {
-      try {
-        const data = JSON.parse(text);
-        if (!data.nodes || !data.lines) { log(`${name}: JSON missing nodes or lines.`, 'err'); return; }
-        currentFileHandle = handle || null;
-        currentFileName = name;
-        currentFormatType = 'json';
-        if (sendToMap({ type: 'cm-import-json', data })) {
-          log(`Sent JSON "${name}" to the map...`);
-          announceTarget(currentFileHandle, name, 'json');
-        }
-      } catch (err) {
-        log(`${name}: invalid JSON structure.`, 'err');
-      }
-    }
-
-    function parseExtendedLines(textContent, name, handle) {
-      const lines = textContent.split(/\r?\n/);
-      const newNodes = [];
-      const newLines = [];
-      let mode = null;
-
-      lines.forEach(l => {
-        const trimmed = l.trim();
-        if (trimmed === '--- NODES ---') { mode = 'nodes'; return; }
-        if (trimmed === '--- CONNECTIONS ---') { mode = 'lines'; return; }
-
-        if (mode === 'nodes') {
-          const parts = trimmed.split('|').map(p => p.trim());
-          if (parts.length >= 2) {
-            const id = parts[0];
-            const coordPart = parts[1].split(' ');
-            let x = 100, y = 100;
-            coordPart.forEach(c => {
-              if (c.startsWith('x:')) x = parseFloat(c.substring(2));
-              if (c.startsWith('y:')) y = parseFloat(c.substring(2));
-            });
-            let textRaw = '';
-            let url = null;
-            let size = 'auto';
-            let collapsed = false;
-
-            parts.slice(2).forEach(p => {
-              if (p.startsWith('text:')) textRaw = p.substring(5).trim();
-              if (p.startsWith('URL:')) url = p.substring(4).trim();
-              if (p.startsWith('size:')) size = p.substring(5).trim();
-              if (p.startsWith('collapsed:')) collapsed = p.substring(10).trim() === 'true';
-            });
-
-            newNodes.push({ id, text: textRaw || 'Node', url, x, y, size, collapsed });
-          }
-        } else if (mode === 'lines') {
-          if (trimmed.startsWith('LINE')) {
-            const parts = trimmed.split('|').map(p => p.trim());
-            let id = generateId(), from = '', to = '', arrow = 'end', width = 1, color = '#00b4d8', label = '';
-            parts.forEach(p => {
-              if (p.startsWith('id:')) id = p.substring(3).trim();
-              if (p.startsWith('from:')) from = p.substring(5).trim();
-              if (p.startsWith('to:')) to = p.substring(3).trim();
-              if (p.startsWith('arrow:')) arrow = p.substring(6).trim();
-              if (p.startsWith('width:')) width = parseInt(p.substring(6).trim(), 10) || 1;
-              if (p.startsWith('color:')) color = p.substring(6).trim();
-              if (p.startsWith('label:')) label = p.substring(6).trim();
-            });
-            if (from && to) {
-              newLines.push({ id, from, to, arrow, width, color, label });
-            }
-          }
-        }
-      });
-
-      if (newNodes.length === 0) {
-        log(`${name}: No valid extended lines data found.`, 'err');
-        return;
-      }
-
-      currentFileHandle = handle || null;
-      currentFileName = name;
-      currentFormatType = 'lines';
-
-      if (sendToMap({ type: 'cm-import-graph', nodes: newNodes, lines: newLines, replace: replaceChk.checked })) {
-        log(`Imported extended lines "${name}" (${newNodes.length} nodes, ${newLines.length} lines).`);
-        announceTarget(currentFileHandle, name, 'lines');
-      }
-    }
-
-    function parseSimpleTxt(textContent) {
-      const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-      const newNodes = [];
-      const newLines = [];
-      const idMap = new Map();
-
-      lines.forEach((line) => {
-        const tokens = line.trim().split(/\s+/);
-        if (tokens.length < 3) return;
-        const firstToken = tokens[0];
-
-        if (firstToken === '-1' || firstToken === '-2') {
-          const fromId = idMap.get(tokens[1]) || tokens[1];
-          const toId = idMap.get(tokens[2]) || tokens[2];
-          newLines.push({
-            id: generateId(), from: fromId, to: toId,
-            arrow: firstToken === '-2' ? 'none' : 'end',
-            width: defaults.width, color: defaults.color, label: ''
-          });
-        } else {
-          let x = 80 + (newNodes.length % 8) * 140;
-          let y = 140 + Math.floor(newNodes.length / 8) * 60;
-          let contentTokens = tokens.slice(1);
-          const possibleY = parseFloat(tokens[tokens.length - 1]);
-          const possibleX = parseFloat(tokens[tokens.length - 2]);
-
-          if (!isNaN(possibleX) && !isNaN(possibleY)) {
-            x = possibleX;
-            y = possibleY;
-            contentTokens = tokens.slice(1, tokens.length - 2);
-          }
-
-          const parsed = parseTextAndUrl(contentTokens.join(' '));
-          const assignedId = generateId();
-          idMap.set(firstToken, assignedId);
-
-          newNodes.push({ id: assignedId, text: parsed.text, url: parsed.url, x, y, size: 'auto', collapsed: false });
-        }
-      });
-      return { nodes: newNodes, lines: newLines };
-    }
-
-    function parseIndentTxt(textContent) {
-      const lines = textContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-      const newNodes = [];
-      const newLines = [];
-      const ancestorStack = [];
-      const startX = 80, startY = 140, levelSpacingX = 180, nodeSpacingY = 50;
-      let currentY = startY;
-
-      lines.forEach(line => {
-        let indentLevel = 0, i = 0;
-        while (i < line.length) {
-          if (line[i] === '\t') { indentLevel += 1; i++; }
-          else if (line.substr(i, 4) === '    ') { indentLevel += 1; i += 4; }
-          else if (line.substr(i, 2) === '  ') { indentLevel += 1; i += 2; }
-          else break;
-        }
-
-        const parsed = parseTextAndUrl(line.trim());
-        const node = {
-          id: generateId(), text: parsed.text, url: parsed.url,
-          x: startX + (indentLevel * levelSpacingX), y: currentY,
-          size: 'auto', collapsed: false
-        };
-        currentY += nodeSpacingY;
-
-        newNodes.push(node);
-        ancestorStack[indentLevel] = node;
-        ancestorStack.length = indentLevel + 1;
-
-        if (indentLevel > 0) {
-          let parentNode = ancestorStack[indentLevel - 1];
-          if (!parentNode) {
-            for (let lvl = indentLevel - 1; lvl >= 0; lvl--) {
-              if (ancestorStack[lvl]) { parentNode = ancestorStack[lvl]; break; }
-            }
-          }
-          if (parentNode) {
-            newLines.push({
-              id: generateId(), from: parentNode.id, to: node.id, arrow: 'end',
-              width: defaults.width, color: defaults.color, label: ''
-            });
-          }
-        }
-      });
-      return { nodes: newNodes, lines: newLines };
-    }
-
-    function sendGraph(parsed, name, formatType, handle) {
-      if (parsed.nodes.length === 0 && parsed.lines.length === 0) {
-        log(`${name}: nothing to import.`, 'err');
-        return;
-      }
-      currentFileHandle = handle || null;
-      currentFileName = name;
-      currentFormatType = formatType;
-      if (sendToMap({ type: 'cm-import-graph', nodes: parsed.nodes, lines: parsed.lines, replace: replaceChk.checked })) {
-        log(`Sent "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map...`);
-        announceTarget(currentFileHandle, name, formatType);
-      }
-    }
-
-    function readFile(file, handler, handle) {
-      const reader = new FileReader();
-      reader.onload = (evt) => handler(evt.target.result, file.name, handle || null);
-      reader.onerror = () => log(`Could not read ${file.name}.`, 'err');
-      reader.readAsText(file);
-    }
-
-    /* Open with the File System Access picker when available, so we keep a handle to the SAME file
-       (that is what lets Save / Ctrl+S overwrite it in place). Falls back to the plain <input type=file>. */
-    async function pickAndRead(description, accept, fallbackInput, handler) {
-      if (!window.showOpenFilePicker) { fallbackInput.click(); return; }
-      try {
-        const [fh] = await window.showOpenFilePicker({ multiple: false, mode: 'readwrite', types: [{ description, accept }] });
-        readFile(await fh.getFile(), handler, fh);
-      } catch (err) {
-        if (err && err.name !== 'AbortError') { log('File picker failed (' + err.message + '). Using basic file chooser.', 'err'); fallbackInput.click(); }
-      }
-    }
-
-    importBtn.onclick = () => pickAndRead('JSON map', { 'application/json': ['.json'] }, importFileInput, importJsonText);
-    importFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) readFile(file, importJsonText);
-      importFileInput.value = '';
-    };
-
-    importLinesBtn.onclick = () => pickAndRead('Extended lines', { 'text/plain': ['.txt', '.json'] }, importLinesFileInput, parseExtendedLines);
-    importLinesFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) readFile(file, parseExtendedLines);
-      importLinesFileInput.value = '';
-    };
-
-    const simpleHandler = (text, name, handle) => sendGraph(parseSimpleTxt(text), name, 'txt-simple', handle);
-    importTxtSimpleBtn.onclick = () => pickAndRead('TXT simple', { 'text/plain': ['.txt'] }, importTxtSimpleFileInput, simpleHandler);
-    importTxtSimpleFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) readFile(file, simpleHandler);
-      importTxtSimpleFileInput.value = '';
-    };
-
-    const indentHandler = (text, name, handle) => sendGraph(parseIndentTxt(text), name, 'txt-indent', handle);
-    importTxtBtn.onclick = () => pickAndRead('TXT indent', { 'text/plain': ['.txt'] }, importTxtFileInput, indentHandler);
-    importTxtFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) readFile(file, indentHandler);
-      importTxtFileInput.value = '';
-    };
-
-    const htmlHandler = (text, name, handle) => {
-      // Attempt to extract JSON from HTML export if embedded
-      const match = text.match(/const mapData = (\{.*?\});/s);
-      if (match) importJsonText(match[1], name, handle);
-      else log(`${name}: No valid embedded map data found in HTML file.`, 'err');
-      if (match) { currentFormatType = 'html'; announceTarget(currentFileHandle, name, 'html'); }
-    };
-    importHtmlBtn.onclick = () => pickAndRead('Map HTML', { 'text/html': ['.html', '.htm'] }, importHtmlFileInput, htmlHandler);
-    importHtmlFileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) readFile(file, htmlHandler);
-      importHtmlFileInput.value = '';
-    };
-
-    /* Drag & drop handling */
-    ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); dropzone.classList.add('over');
-    }));
-    ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
-      e.preventDefault(); dropzone.classList.remove('over');
-    }));
-    dropzone.addEventListener('drop', async (e) => {
-      if (!mapState) { log('Not connected to the map.', 'err'); return; }
-      const file = e.dataTransfer.files[0];
-      if (!file) return;
-      // must be requested synchronously during the drop event; gives a handle to the dropped file (Chromium)
-      let handle = null;
-      try {
-        const item = e.dataTransfer.items && e.dataTransfer.items[0];
-        if (item && item.getAsFileSystemHandle) {
-          const h = await item.getAsFileSystemHandle();
-          if (h && h.kind === 'file') handle = h;
-        }
-      } catch (err) {}
-      if (/\.json$/i.test(file.name)) {
-        readFile(file, importJsonText, handle);
-      } else if (/\.html?$/i.test(file.name)) {
-        readFile(file, htmlHandler, handle);
-      } else {
-        readFile(file, (text, name, h) => {
-          if (text.includes('VERSION: 2.0_METADATA')) {
-            parseExtendedLines(text, name, h);
-          } else {
-            const simple = /^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text);
-            sendGraph(simple ? parseSimpleTxt(text) : parseIndentTxt(text), name, simple ? 'txt-simple' : 'txt-indent', h);
-          }
-        }, handle);
-      }
-    });
-    document.body.addEventListener('dragover', (e) => e.preventDefault());
-    document.body.addEventListener('drop', (e) => e.preventDefault());
-  </script>
+  <input type="file" id="import-json-file" accept=".json,application/json" hidden>
+  <input type="file" id="import-lines-file" accept=".txt,.json,text/plain,application/json" hidden>
+  <input type="file" id="import-simple-file" accept=".txt,text/plain" hidden>
+  <input type="file" id="import-indent-file" accept=".txt,text/plain" hidden>
+  <input type="file" id="import-html-file" accept=".html,.htm,text/html" hidden>
+</div>
+
+<div class="panel">
+  <h2>History States</h2>
+  <div class="hint">Jump to, or delete, recorded history states. History entries show counts and are managed by the main map.</div>
+  <div id="history-list" style="max-height:180px;overflow:auto;margin-bottom:7px"></div>
+  <button id="clear-history-btn" class="danger-btn" disabled>Clear All History States</button>
+</div>
+<div class="panel"><h2>Log</h2><div id="log"></div></div>
+
+<script>
+(()=>{
+'use strict';
+let mapState=null,defaults={width:1,color:'#00b4d8',arrow:'end'},historyStates=[],historyIdx=-1,saveTarget=null,currentFileHandle=null,currentFileName=null,currentFormatType='lines';
+const opener_=window.opener;
+const $=id=>document.getElementById(id);
+const statusEl=$('status'),statusText=$('status-text'),logEl=$('log'),dropzone=$('dropzone'),replaceChk=$('replace-chk');
+let saveFormat='lines';
+const FORMAT_LABELS={lines:'TXT Extended Lines','txt-simple':'TXT Simple','txt-indent':'TXT Indent',json:'JSON',html:'Full HTML'};
+function updateFormatNote(){$('format-note').textContent='Save format: '+(FORMAT_LABELS[saveFormat]||saveFormat)+' (change it in the main menu).';}
+const allButtons=['save-btn','save-canvas-new-btn','save-connected-new-btn','resave-all-btn','iphone-save-btn','iphone-load-btn','export-json-btn','export-lines-btn','export-simple-btn','export-indent-btn','export-html-btn','import-json-btn','import-lines-btn','import-simple-btn','import-indent-btn','import-html-btn'];
+function log(msg,cls){const row=document.createElement('div');if(cls)row.className=cls;row.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;logEl.appendChild(row);logEl.scrollTop=logEl.scrollHeight;}
+function setConnected(yes){statusEl.classList.toggle('connected',yes);allButtons.forEach(id=>$(id).disabled=!yes||(!mapState&&!id.startsWith('import-')));$('clear-history-btn').disabled=!yes||!historyStates.length;}
+function post(msg){if(!opener_||opener_.closed){log('Main concept map window is closed or unreachable. Open this manager from the main map.','err');statusText.textContent='Main map window not reachable.';setConnected(false);return false;}try{opener_.postMessage(msg,'*');return true;}catch(err){log('Could not communicate with main map: '+err.message,'err');return false;}}
+function requestState(){post({type:'cm-request-state'});}
+function command(action,extra={}){post({type:'cm-io-command',action,...extra});}
+function download(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);}
+function slug(value){return(String(value||'concept_map').trim().replace(/[^a-z0-9_-]+/gi,'_').replace(/^_+|_+$/g,'')||'concept_map').slice(0,100);}
+function prefix(){if(mapState&&mapState.nodes&&mapState.nodes.length){const first=[...mapState.nodes].sort((a,b)=>(a.y-b.y)||(a.x-b.x))[0];if(first&&String(first.text||'').trim())return slug(first.text);}return 'concept_map';}
+function dateStamp(){return new Date().toISOString().slice(0,10);}
+function formatLines(state){const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${state.nodes.length}`,`LINES: ${state.lines.length}`,'--- NODES ---'];state.nodes.forEach(n=>out.push(`${n.id} | x:${Math.round(n.x||0)} y:${Math.round(n.y||0)} | text: ${n.text||'Node'}${n.url?` | URL: ${n.url}`:''}${n.size?` | size: ${n.size}`:''}${n.collapsed?' | collapsed: true':''}`));out.push('--- CONNECTIONS ---');state.lines.forEach(l=>out.push(`LINE | id:${l.id||''} | from:${l.from} | to:${l.to} | arrow:${l.arrow||'end'} | width:${l.width||1} | color:${l.color||'#00b4d8'} | label:${l.label||''}`));return out.join('\n');}
+function formatSimple(state){const out=[];state.nodes.forEach(n=>out.push(`${n.id} ${n.url?`${n.text} ${n.url}`:n.text} ${Math.round(n.x||0)} ${Math.round(n.y||0)}`));state.lines.forEach(l=>{const rev=l.arrow==='start';out.push(`${l.arrow==='none'?'-2':'-1'} ${rev?l.to:l.from} ${rev?l.from:l.to}`);});return out.join('\n');}
+function formatIndent(state){const kids=new Map(),parents=new Map();state.nodes.forEach(n=>{kids.set(n.id,[]);parents.set(n.id,0);});state.lines.forEach(l=>{const p=l.arrow==='start'?l.to:l.from,c=l.arrow==='start'?l.from:l.to;if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parents.set(c,parents.get(c)+1);}});let roots=state.nodes.filter(n=>parents.get(n.id)===0);if(!roots.length)roots=[...state.nodes];roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));const seen=new Set(),out=[];function walk(id,depth){if(seen.has(id))return;seen.add(id);const n=state.nodes.find(x=>x.id===id);if(!n)return;out.push('    '.repeat(depth)+(n.url?`${n.text} ${n.url}`:n.text));(kids.get(id)||[]).forEach(id2=>walk(id2,depth+1));}roots.forEach(n=>walk(n.id,0));state.nodes.forEach(n=>walk(n.id,0));return out.join('\n');}
+function setTargetUI(target){
+ const previous=saveTarget;
+ if(target){const keepHandle=previous&&previous.name===target.name?previous.handle:null;saveTarget={...target,handle:target.handle||keepHandle||null};}
+ else saveTarget=null;
+ currentFileHandle=saveTarget?.handle||null;
+ currentFileName=saveTarget?.name||null;
+ currentFormatType=saveTarget?.format||'lines';
+ $('filename-input').value=saveTarget?.name||'';
+ $('target-label').textContent=saveTarget?`Main map saves to: ${saveTarget.name} (${saveTarget.format||'lines'})`:'No file linked yet. Save will ask where to save.';
+}
+function renderHistory(){const box=$('history-list');box.innerHTML='';if(!historyStates.length){box.innerHTML='<div class="hint">No history states recorded.</div>';$('clear-history-btn').disabled=true;return;}historyStates.forEach((item,i)=>{const index=typeof item==='number'?item:(item.index??i);const row=document.createElement('div');row.className='history-item'+(index===historyIdx?' active':'');const label=document.createElement('span');label.textContent=`State #${index+1} (${item.nodes??0} nodes, ${item.lines??0} lines)`;const actions=document.createElement('div');actions.style.cssText='display:flex;gap:4px';const jump=document.createElement('button');jump.className='action-btn';jump.textContent='Jump';jump.onclick=()=>{post({type:'cm-history-action',action:'jump',index});log(`Requested history state #${index+1}.`);};const del=document.createElement('button');del.className='danger-btn';del.textContent='Delete';del.onclick=()=>{post({type:'cm-history-action',action:'delete',index});log(`Requested deletion of history state #${index+1}.`);};actions.append(jump,del);row.append(label,actions);box.appendChild(row);});$('clear-history-btn').disabled=false;}
+function receiveState(d){if(d.saveFormat&&FORMAT_LABELS[d.saveFormat]){saveFormat=d.saveFormat;updateFormatNote();}if(d.state&&Array.isArray(d.state.nodes)&&Array.isArray(d.state.lines))mapState=d.state;if(d.defaults)defaults=d.defaults;if(Array.isArray(d.history))historyStates=d.history;if(Number.isInteger(d.historyIdx))historyIdx=d.historyIdx;if(Object.prototype.hasOwnProperty.call(d,'saveTarget'))setTargetUI(d.saveTarget);setConnected(true);if(mapState)statusText.textContent=`Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;renderHistory();}
+function parseTextAndUrl(input){const match=String(input).match(/https?:\/\/[^\s]+/i);if(match){const url=match[0];return{text:String(input).replace(url,'').trim()||url,url};}return{text:String(input).trim()||'Node',url:null};}
+function newId(){return 'id_'+Math.random().toString(36).slice(2,11);}
+function parseExtended(text){const newNodes=[],newLines=[];let mode=null;text.split(/\r?\n/).forEach(line=>{const trimmed=line.trim();if(trimmed==='--- NODES ---'){mode='nodes';return;}if(trimmed==='--- CONNECTIONS ---'){mode='lines';return;}if(mode==='nodes'){const parts=trimmed.split('|').map(x=>x.trim());if(parts.length<2)return;const id=parts[0],coords=parts[1];const xm=coords.match(/x:\s*(-?\d+(?:\.\d+)?)/),ym=coords.match(/y:\s*(-?\d+(?:\.\d+)?)/);let textRaw='',url=null,size='auto',collapsed=false;for(const part of parts.slice(2)){if(part.startsWith('text:'))textRaw=part.slice(5).trim();else if(part.startsWith('URL:'))url=part.slice(4).trim();else if(part.startsWith('size:'))size=part.slice(5).trim();else if(part.startsWith('collapsed:'))collapsed=part.slice(10).trim()==='true';}newNodes.push({id,text:textRaw||'Node',url,x:xm?+xm[1]:100,y:ym?+ym[1]:100,size,collapsed});}else if(mode==='lines'&&trimmed.startsWith('LINE')){const parts=trimmed.split('|').map(x=>x.trim());const take=(prefix,fallback='')=>{const p=parts.find(x=>x.startsWith(prefix));return p?p.slice(prefix.length).trim():fallback;};const from=take('from:'),to=take('to:');if(from&&to)newLines.push({id:take('id:',newId()),from,to,arrow:take('arrow:','end'),width:parseFloat(take('width:','1'))||1,color:take('color:','#00b4d8'),label:take('label:','')});}});return{nodes:newNodes,lines:newLines};}
+function parseSimple(text){const lines=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],connections=[],map=new Map();lines.forEach(line=>{const t=line.trim().split(/\s+/);if(t.length<3)return;const first=t[0];if(first==='-1'||first==='-2'){connections.push({id:newId(),from:map.get(t[1])||t[1],to:map.get(t[2])||t[2],arrow:first==='-2'?'none':'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});return;}let x=80+(nodes.length%8)*140,y=140+Math.floor(nodes.length/8)*60,content=t.slice(1),py=Number(t[t.length-1]),px=Number(t[t.length-2]);if(Number.isFinite(px)&&Number.isFinite(py)){x=px;y=py;content=t.slice(1,-2);}const parsed=parseTextAndUrl(content.join(' '));const id=newId();map.set(first,id);nodes.push({id,text:parsed.text,url:parsed.url,x,y,size:'auto',collapsed:false});});return{nodes,lines:connections};}
+function parseIndent(text){const source=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],lines=[],stack=[];let y=140;source.forEach(line=>{let level=0,i=0;while(i<line.length){if(line[i]==='\t'){level++;i++;}else if(line.slice(i,i+4)==='    '){level++;i+=4;}else if(line.slice(i,i+2)==='  '){level++;i+=2;}else break;}const p=parseTextAndUrl(line.trim()),node={id:newId(),text:p.text,url:p.url,x:80+level*180,y,size:'auto',collapsed:false};y+=50;nodes.push(node);stack[level]=node;stack.length=level+1;if(level>0){const parent=stack[level-1];if(parent)lines.push({id:newId(),from:parent.id,to:node.id,arrow:'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});}});return{nodes,lines};}
+function announceTarget(handle,name,format){currentFileHandle=handle||null;currentFileName=name;currentFormatType=format;post({type:'cm-save-target',name,format});if(handle&&!post({type:'cm-save-handle',handle,name}))log('The selected file handle could not be shared with the main map; overwrite remains available from this panel.','err');}
+function importJson(text,name,handle=null){const data=JSON.parse(text);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('JSON must contain arrays named nodes and lines.');post({type:'cm-import-json',data});announceTarget(handle,name,'json');log(`Sent JSON "${name}" to the map.`);}
+function importGraph(text,name,format,handle=null){let parsed;if(format==='lines'){parsed=parseExtended(text);if(!parsed.nodes.length)throw new Error('No extended-lines nodes were found.');}else if(format==='simple')parsed=parseSimple(text);else parsed=parseIndent(text);if(!parsed.nodes.length&&!parsed.lines.length)throw new Error('No map records were found.');const fmt=format==='lines'?'lines':format==='simple'?'txt-simple':'txt-indent';post({type:'cm-import-graph',nodes:parsed.nodes,lines:parsed.lines,replace:replaceChk.checked,name,format:fmt});if(replaceChk.checked)announceTarget(handle,name,fmt);log(`Sent ${format} "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map.`);}
+function importHtml(text,name,handle=null){const match=text.match(/const mapData = (\{[\s\S]*?\});/);if(!match)throw new Error('No embedded mapData JSON found in this HTML file.');const data=JSON.parse(match[1]);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('HTML does not contain valid map data.');post({type:'cm-import-json',data});announceTarget(handle,name,'html');log(`Imported map data from HTML "${name}".`);}
+function autoDetectAndImport(text,name,handle=null){
+  const trimmed=text.trim();
+  if(/^<!doctype html|^<html/i.test(trimmed)){importHtml(text,name,handle);return;}
+  if(trimmed.startsWith('{')||trimmed.startsWith('[')){importJson(text,name,handle);return;}
+  if(/^VERSION:\s*2\.0_METADATA/m.test(text)||/--- NODES ---/.test(text)){importGraph(text,name,'lines',handle);return;}
+  if(/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)){importGraph(text,name,'simple',handle);return;}
+  importGraph(text,name,'indent',handle);
+}
+function readFile(file,handler,handle=null){const reader=new FileReader();reader.onload=()=>{try{handler(String(reader.result||''),file.name,handle);}catch(err){log(`${file.name}: ${err.message||err}`,'err');}};reader.onerror=()=>log(`Could not read ${file.name}.`,'err');reader.readAsText(file);}
+async function chooseFile(inputId,format){
+ const config={json:{description:'Concept map JSON',accept:{'application/json':['.json']}},lines:{description:'Extended lines TXT',accept:{'text/plain':['.txt','.json']}},simple:{description:'TXT Simple',accept:{'text/plain':['.txt']}},indent:{description:'TXT Indent',accept:{'text/plain':['.txt']}},html:{description:'Concept map HTML',accept:{'text/html':['.html','.htm']}}}[format];
+ if(window.showOpenFilePicker&&config){try{const [handle]=await window.showOpenFilePicker({multiple:false,types:[config]});const file=await handle.getFile();handleImport(file,format,handle);return;}catch(err){if(err&&err.name==='AbortError')return;log('Advanced file picker unavailable: '+(err.message||err)+'. Using the standard chooser.','err');}}
+ $(inputId).onchange=e=>{const file=e.target.files&&e.target.files[0];if(file)handleImport(file,format,null);e.target.value='';};$(inputId).click();
+}
+function handleImport(file,format,handle=null){if(!file)return;readFile(file,(text,name,fh)=>{try{if(format==='json')importJson(text,name,fh);else if(format==='html'||/^\s*<!doctype html|^\s*<html/i.test(text))importHtml(text,name,fh);else if(format==='auto')autoDetectAndImport(text,name,fh);else importGraph(text,name,format,fh);}catch(err){log(`${name}: ${err.message||err}`,'err');}},handle);}
+function serializeFor(fmt){if(!mapState)throw new Error('Map data is not available yet.');if(fmt==='lines')return formatLines(mapState);if(fmt==='txt-simple')return formatSimple(mapState);if(fmt==='txt-indent')return formatIndent(mapState);if(fmt==='html')return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p><script>const mapData = ${JSON.stringify(mapState,null,2)};<\/script></body></html>`;return JSON.stringify(mapState,null,2);}
+const saveTypes={json:{description:'Concept map JSON',accept:{'application/json':['.json']}},html:{description:'Concept map HTML',accept:{'text/html':['.html','.htm']}} ,lines:{description:'Extended lines TXT',accept:{'text/plain':['.txt']}},'txt-simple':{description:'TXT Simple',accept:{'text/plain':['.txt']}},'txt-indent':{description:'TXT Indent',accept:{'text/plain':['.txt']}}};
+async function saveCurrentFromPanel(){
+ if(!mapState){log('No map data received yet.','err');return;}
+ const fmt=FORMAT_LABELS[saveFormat]?saveFormat:'lines';
+ const fallbackName=currentFileName||saveTarget?.name||`${prefix()}_diagram.txt`;
+ let content;
+ try{content=serializeFor(fmt);}catch(err){log('Could not serialize map: '+err.message,'err');return;}
+ if(currentFileHandle){
+  try{let permission=await currentFileHandle.queryPermission({mode:'readwrite'});if(permission!=='granted')permission=await currentFileHandle.requestPermission({mode:'readwrite'});if(permission!=='granted')throw new Error('Write permission was not granted.');const writable=await currentFileHandle.createWritable();await writable.write(content);await writable.close();log(`Successfully overwrote ${currentFileName||fallbackName}.`,'ok');post({type:'cm-save-target',name:currentFileName||fallbackName,format:fmt});post({type:'cm-save-handle',handle:currentFileHandle,name:currentFileName||fallbackName});return;}catch(err){log('Direct overwrite failed: '+(err.message||err)+'. Trying the main map save handler.','err');}
+ }
+ if(window.showSaveFilePicker){
+  try{const picked=await window.showSaveFilePicker({suggestedName:fallbackName,types:[saveTypes[fmt]||saveTypes.lines]});const writable=await picked.createWritable();await writable.write(content);await writable.close();currentFileHandle=picked;currentFileName=picked.name||fallbackName;currentFormatType=fmt;post({type:'cm-save-target',name:currentFileName,format:fmt});post({type:'cm-save-handle',handle:picked,name:currentFileName});setTargetUI({name:currentFileName,format:fmt,handle:picked});log(`Saved ${currentFileName}.`,'ok');return;}catch(err){if(err&&err.name==='AbortError')return;log('Save picker failed: '+(err.message||err)+'. Falling back to download.','err');}
+ }
+ download(fallbackName,content,'text/plain;charset=utf-8');currentFileName=fallbackName;currentFormatType=fmt;post({type:'cm-save-target',name:fallbackName,format:fmt});log(`Downloaded ${fallbackName}. Browser restrictions prevent this fallback from guaranteeing an in-place overwrite.`,'ok');
+}
+$('save-btn').onclick=saveCurrentFromPanel;$('save-canvas-new-btn').onclick=()=>command('save-canvas-new');$('save-connected-new-btn').onclick=()=>command('save-connected-new');$('resave-all-btn').onclick=()=>command('resave-all');$('iphone-save-btn').onclick=()=>command('iphone-save');$('iphone-load-btn').onclick=()=>$('mobile-file-input').click();
+$('mobile-file-input').onchange=e=>{const file=e.target.files&&e.target.files[0];if(file)handleImport(file,'auto',null);e.target.value='';};
+$('set-filename-btn').onclick=()=>{const name=$('filename-input').value.trim();if(!name){log('Enter a filename before applying it.','err');return;}command('set-filename',{name});};$('filename-input').addEventListener('keydown',e=>{if(e.key==='Enter')$('set-filename-btn').click();});
+$('export-json-btn').onclick=()=>{if(!mapState)return;const exportName=`${prefix()}_diagram_${dateStamp()}.json`;download(exportName,JSON.stringify(mapState,null,2),'application/json');log('Exported JSON as '+exportName+'.');};
+$('export-lines-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_lines_${dateStamp()}.txt`;download(exportName,formatLines(mapState),'text/plain;charset=utf-8');log('Exported Extended Lines as '+exportName+'.');};
+$('export-simple-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_simple_${dateStamp()}.txt`;download(exportName,formatSimple(mapState),'text/plain;charset=utf-8');log('Exported TXT Simple as '+exportName+'.');};
+$('export-indent-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_indented_${dateStamp()}.txt`;download(exportName,formatIndent(mapState),'text/plain;charset=utf-8');log('Exported TXT Indent as '+exportName+'.');};
+$('export-html-btn').onclick=()=>{if(!mapState)return;const exportName=`${prefix()}_view_${dateStamp()}.html`;const content=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p><script>const mapData = ${JSON.stringify(mapState,null,2)};<\/script></body></html>`;download(exportName,content,'text/html;charset=utf-8');log('Exported Full HTML view as '+exportName+'.');};
+$('import-json-btn').onclick=()=>chooseFile('import-json-file','json');$('import-lines-btn').onclick=()=>chooseFile('import-lines-file','lines');$('import-simple-btn').onclick=()=>chooseFile('import-simple-file','simple');$('import-indent-btn').onclick=()=>chooseFile('import-indent-file','indent');$('import-html-btn').onclick=()=>chooseFile('import-html-file','html');
+$('clear-history-btn').onclick=()=>{post({type:'cm-history-action',action:'clear'});log('Requested clearing all history states.');};
+$('refresh-btn').onclick=requestState;
+['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('over');}));['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('over');}));dropzone.addEventListener('drop',async e=>{const file=e.dataTransfer.files&&e.dataTransfer.files[0];if(!file)return;let handle=null;try{const item=e.dataTransfer.items&&e.dataTransfer.items[0];if(item&&item.getAsFileSystemHandle){const picked=await item.getAsFileSystemHandle();if(picked&&picked.kind==='file')handle=picked;}}catch(err){}handleImport(file,'auto',handle);});document.body.addEventListener('dragover',e=>e.preventDefault());document.body.addEventListener('drop',e=>e.preventDefault());
+window.addEventListener('message',e=>{if(e.source!==opener_||!e.data||typeof e.data!=='object')return;const d=e.data;if(d.type==='cm-state')receiveState(d);else if(d.type==='cm-ack'){log(d.message||'Main map responded.',d.ok===false?'err':'ok');}else if(d.type==='cm-save-target'){setTargetUI(d.name?{name:d.name,format:d.format||'lines'}:null);}else if(d.type==='cm-save-handle'&&d.handle&&(!saveTarget||!d.name||d.name===saveTarget.name)){currentFileHandle=d.handle;currentFileName=d.name||currentFileName;if(saveTarget)saveTarget={...saveTarget,handle:d.handle};}});
+window.addEventListener('load',()=>{if(!opener_){statusText.textContent='Open this page using Import / Export & Save Options in conceptmap.html.';log('No main map opener. Open conceptmap.html directly, then open this manager from its button.','err');setConnected(false);return;}post({type:'cm-io-ready'});setTimeout(()=>{if(!mapState){log('No response yet from main map. Try Refresh.','err');}},1200);});
+})();
+</script>
 </body>
 </html>

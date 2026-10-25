@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Concept Map AI</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#130924;color:#e0e6ed;font:11px/1.45 monospace}body{padding:8px;user-select:text;-webkit-user-select:text}.header{display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #9d4edd;padding:3px 0 8px;margin-bottom:8px}.title{font-weight:bold;color:#e0aaff;letter-spacing:.6px}.hint{color:#9daec2;font-size:10px}button,input,select,textarea{width:100%;font:11px monospace;color:#fff;background:#1b263b;border:1px solid #778da9;padding:7px;border-radius:2px}button{background:#240046;border-color:#9d4edd;color:#e0aaff;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;touch-action:manipulation}button:hover{background:#3c096c;color:#fff}button:disabled{opacity:.35;cursor:not-allowed}label{display:block;margin:7px 0 4px;color:#90e0ef}.row{display:flex;gap:6px}.row>*{flex:1;min-width:0}.section{color:#00f5d4;font-size:10px;font-weight:bold;letter-spacing:.5px;margin:10px 0 5px;border-bottom:1px solid #34204d;padding-bottom:3px}.status{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#90e0ef;background:#0d1b2a;border:1px solid #34204d;padding:7px;margin-top:8px;min-height:36px}.settings{border:1px solid #50346b;padding:7px;margin:7px 0}.settings[hidden]{display:none}.fine{color:#aebbd0;font-size:9px;line-height:1.45;margin-top:5px}textarea{resize:vertical;min-height:55px}#image-file{font-size:10px}#provider,#model{min-width:0}
+</style></head><body>
+<div class="header"><span class="title">✨ CONCEPT MAP AI</span><button id="settings-toggle" style="width:auto;padding:5px 8px">Settings</button></div>
+<div id="settings" class="settings" hidden>
+<label for="provider">AI Provider</label><select id="provider"><option value="gemini">Gemini</option><option value="claude">Claude (Anthropic)</option><option value="openai">ChatGPT / OpenAI API</option></select>
+<label for="api-key" id="key-caption">Gemini API Key</label><input type="password" id="api-key" autocomplete="off" placeholder="Paste selected provider's API key">
+<label for="model">Model</label><select id="model"></select>
+<div class="fine">OpenAI and Claude API usage is billed separately from their consumer app subscriptions. Keep API keys private. The key is passed to the parent map page locally and is not written into this panel file.</div>
+</div>
+<div class="section">GENERATE FROM TOPIC</div><textarea id="prompt" rows="2" placeholder="e.g. Distributed system consensus protocols"></textarea>
+<div class="row" style="margin-top:6px"><button data-action="generate">Generate Map</button><button data-action="append" style="background:#14564f;border-color:#2a9d8f;color:#fff">Append</button></div>
+<button data-action="roadmap" style="margin-top:6px;background:#023e8a;border-color:#00b4d8;color:#00f5d4">Generate as 1-Year Roadmap</button>
+<div class="section">CONTEXTUAL SELECTION TOOLS</div>
+<button data-action="expand" id="expand" disabled>🌱 Expand Selected Node</button><button data-action="drill" id="drill" disabled style="margin-top:5px;background:#023e8a;border-color:#00b4d8;color:#00f5d4">🔍 AI Drill-Down (Sub-Map)</button><button data-action="bridge" id="bridge" disabled style="margin-top:5px;background:#023e8a;border-color:#00b4d8;color:#00f5d4">🔗 Connect 2 Selected Nodes</button>
+<div class="section">WHITEBOARD / IMAGE TO MAP</div><input type="file" id="image-file" accept="image/*"><button data-action="image" style="margin-top:5px">Convert Image to Concept Map</button>
+<div class="section">ASK MAP (AI COPILOT)</div><input id="question" type="text" placeholder="e.g. What are the key bottlenecks?"><button data-action="ask" style="margin-top:5px;background:#023e8a;border-color:#00b4d8;color:#00f5d4">Analyze &amp; Highlight</button>
+<span id="status" class="status">Connecting to conceptmap.html…</span>
+<script>
+(()=>{
+ const $=id=>document.getElementById(id);let lastState={},parentConnected=false,readyRetry=null;
+ const send=(type,extra={})=>parent.postMessage({channel:'conceptmap-ai',type,...extra},'*');
+ // This file is a panel component. Open conceptmap.html to use its AI engine.
+ if(window.parent===window){
+  $('status').textContent='This is the AI panel component, not the full concept-map app. Keep conceptmap.html, conceptmap_ai.html, and conceptmap_code.html together in one folder, then open conceptmap.html directly in your browser. Do not select this HTML file in the map-import control.';
+  document.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=true);
+  return;
+ }
+ $('settings-toggle').addEventListener('click',()=>{$('settings').hidden=!$('settings').hidden;$('settings-toggle').textContent=$('settings').hidden?'Settings':'Hide Settings'});
+ $('provider').addEventListener('change',()=>send('provider',{value:$('provider').value}));
+ $('model').addEventListener('change',()=>send('model',{value:$('model').value}));
+ $('api-key').addEventListener('input',()=>send('key',{value:$('api-key').value}));
+ $('prompt').addEventListener('input',()=>send('prompt',{value:$('prompt').value}));
+ $('question').addEventListener('input',()=>send('question',{value:$('question').value}));
+ document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click',async()=>{
+  const action=btn.dataset.action;
+  if(action==='image'){
+   const file=$('image-file').files?.[0];if(!file){$('status').textContent='Choose an image file first.';return;}
+   const reader=new FileReader();reader.onload=()=>send('image',{dataUrl:reader.result,name:file.name,mimeType:file.type||'image/png'});reader.onerror=()=>{$('status').textContent='Could not read that image.'};reader.readAsDataURL(file);return;
+  }
+  if(action==='generate'||action==='append'||action==='roadmap')send('prompt',{value:$('prompt').value});
+  if(action==='ask')send('question',{value:$('question').value});
+  send('action',{action});
+ }));
+ window.addEventListener('message',event=>{
+  if(event.source!==parent||!event.data||event.data.type!=='conceptmap-ai-state')return;
+  parentConnected=true;if(readyRetry){clearInterval(readyRetry);readyRetry=null;}
+  const s=event.data;lastState=s;
+  if($('provider').value!==s.provider)$('provider').value=s.provider;
+  const models=s.models||[];const signature=models.map(m=>m.value+':'+m.label).join('|');
+  if($('model').dataset.signature!==signature){$('model').innerHTML=models.map(m=>{const o=document.createElement('option');o.value=m.value;o.textContent=m.label;return o.outerHTML}).join('');$('model').dataset.signature=signature;}
+  $('model').value=s.model;
+  if(document.activeElement!==$('api-key'))$('api-key').value=s.key||'';
+  $('key-caption').textContent=s.keyCaption||'API Key';$('api-key').placeholder=s.provider==='gemini'?'AIzaSy...':'Paste API key for selected provider';
+  if(document.activeElement!==$('prompt'))$('prompt').value=s.prompt||'';
+  if(document.activeElement!==$('question'))$('question').value=s.question||'';
+  $('status').textContent=s.status||'Ready.';
+  $('expand').disabled=!!s.expandDisabled;$('drill').disabled=!!s.drillDisabled;$('bridge').disabled=!!s.bridgeDisabled;
+ });
+ // Repeat the ready ping briefly so the main page cannot miss it during startup.
+ send('ready');
+ readyRetry=setInterval(()=>{if(parentConnected){clearInterval(readyRetry);readyRetry=null;}else send('ready');},500);
+ setTimeout(()=>{if(!parentConnected)$('status').textContent='Still waiting for the main concept map. Open conceptmap.html and keep this file in the same folder.';},3500);
+})();
+</script></body></html>
