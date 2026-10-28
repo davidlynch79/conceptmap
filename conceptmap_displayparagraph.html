@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Concept Map — Display Paragraph</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#1b263b;color:#e0e6ed;display:flex;flex-direction:column;gap:7px;padding:7px;-webkit-text-size-adjust:100%}.cap{font-size:10px;color:#90e0ef;font-weight:bold;letter-spacing:.5px}label{display:flex;align-items:center;gap:7px;cursor:pointer;min-height:22px}input[type=checkbox]{accent-color:#00b4d8;width:16px;height:16px;flex:0 0 auto}input[type=number]{width:75px;background:#0d1b2a;border:1px solid #778da9;color:#fff;padding:5px;font:11px monospace}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.hint{font-size:9px;color:#90a4b8;line-height:1.35}button{background:#023e8a;border:1px solid #00b4d8;color:#00f5d4;padding:6px;font:10px monospace;text-transform:uppercase;cursor:pointer}textarea{width:100%;height:190px;resize:vertical;background:#0d1b2a;border:1px solid #778da9;color:#e0e6ed;padding:6px;font:10px/1.35 monospace;white-space:pre;}
+</style></head><body>
+<div class="cap">TEXT NODE DISPLAY</div>
+<label><input id="firstWords" type="checkbox"> First words only</label>
+<div class="row"><span>Maximum words</span><input id="firstCount" type="number" min="1" max="100000" value="200"></div>
+<label><input id="longerWords" type="checkbox"> Longer words only</label>
+<div class="row"><span>Minimum word length</span><input id="minWordLength" type="number" min="1" max="1000" value="7"></div>
+<label><input id="longestWord" type="checkbox"> Longest word only</label>
+<hr style="border:0;border-top:1px solid #415a77">
+<label><input id="wordWrap" type="checkbox" checked> Word wrap</label>
+<label><input id="artificialWordWrap" type="checkbox"> Artificial word wrap</label>
+<div class="row"><span>Characters per line</span><input id="artificialWrapLength" type="number" min="1" max="10000" value="30"></div>
+<hr style="border:0;border-top:1px solid #415a77">
+<div class="row"><strong>Abbreviations</strong><button id="abbrev" type="button" aria-pressed="false">Abbrev: OFF</button></div>
+<div class="hint">To keep your custom list between sessions, save these lines as a plain-text file named exactly <b>abbrev.txt</b> in the folder selected by conceptmap.html. Use one pair per line: original word, then replacement (for example: <code>your ur</code>). Matching whole words only; edits affect display, not saved node text.</div>
+<textarea id="conversions" spellcheck="false" aria-label="Abbreviation conversions"></textarea>
+<div class="row"><button id="reset" type="button">Reset display</button><span id="status" class="hint">Waiting for conceptmap.html…</span></div>
+<script>
+'use strict';
+const DEFAULT_CONVERSIONS=`your ur
+are r
+have hav
+love luv
+you u
+youre ur
+because bc
+be b
+see c
+okay k
+ok k
+people ppl
+please pls
+thanks thx
+thank thx
+with w
+without w/o
+about abt
+before b4
+after aft
+between btwn
+though tho
+through thru
+night nite
+great gr8
+late l8
+wait w8
+weight w8
+mate m8
+hate h8
+date d8
+straight str8
+forever 4ever
+whatever w/e
+someone sum1
+anyone ne1
+everyone evry1
+nothing nthng
+something smthng
+anything anythng
+message msg
+messages msgs
+text txt
+picture pic
+pictures pics
+friend fren
+friends frens
+family fam
+school schl
+home hom
+work wrk
+money $$
+number num
+numbers nums
+minute min
+minutes mins
+second sec
+seconds secs
+hour hr
+hours hrs
+tomorrow tmrw
+tonight 2nite
+today 2day
+yesterday yday
+morning morn
+afternoon aftn
+evening eve
+week wk
+weeks wks
+month mo
+months mos
+year yr
+years yrs
+birthday bday
+congratulations congrats
+probably prolly
+really rly
+right ryt
+alright aight
+anyway anw
+always alwys
+already alrdy
+around round
+coming comin
+going goin
+want wanna
+trying tryna
+kind knd
+excuse ex
+problem prob
+question q
+answer ans
+information info
+application app
+computer comp
+internet net
+website site
+favorite fav
+beautiful beaut
+important imp`; 
+const $=id=>document.getElementById(id);const parentConnected=parent!==window;
+let settings={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:false,artificialWrapLength:30,abbreviationsEnabled:false,conversions:DEFAULT_CONVERSIONS};
+function post(type,extra={}){if(parentConnected)parent.postMessage({ch:'conceptmap-displayparagraph',type,...extra},'*');}
+function read(){settings={firstWords:$('firstWords').checked,firstCount:Math.max(1,parseInt($('firstCount').value,10)||200),longerWords:$('longerWords').checked,minWordLength:Math.max(1,parseInt($('minWordLength').value,10)||7),longestWord:$('longestWord').checked,wordWrap:$('wordWrap').checked,artificialWordWrap:$('artificialWordWrap').checked,artificialWrapLength:Math.max(1,parseInt($('artificialWrapLength').value,10)||30),abbreviationsEnabled:settings.abbreviationsEnabled,conversions:$('conversions').value};$('abbrev').textContent='Abbrev: '+(settings.abbreviationsEnabled?'ON':'OFF');$('abbrev').setAttribute('aria-pressed',String(settings.abbreviationsEnabled));post('settings',{settings});$('status').textContent='Display updated';}
+function write(){for(const [k,v] of Object.entries(settings)){if($(k)){if($(k).type==='checkbox')$(k).checked=!!v;else $(k).value=v;}}$('abbrev').textContent='Abbrev: '+(settings.abbreviationsEnabled?'ON':'OFF');$('abbrev').setAttribute('aria-pressed',String(settings.abbreviationsEnabled));}
+['firstWords','firstCount','longerWords','minWordLength','longestWord','wordWrap','artificialWordWrap','artificialWrapLength'].forEach(id=>$(id).addEventListener('change',read));
+$('conversions').value=DEFAULT_CONVERSIONS;$('conversions').addEventListener('change',read);$('conversions').addEventListener('input',()=>{clearTimeout(window.__unused);read();});
+$('abbrev').onclick=()=>{settings.abbreviationsEnabled=!settings.abbreviationsEnabled;read();};
+$('reset').onclick=()=>{settings={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:false,artificialWrapLength:30,abbreviationsEnabled:false,conversions:DEFAULT_CONVERSIONS};write();read();};
+addEventListener('message',e=>{const d=e.data;if(e.source!==parent||!d||d.ch!=='conceptmap-displayparagraph')return;if(d.type==='settings'&&d.settings){settings={...settings,...d.settings};if(!settings.conversions)settings.conversions=DEFAULT_CONVERSIONS;write();$('status').textContent='Connected';}if(d.type==='conversions-file'&&typeof d.text==='string'){settings.conversions=d.text;$('conversions').value=d.text;read();$('status').textContent='Loaded abbrev.txt';}if(d.type==='abbrev-file-missing')$('status').textContent='Using built-in abbreviations (abbrev.txt not found)';});
+if(parentConnected)post('ready');else $('status').textContent='Open this panel from conceptmap.html';
+</script></body></html>

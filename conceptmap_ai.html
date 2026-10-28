@@ -20,48 +20,294 @@
 <span id="status" class="status">Connecting to conceptmap.html…</span>
 <script>
 (()=>{
- const $=id=>document.getElementById(id);let lastState={},parentConnected=false,readyRetry=null;
+ const $=id=>document.getElementById(id);
  const send=(type,extra={})=>parent.postMessage({channel:'conceptmap-ai',type,...extra},'*');
- // This file is a panel component. Open conceptmap.html to use its AI engine.
+ // This file is the AI panel AND the AI engine. Open conceptmap.html to use it.
  if(window.parent===window){
   $('status').textContent='This is the AI panel component, not the full concept-map app. Keep conceptmap.html, conceptmap_ai.html, and conceptmap_code.html together in one folder, then open conceptmap.html directly in your browser. Do not select this HTML file in the map-import control.';
   document.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=true);
   return;
  }
+ const AI_PROVIDERS={
+  gemini:{label:'Gemini',defaultModel:'gemini-3.8-flash',models:[['gemini-3.8-flash','Gemini 3.8 Flash'],['gemini-3.7-flash','Gemini 3.7 Flash'],['gemini-3.1-pro-preview','Gemini 3.1 Pro Preview']]},
+  claude:{label:'Claude',defaultModel:'claude-sonnet-5-5',models:[['claude-sonnet-5-5','Claude Sonnet 5.5'],['claude-opus-5-5','Claude Opus 5.5'],['claude-haiku-5-5','Claude Haiku 5.5']]},
+  openai:{label:'ChatGPT / OpenAI',defaultModel:'gpt-5.1',models:[['gpt-5.1','GPT-5.1'],['gpt-5-mini','GPT-5 mini'],['gpt-4.1','GPT-4.1']]}
+ };
+ let provider='gemini',model=AI_PROVIDERS.gemini.defaultModel,keys={},sel=0,parentConnected=false,readyRetry=null,localUntil=0;
+ const cfg=()=>AI_PROVIDERS[provider]||AI_PROVIDERS.gemini;
+ const setStatus=t=>{$('status').textContent=t;};
+ const clamp=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));
+ const uid=()=>'id_'+Math.random().toString(36).slice(2,11);
+
+ /* ---------- panel UI ---------- */
+ function refreshUI(forceKey){
+  const c=cfg();
+  $('provider').value=provider;
+  if($('model').dataset.provider!==provider){$('model').innerHTML=c.models.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');$('model').dataset.provider=provider;}
+  $('model').value=model;
+  $('key-caption').textContent=`${c.label} API Key:`;
+  $('api-key').placeholder=provider==='gemini'?'AIzaSy...':'Paste API key for '+c.label;
+  if(forceKey||document.activeElement!==$('api-key'))$('api-key').value=keys[provider]||'';
+  $('expand').disabled=sel!==1;$('drill').disabled=sel!==1;$('bridge').disabled=sel!==2;
+ }
  $('settings-toggle').addEventListener('click',()=>{$('settings').hidden=!$('settings').hidden;$('settings-toggle').textContent=$('settings').hidden?'Settings':'Hide Settings'});
- $('provider').addEventListener('change',()=>send('provider',{value:$('provider').value}));
- $('model').addEventListener('change',()=>send('model',{value:$('model').value}));
- $('api-key').addEventListener('input',()=>send('key',{value:$('api-key').value}));
- $('prompt').addEventListener('input',()=>send('prompt',{value:$('prompt').value}));
- $('question').addEventListener('input',()=>send('question',{value:$('question').value}));
- document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click',async()=>{
-  const action=btn.dataset.action;
-  if(action==='image'){
-   const file=$('image-file').files?.[0];if(!file){$('status').textContent='Choose an image file first.';return;}
-   const reader=new FileReader();reader.onload=()=>send('image',{dataUrl:reader.result,name:file.name,mimeType:file.type||'image/png'});reader.onerror=()=>{$('status').textContent='Could not read that image.'};reader.readAsDataURL(file);return;
-  }
-  if(action==='generate'||action==='append'||action==='roadmap')send('prompt',{value:$('prompt').value});
-  if(action==='ask')send('question',{value:$('question').value});
-  send('action',{action});
- }));
- window.addEventListener('message',event=>{
-  if(event.source!==parent||!event.data||event.data.type!=='conceptmap-ai-state')return;
-  parentConnected=true;if(readyRetry){clearInterval(readyRetry);readyRetry=null;}
-  const s=event.data;lastState=s;
-  if($('provider').value!==s.provider)$('provider').value=s.provider;
-  const models=s.models||[];const signature=models.map(m=>m.value+':'+m.label).join('|');
-  if($('model').dataset.signature!==signature){$('model').innerHTML=models.map(m=>{const o=document.createElement('option');o.value=m.value;o.textContent=m.label;return o.outerHTML}).join('');$('model').dataset.signature=signature;}
-  $('model').value=s.model;
-  if(document.activeElement!==$('api-key'))$('api-key').value=s.key||'';
-  $('key-caption').textContent=s.keyCaption||'API Key';$('api-key').placeholder=s.provider==='gemini'?'AIzaSy...':'Paste API key for selected provider';
-  if(document.activeElement!==$('prompt'))$('prompt').value=s.prompt||'';
-  if(document.activeElement!==$('question'))$('question').value=s.question||'';
-  $('status').textContent=s.status||'Ready.';
-  $('expand').disabled=!!s.expandDisabled;$('drill').disabled=!!s.drillDisabled;$('bridge').disabled=!!s.bridgeDisabled;
+ $('provider').addEventListener('change',()=>{
+  keys[provider]=$('api-key').value;
+  provider=AI_PROVIDERS[$('provider').value]?$('provider').value:'gemini';model=cfg().defaultModel;localUntil=Date.now()+600;
+  refreshUI(true);setStatus(`${cfg().label} selected. Enter its API key to use AI features.`);
+  send('provider',{value:provider,model});
  });
- // Repeat the ready ping briefly so the main page cannot miss it during startup.
+ $('model').addEventListener('change',()=>{model=$('model').value;localUntil=Date.now()+600;send('model',{value:model});});
+ $('api-key').addEventListener('input',()=>{keys[provider]=$('api-key').value;send('key',{provider,value:keys[provider]});});
+
+ /* ---------- main-map access ---------- */
+ const pend=new Map();let rid=0;
+ const getCtx=()=>new Promise(res=>{const id=++rid;pend.set(id,res);send('get',{id});});
+ const applyMap=(nodes,lines,mode,timeline)=>send('apply',{nodes,lines,mode,timeline:!!timeline});
+
+ /* ---------- AI engine ---------- */
+ function getAIAuth(){
+  const c=cfg(),apiKey=String(keys[provider]||'').trim();
+  if(!apiKey)throw new Error(`Enter your ${c.label} API key in the AI settings.`);
+  return{provider,apiKey,model:$('model').value||c.defaultModel,config:c};
+ }
+ const readParts=contents=>(contents||[]).map(m=>({role:m.role==='model'?'assistant':(m.role||'user'),parts:m.parts||[]}));
+ function parseAIJson(raw){
+  const clean=String(raw||'{}').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
+  try{return JSON.parse(clean);}catch(e){
+   const a=clean.indexOf('{'),b=clean.lastIndexOf('}');
+   if(a>=0&&b>a){try{return JSON.parse(clean.slice(a,b+1));}catch(e2){}}
+   throw new Error('The AI did not return valid JSON. Try again or use a different model.');
+  }
+ }
+ function responseText(data,p){
+  if(p==='gemini')return data.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('\n')||'{}';
+  if(p==='claude')return data.content?.filter(x=>x.type==='text').map(x=>x.text).join('\n')||'{}';
+  if(data.output_text)return data.output_text;
+  return(data.output||[]).flatMap(i=>i.content||[]).filter(x=>x.type==='output_text'||x.type==='text').map(x=>x.text||'').join('\n')||'{}';
+ }
+ async function requestAI(contents,systemInstruction=null){
+  const{provider:p,apiKey,model:m,config}=getAIAuth();
+  const rules='Return only one valid JSON object. Do not wrap the JSON in Markdown fences or add explanatory prose.';
+  const instructions=systemInstruction?`${systemInstruction}\n\n${rules}`:rules;
+  setStatus(`Connecting to ${config.label} (${m})...`);
+  let url,headers={'Content-Type':'application/json'},body;
+  const messages=readParts(contents);
+  if(p==='gemini'){
+   url=`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(apiKey)}`;
+   body={contents:messages.map(x=>({role:x.role==='assistant'?'model':'user',parts:x.parts})),generationConfig:{temperature:0.2,responseMimeType:'application/json'},systemInstruction:{parts:[{text:instructions}]}};
+  }else if(p==='claude'){
+   url='https://api.anthropic.com/v1/messages';
+   headers['x-api-key']=apiKey;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';
+   body={model:m,max_tokens:8192,system:instructions,messages:messages.map(x=>({role:x.role==='assistant'?'assistant':'user',content:x.parts.map(part=>{
+    if(part.text!==undefined)return{type:'text',text:part.text};
+    if(part.inlineData)return{type:'image',source:{type:'base64',media_type:part.inlineData.mimeType||'image/png',data:part.inlineData.data}};
+    return null;}).filter(Boolean)}))};
+  }else{
+   url='https://api.openai.com/v1/responses';
+   headers.Authorization=`Bearer ${apiKey}`;
+   body={model:m,instructions,input:messages.map(x=>({role:x.role==='assistant'?'assistant':'user',content:x.parts.map(part=>{
+    if(part.text!==undefined)return{type:'input_text',text:part.text};
+    if(part.inlineData)return{type:'input_image',image_url:`data:${part.inlineData.mimeType||'image/png'};base64,${part.inlineData.data}`};
+    return null;}).filter(Boolean)})),text:{format:{type:'json_object'}}};
+  }
+  let response;
+  try{response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});}
+  catch(err){throw new Error(`${config.label} request could not reach the API (${err.message}). If this is a browser/CORS block, try opening the HTML from a local web server or using a trusted API proxy.`);}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.error){
+   const message=data.error?.message||data.message||`HTTP ${response.status}`;
+   const hint=p==='claude'?' If the browser blocks the request, use a local trusted setup that supports Anthropic API access.':'';
+   throw new Error(`${config.label} API error: ${message}.${hint}`);
+  }
+  setStatus(`Processing ${config.label} response...`);
+  return parseAIJson(responseText(data,p));
+ }
+ const askAIText=(prompt,instruction=null)=>requestAI([{role:'user',parts:[{text:prompt}]}],instruction);
+ function makeAiNodes(items,position,includeUrls=true){
+  const idMap=new Map();
+  const nodes=items.map((n,i)=>{const id=uid();idMap.set(n.id,id);return{id,text:n.text,url:includeUrls?(n.url||null):null,...position(n,i),size:'auto',collapsed:false};});
+  return{nodes,idMap};
+ }
+ function makeAiLines(lines,idMap,nodes,color='#00b4d8',width=1){
+  return(lines||[]).map(l=>({id:uid(),from:idMap.get(l.from)||nodes[0]?.id,to:idMap.get(l.to)||nodes[1]?.id,label:l.label||'',arrow:l.arrow||'end',width,color})).filter(l=>l.from&&l.to);
+ }
+ function makeAiMap(data,position,includeUrls=true){
+  const mapped=makeAiNodes(data.nodes||[],position,includeUrls);
+  return{nodes:mapped.nodes,lines:makeAiLines(data.lines,mapped.idMap,mapped.nodes)};
+ }
+ async function generateMap(promptText,append=false,isRoadmap=false){
+  if(!promptText.trim())return alert('Please enter a topic or prompt for the AI.');
+  const systemInstruction=`You are a knowledge architect creating concept maps.
+Return ONLY a valid JSON object matching this schema:
+{
+  "nodes": [{ "id": "string", "text": "string", "url": "optional string URL", "month": 0 }],
+  "lines": [{ "from": "id_string", "to": "id_string", "label": "string", "arrow": "end" }]
+}
+${isRoadmap?'Assign "month" (0 to 11) for each milestone across the 12 calendar months.':''}`;
+  try{
+   const g=await getCtx();
+   const data=await askAIText(promptText,systemInstruction);
+   if(!Array.isArray(data.nodes))throw new Error('Invalid JSON format received.');
+   const tp=g.tp,usable=tp.width-25;
+   const count=append?g.nodes.length:0;
+   const startX=100+(count*25)%300,startY=100+Math.floor(count/5)*140;
+   const mapped=makeAiMap(data,(n,i)=>{
+    if(isRoadmap){const month=clamp(typeof n.month==='number'?n.month:i%12,0,11);return{x:Math.round(tp.x+10+month/11*usable),y:Math.round(tp.y+70+i%3*60)};}
+    return{x:startX+i%4*230,y:startY+Math.floor(i/4)*110};
+   });
+   applyMap(mapped.nodes,mapped.lines,append?'append':'replace',isRoadmap);
+   setStatus(`Generated ${data.nodes.length} nodes successfully.`);
+   send('toast',{text:`Generated ${data.nodes.length} nodes via ${cfg().label}`});
+  }catch(err){setStatus('AI error: '+err.message);send('toast',{text:'AI error: '+err.message});}
+ }
+ async function expandNode(){
+  const g=await getCtx();
+  if(g.sel.length!==1)return alert('Select exactly 1 node to expand.');
+  const parentNode=g.nodes.find(n=>n.id===g.sel[0]);
+  setStatus(`Expanding "${parentNode.text}" with ${cfg().label}...`);
+  const prompt=`Given the core concept "${parentNode.text}", provide 4 to 5 direct sub-concepts or key aspects that branch out from it.
+Return JSON:
+{
+  "nodes": [{ "id": "string", "text": "string", "url": "optional url" }],
+  "lines": [{ "from": "parent", "to": "string", "label": "string" }]
+}`;
+  try{
+   const data=await askAIText(prompt);
+   if(!data.nodes)throw new Error('Bad response structure');
+   const count=data.nodes.length,radius=180;
+   const{nodes:newNodes}=makeAiNodes(data.nodes,(_,i)=>{const a=i/count*2*Math.PI;return{x:Math.round(parentNode.x+Math.cos(a)*radius),y:Math.round(parentNode.y+Math.sin(a)*radius)};});
+   const newLines=newNodes.map((n,i)=>({id:uid(),from:parentNode.id,to:n.id,label:data.lines?.[i]?.label||'branches to',arrow:'end',width:1,color:'#9d4edd'}));
+   applyMap(newNodes,newLines,'append');
+   setStatus(`Expanded with ${newNodes.length} sub-concepts.`);
+   send('toast',{text:`Expanded concept with ${newNodes.length} nodes`});
+  }catch(err){setStatus('AI error: '+err.message);}
+ }
+ async function connectNodes(){
+  const g=await getCtx();
+  if(g.sel.length!==2)return alert('Select exactly 2 nodes to connect.');
+  const[n1,n2]=g.sel.map(id=>g.nodes.find(n=>n.id===id));
+  setStatus(`Analyzing connection between "${n1.text}" and "${n2.text}" with ${cfg().label}...`);
+  const prompt=`Analyze how concept "${n1.text}" relates to concept "${n2.text}".
+Return JSON with the relationship and an optional intermediary bridge node if helpful:
+{
+  "bridgeText": "optional middle concept if needed, or null",
+  "label1": "relationship from 1 to bridge/2",
+  "label2": "relationship from bridge to 2 (if bridge exists)"
+}`;
+  try{
+   const data=await askAIText(prompt),nodes=[],lines=[];
+   if(data.bridgeText){
+    const b={id:uid(),text:data.bridgeText,url:null,x:Math.round((n1.x+n2.x)/2),y:Math.round((n1.y+n2.y)/2)+20,size:'auto',collapsed:false};
+    nodes.push(b);
+    lines.push({id:uid(),from:n1.id,to:b.id,label:data.label1||'',arrow:'end',width:2,color:'#00f5d4'},{id:uid(),from:b.id,to:n2.id,label:data.label2||'',arrow:'end',width:2,color:'#00f5d4'});
+   }else lines.push({id:uid(),from:n1.id,to:n2.id,label:data.label1||'relates to',arrow:'end',width:2,color:'#00f5d4'});
+   applyMap(nodes,lines,'append');
+   setStatus('Connection established!');
+   send('toast',{text:`Connected nodes with ${cfg().label}`});
+  }catch(err){setStatus('AI error: '+err.message);}
+ }
+ async function drillDown(){
+  const g=await getCtx();
+  if(g.sel.length!==1)return alert('Select 1 node to drill down into.');
+  const node=g.nodes.find(n=>n.id===g.sel[0]);
+  setStatus(`Creating deep-dive map for "${node.text}"...`);
+  const prompt=`Create an in-depth standalone concept map exploring: "${node.text}".
+Return JSON:
+{
+  "nodes": [{ "id": "string", "text": "string" }],
+  "lines": [{ "from": "id", "to": "id", "label": "string", "arrow": "end" }]
+}`;
+  try{
+   const parsed=await askAIText(prompt);
+   if(!parsed.nodes)throw new Error('Bad data');
+   const{nodes,lines}=makeAiMap(parsed,(_,i)=>({x:100+i%3*240,y:120+Math.floor(i/3)*120}),false);
+   send('drill',{name:node.text,nodes,lines});
+   setStatus(`Opened sub-map for "${node.text}".`);
+   send('toast',{text:`Drilled down into "${node.text}"`});
+  }catch(err){setStatus('AI error: '+err.message);}
+ }
+ function convertImage(){
+  const file=$('image-file').files?.[0];
+  if(!file)return alert('Please choose an image file first.');
+  setStatus(`Transcribing diagram image with ${cfg().label}...`);
+  const reader=new FileReader();
+  reader.onerror=()=>setStatus('Could not read that image.');
+  reader.onload=async()=>{
+   try{
+    const contents=[{role:'user',parts:[{inlineData:{mimeType:file.type||'image/png',data:String(reader.result).split(',')[1]}},{text:'Transcribe this diagram/whiteboard/sketch into a concept map JSON with "nodes" and "lines".'}]}];
+    const parsed=await requestAI(contents);
+    if(!parsed.nodes)throw new Error('Invalid transcription structure.');
+    const{nodes,lines}=makeAiMap(parsed,(_,i)=>({x:120+i%4*220,y:140+Math.floor(i/4)*110}),false);
+    applyMap(nodes,lines,'replace');
+    setStatus(`Transcribed ${nodes.length} nodes from image!`);
+    send('toast',{text:`Whiteboard transcribed: ${nodes.length} nodes created`});
+   }catch(err){setStatus('Image error: '+err.message);}
+  };
+  reader.readAsDataURL(file);
+ }
+ async function askCopilot(){
+  const question=$('question').value.trim();
+  if(!question)return alert('Enter a question about the current map.');
+  const g=await getCtx();
+  if(!g.nodes.length)return alert('The canvas is empty.');
+  setStatus(`Analyzing map with ${cfg().label} Copilot...`);
+  const mapSummary={nodes:g.nodes.map(n=>({id:n.id,text:n.text})),lines:g.lines.map(l=>({from:l.from,to:l.to,label:l.label}))};
+  const prompt=`Current Concept Map Data:
+${JSON.stringify(mapSummary)}
+
+User Question: "${question}"
+Answer the question based on the map and identify the relevant node IDs to highlight.
+Return JSON:
+{
+  "answer": "string explanation",
+  "highlightNodeIds": ["id1", "id2"]
+}`;
+  try{
+   const res=await askAIText(prompt);
+   send('select',{ids:res.highlightNodeIds||[]});
+   setStatus(res.answer||'Analysis complete.');
+   alert('Copilot Answer:\n\n'+(res.answer||'Relevant nodes highlighted on map.'));
+  }catch(err){setStatus('Copilot error: '+err.message);}
+ }
+ const actions={
+  generate:()=>generateMap($('prompt').value,false,false),
+  append:()=>generateMap($('prompt').value,true,false),
+  roadmap:()=>generateMap($('prompt').value||'1-Year Milestone Roadmap',false,true),
+  expand:expandNode,drill:drillDown,bridge:connectNodes,image:convertImage,ask:askCopilot
+ };
+ document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click',()=>actions[btn.dataset.action]()));
+
+ /* Ctrl+S / Ctrl+Z / Ctrl+Y belong to the main map even when this panel has focus */
+ addEventListener('keydown',e=>{
+  if(!(e.ctrlKey||e.metaKey)||e.altKey)return;
+  const k=e.key.toLowerCase(),t=e.target;
+  if(k!=='s'&&k!=='z'&&k!=='y')return;
+  if(k!=='s'&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&(t.type==='text'||t.type==='password'))))return;
+  e.preventDefault();
+  send('hotkey',{key:e.key,shift:e.shiftKey,ctrl:e.ctrlKey,meta:e.metaKey});
+ });
+ /* ---------- bridge ---------- */
+ window.addEventListener('message',e=>{
+  const d=e.data;
+  if(e.source!==parent||!d||d.channel!=='conceptmap-ai')return;
+  if(d.type==='reply'){const f=pend.get(d.id);pend.delete(d.id);if(f)f(d);return;}
+  if(d.type!=='conceptmap-ai-state')return;
+  if(!parentConnected){parentConnected=true;setStatus('Choose an AI provider and enter its API key to activate AI features.');}
+  if(readyRetry){clearInterval(readyRetry);readyRetry=null;}
+  sel=d.sel|0;
+  if(document.activeElement!==$('api-key'))keys={...(d.keys||{})};
+  if(Date.now()>localUntil){
+   if(!AI_PROVIDERS[d.provider]){provider='gemini';model=cfg().defaultModel;send('provider',{value:provider,model});}
+   else{
+    provider=d.provider;model=d.model;
+    if(!cfg().models.some(([v])=>v===model)){model=cfg().defaultModel;send('model',{value:model});}
+   }
+  }
+  refreshUI();
+ });
  send('ready');
  readyRetry=setInterval(()=>{if(parentConnected){clearInterval(readyRetry);readyRetry=null;}else send('ready');},500);
- setTimeout(()=>{if(!parentConnected)$('status').textContent='Still waiting for the main concept map. Open conceptmap.html and keep this file in the same folder.';},3500);
+ setTimeout(()=>{if(!parentConnected)setStatus('Still waiting for the main concept map. Open conceptmap.html and keep this file in the same folder.');},3500);
 })();
 </script></body></html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concept Map — Side Functions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#1b263b;color:#e0e6ed;display:flex;flex-direction:column;gap:6px;-webkit-text-size-adjust:100%;user-select:none;-webkit-user-select:none}
+input[type=text],select,textarea{background:#1b263b;border:1px solid #778da9;color:#fff;padding:6px;font:11px monospace;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:#00b4d8}
+button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:7px 10px;font:11px monospace;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;touch-action:manipulation;width:100%}
+button:hover{background:#0077b6;color:#fff}
+button:disabled{opacity:.35;cursor:not-allowed}
+.a{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold}
+.x{background:#7209b7;border-color:#f72585;color:#ff4d6d}
+label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;width:100%}
+input[type=checkbox]{cursor:pointer;accent-color:#00b4d8;width:16px;height:16px;min-width:16px}
+input[type=color]{border:none;width:28px;height:28px;cursor:pointer;background:transparent;padding:0}
+.g{display:flex;flex-direction:column;gap:6px;padding:6px;background:#0d1b2a;border:1px solid #415a77}
+.g>summary,.cap{font-size:9.5px;color:#00f5d4;font-weight:bold;letter-spacing:.5px;cursor:pointer}
+.cap{cursor:default}
+.g[open]>summary{margin-bottom:6px}
+.r{display:flex;flex-direction:row;align-items:center;gap:6px}
+.r>*{flex:1}
+.sl{display:flex;flex-direction:column;gap:2px}
+.sl input[type=range]{width:100%;cursor:pointer;accent-color:#00b4d8;height:22px}
+.sl b{color:#00f5d4;font-weight:400}
+.h{color:#778da9;font-size:9px;line-height:1.3}
+.rw{position:relative;width:100%;min-width:120px;height:22px}
+.rw input{position:absolute;left:0;top:0;width:100%;background:transparent;pointer-events:none;appearance:none;-webkit-appearance:none}
+.rw input::-webkit-slider-thumb{pointer-events:auto;cursor:pointer;appearance:none;-webkit-appearance:none;width:18px;height:18px;background:#00b4d8;border-radius:50%}
+.up{color:#ffb703;font-weight:bold}.dn{color:#ff5d8f;font-weight:bold}
+#ed{min-height:150px;max-height:42vh;resize:vertical;white-space:pre;overflow:auto;line-height:1.45;font-size:10px;user-select:text;-webkit-user-select:text}
+#ed:focus{border-color:#00f5d4}
+#conn{display:none;color:#ffb4a2;background:#2b1010;border:1px solid #ff6b6b;padding:6px;font-size:10px}
+body.touch-mode input[type=text],body.touch-mode select,body.touch-mode textarea{font-size:16px}
+.hg{display:grid;grid-template-columns:110px 1fr;gap:4px 8px;font-size:10.5px;line-height:1.45}
+.hg b{color:#00f5d4}.hg h4{grid-column:1/-1;color:#90e0ef;text-transform:uppercase;border-bottom:1px solid #415a77;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="conn">Not connected. This panel loads inside the conceptmap.html menu; keep both files in the same folder.</div>
+
+<details class="g"><summary>SETTINGS PREFERENCES</summary>
+  <div class="r"><button id="exp" class="a" title="Download readable, commented settings text">Export TXT</button><button id="imp" class="a" title="Import a commented text settings file or an older JSON settings file">Import Settings</button><input type="file" id="impf" accept=".txt,.cfg,.conf,.json,text/plain,application/json" hidden></div>
+  <label for="ed">Direct Settings Text Editor</label>
+  <textarea id="ed" rows="9" spellcheck="false" autocomplete="off" placeholder="SECTION;setting;value // explanation"></textarea>
+  <span class="h">One setting per line. Edit the value before //; the inline comment explains its meaning. Unknown settings are ignored. API keys and the local folder path are not included in exports. Reset Text Field loads built-in defaults into this editor only; click Apply Text to apply them. Reset Preferences applies defaults immediately while preserving the map and API keys.</span>
+  <div class="r"><button id="reload">Reload Current</button><button id="apply" class="a">Apply Text</button></div>
+  <div class="r"><button id="rtext" title="Load built-in default settings into the editor only; does not apply them">Reset Text Field</button><button id="rdef" class="x" title="Apply default preferences while preserving map content and API keys">Reset Preferences</button></div>
+  <label><input type="checkbox" data-k="draggablePanels"> Make sub menus draggable</label>
+</details>
+
+<details class="g"><summary>INTERFACE OPTIONS</summary>
+  <label>Interface Mode: <select data-k="inputMode"><option value="auto">Auto-Detect</option><option value="desktop">Desktop Mode</option><option value="touch">Touch / Phone Mode</option></select></label>
+</details>
+
+<details class="g"><summary>TOUCH TUNING (ANTI-STICKY)</summary>
+  <div class="sl"><span>Drag starts after: <b data-out="touchDragThreshold" data-unit="px"></b></span><input type="range" data-k="touchDragThreshold" min="0" max="30" step="1"><span class="h">higher = ignores finger jitter</span></div>
+  <div class="sl"><span>Node touch padding: <b data-out="touchHitPad" data-unit="px"></b></span><input type="range" data-k="touchHitPad" min="0" max="60" step="1"><span class="h">near-miss touches still grab the node</span></div>
+  <div class="sl"><span>Hold before drag: <b data-out="touchHoldMs" data-unit="ms"></b></span><input type="range" data-k="touchHoldMs" min="0" max="600" step="25"><span class="h">0 = off. Moving earlier pans the screen</span></div>
+  <label><input type="checkbox" data-k="touchIgnoreExtra"> Ignore extra fingers while dragging</label>
+  <label><input type="checkbox" data-k="touchAutoClear"> Auto-clear stuck touches</label>
+  <button id="treset">Reset touches now</button>
+</details>
+
+<div class="g"><div class="sl"><span>Linkage Font Range: <b data-out="fontMin"></b>&ndash;<b data-out="fontMax"></b></span>
+  <div class="rw"><input type="range" data-k="fontMin" min="6" max="36" step="1"><input type="range" data-k="fontMax" min="6" max="36" step="1"></div></div></div>
+
+<div class="g"><span class="cap">DISTANCE-BASED LINE COLORING</span>
+  <div class="r"><label><input type="checkbox" data-k="colorDist1"> 1 away line</label><input type="color" data-k="colorDist1Hex"></div>
+  <div class="r"><label><input type="checkbox" data-k="colorDist2"> 2 away line</label><input type="color" data-k="colorDist2Hex"></div>
+  <div class="r"><label><input type="checkbox" data-k="colorDist3"> 3 away line</label><input type="color" data-k="colorDist3Hex"></div></div>
+
+<div class="g"><div class="sl"><span>Hide nodes &gt; dist: <b data-out="maxDistanceLimit"></b></span><input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1"></div></div>
+
+<div class="g">
+  <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
+  <label><input type="checkbox" id="chain" checked> Highlight Chain <span class="up">&#9644;up</span> <span class="dn">&#9644;down</span></label>
+  <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
+  <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
+</div>
+
+<details class="g"><summary>DUPLICATE DETECTOR OPTIONS</summary>
+  <button id="ddet" class="a" title="Find exact duplicate graph instances">Detect Duplicates</button>
+  <label title="When enabled, dragging any highlighted node moves its entire duplicate graph instance as one unit"><input type="checkbox" id="ddrag"> Drag Duplicates</label>
+  <button id="ddel" class="a" title="Delete extra copies only when the entire graph instance matches exactly">Delete Duplicates</button>
+  <button id="dseg" class="a" title="Move extra copies of exact duplicate graph instances into empty canvas space">Segregate Duplicates</button>
+  <button id="dclr" title="Clear duplicated-instance highlights without deleting graph data">Clear Duplicated Instances</button>
+  <span id="dst" class="h">Highlights exact duplicate graph instances. Deletion keeps one copy and removes only structurally identical instances.</span>
+</details>
+
+<details class="g"><summary>? HELP GUIDE</summary>
+<div class="hg">
+<h4>AI Features</h4>
+<b>Generate / Append</b><span>Builds or appends full knowledge graphs with nodes and directed lines using the selected AI model.</span>
+<b>1-Year Roadmap</b><span>Creates timeline-aware concepts mapped directly across the 12-month calendar overlay.</span>
+<b>Expand Selected</b><span>Select 1 node and click "🌱 Expand Selected Node" to branch out sub-topics.</span>
+<b>Connect 2 Nodes</b><span>Select 2 nodes to find and create missing relationship links or bridge concepts.</span>
+<b>AI Drill-Down</b><span>Generates an in-depth child map inside the view stack with back-navigation.</span>
+<b>Whiteboard to Map</b><span>Upload an image or diagram photo to transcribe it into connected digital nodes.</span>
+<b>Ask Map (Copilot)</b><span>Ask questions about your concept map. Gemini answers and highlights key paths.</span>
+<h4>Shortcuts &amp; Touch</h4>
+<b>Pan &amp; Zoom</b><span>Two-finger pinch to zoom; drag empty space to pan. Ctrl+Wheel zooms.</span>
+<b>Draw Connections</b><span>Drag from near a node towards another node to link them, or use the bottom-right arrow ball.</span>
+<b>Delete</b><span>Press Del or Backspace with nodes or lines selected.</span>
+</div>
+</details>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id),$$=s=>[...document.querySelectorAll(s)];
+let S={},D={},PANELS=[],dragging=false,wantEditor=false,groups=[];
+const post=(type,o={})=>parent.postMessage({ch:'conceptmap-side',type,...o},'*');
+const connected=parent!==window;
+if(!connected)$('conn').style.display='block';
+
+const SETTING_SECTIONS={
+  panelOrder:'LAYOUT',draggablePanels:'LAYOUT',sidebarWidth:'LAYOUT',
+  inputMode:'INTERFACE',interactionMode:'INTERACTION',dragGraphBall:'INTERACTION',
+  singleTouchExpand:'INTERACTION',editMode:'INTERACTION',linkOpenMode:'LINKS',
+  fontMin:'TEXT',fontMax:'TEXT',autoSizeAll:'NODES',maxLinksBound:'NODES',
+  colorDist1:'LINES',colorDist1Hex:'LINES',colorDist2:'LINES',colorDist2Hex:'LINES',
+  colorDist3:'LINES',colorDist3Hex:'LINES',maxDistanceLimit:'LINES',
+  showTimeline:'VIEW',showUrls:'VIEW',timelinePos:'VIEW',
+  touchDragThreshold:'TOUCH',touchHitPad:'TOUCH',touchHoldMs:'TOUCH',
+  touchIgnoreExtra:'TOUCH',touchAutoClear:'TOUCH',
+  aiProvider:'AI',aiModel:'AI'
+};
+const SETTING_HELP={
+  panelOrder:'Order of sidebar panels; panel IDs separated with |',
+  draggablePanels:'true=allow dragging panels to reorder; false=lock order',
+  sidebarWidth:'Sidebar width in pixels',
+  inputMode:'1=touch, 2=desktop, 3=auto-detect',
+  interactionMode:'1=drag nodes, 2=draw arrows',
+  dragGraphBall:'true=show/use the graph drag ball',
+  singleTouchExpand:'true=single click/touch expands node action balls',
+  editMode:'1=edit spot ball, 2=edit instead of opening link',
+  linkOpenMode:'1=new window, 2=current window, 3=expand in current, 4=rotate/flip, 5=open in empty space',
+  fontMin:'Minimum linkage label font size in pixels',
+  fontMax:'Maximum linkage label font size in pixels',
+  autoSizeAll:'true=automatically size all nodes',
+  maxLinksBound:'Minimum link-bound display threshold (normally maintained automatically)',
+  colorDist1:'true=enable line color for distance 1',
+  colorDist1Hex:'Color for distance-1 lines, as a hex color',
+  colorDist2:'true=enable line color for distance 2',
+  colorDist2Hex:'Color for distance-2 lines, as a hex color',
+  colorDist3:'true=enable line color for distance 3',
+  colorDist3Hex:'Color for distance-3 lines, as a hex color',
+  maxDistanceLimit:'Hide nodes farther than this selected-link distance; 10 means unlimited',
+  showTimeline:'true=show the timeline overlay',
+  showUrls:'true=show URLs on nodes',
+  timelinePos:'Timeline position/width as x,y,width in pixels',
+  touchDragThreshold:'Movement in pixels before a touch drag starts',
+  touchHitPad:'Extra touch target padding in pixels',
+  touchHoldMs:'Touch hold threshold in milliseconds; 0=off',
+  touchIgnoreExtra:'true=ignore extra fingers while dragging',
+  touchAutoClear:'true=automatically clear stuck touch gestures',
+  aiProvider:'1=Gemini, 2=Claude, 3=OpenAI API',
+  aiModel:'Provider model identifier; must be supported by the selected provider'
+};
+const CHOICE_SETTINGS={
+  inputMode:{touch:1,desktop:2,auto:3},
+  aiProvider:{gemini:1,claude:2,openai:3},
+  interactionMode:{drag:1,arrow:2},
+  editMode:{spot:1,editInstead:2},
+  linkOpenMode:{new:1,current:2,expand:3,rotateFlip:4,openEmptySpace:5}
+};
+function encodeSettingValue(key,value){
+  if(CHOICE_SETTINGS[key])return String(CHOICE_SETTINGS[key][value]||value);
+  if(key==='panelOrder')return Array.isArray(value)?value.join('|'):'';
+  if(key==='timelinePos'&&value&&typeof value==='object')return [value.x,value.y,value.width].join(',');
+  if(typeof value==='boolean')return value?'true':'false';
+  return String(value??'');
+}
+function formatSettingsText(source=S){
+  const lines=[
+    '// CONCEPT MAP SETTINGS;FORMAT;1',
+    '// Edit the value between the second semicolon and the inline // comment.',
+    '// Blank lines and lines starting with // are ignored. Settings may be reordered.',
+    '// Do not add API keys here: credentials are intentionally not exported.',
+    '// Lines use SECTION;setting;value // help. Keep one setting per line.',
+    ''
+  ];
+  for(const key of Object.keys(D)){
+    const section=SETTING_SECTIONS[key]||'GENERAL';
+    lines.push(`${section};${key};${encodeSettingValue(key,source[key])} // ${SETTING_HELP[key]||'See the setting name; use a value of the same type as shown.'}`);
+  }
+  lines.push('','// END SETTINGS');
+  return lines.join('\n');
+}
+function parseChoiceValue(key,value){
+  const choices=CHOICE_SETTINGS[key];
+  if(!choices)return value;
+  const clean=String(value).trim();
+  const matched=Object.entries(choices).find(([name,num])=>name.toLowerCase()===clean.toLowerCase()||String(num)===clean);
+  if(!matched)throw new Error(`Invalid value for ${key}: ${clean}`);
+  return matched[0];
+}
+function parseTextSettings(text){
+  const updates={},unknown=[];
+  const allowed=new Set(Object.keys(D));
+  const lines=String(text||'').split(/\r?\n/);
+  for(let i=0;i<lines.length;i++){
+    const original=lines[i],line=original.trim();
+    if(!line||line.startsWith('//')||line.startsWith('#'))continue;
+    const first=line.indexOf(';'),second=first<0?-1:line.indexOf(';',first+1);
+    if(first<1||second<0)throw new Error(`Line ${i+1}: expected SECTION;setting;value`);
+    const key=line.slice(first+1,second).trim();
+    let raw=line.slice(second+1);
+
+    raw=raw.replace(/\s+\/\/.*$/,'').trim();
+    if(!allowed.has(key)){unknown.push(key||`line ${i+1}`);continue;}
+    try{
+      let value=parseChoiceValue(key,raw);
+      if(key==='panelOrder'){
+        value=raw.split('|').map(x=>x.trim()).filter(Boolean);
+        const known=new Set(PANELS);
+        value=value.filter(id=>known.has(id));
+        if(!value.length)throw new Error('panelOrder must contain at least one known panel ID');
+      }else if(key==='timelinePos'){
+        const parts=raw.split(',').map(x=>Number(x.trim()));
+        if(parts.length!==3||parts.some(x=>!Number.isFinite(x)))throw new Error('timelinePos must be x,y,width');
+        value={x:parts[0],y:parts[1],width:Math.max(100,parts[2])};
+      }else if(typeof D[key]==='boolean'){
+        const b=String(raw).toLowerCase();
+        if(!['true','false','1','0','yes','no'].includes(b))throw new Error(`${key} must be true/false or 1/0`);
+        value=['true','1','yes'].includes(b);
+      }else if(typeof D[key]==='number'){
+        value=Number(raw);
+        if(!Number.isFinite(value))throw new Error(`${key} must be a number`);
+      }else if(key==='aiModel'){
+        value=raw.trim();
+        if(!value)throw new Error('aiModel cannot be blank');
+      }
+      updates[key]=value;
+    }catch(err){throw new Error(`Line ${i+1} (${key}): ${err.message}`);}
+  }
+  return {updates,unknown};
+}
+
+const ed=$('ed');
+const refreshEditor=()=>{if(Object.keys(D).length)ed.value=formatSettingsText(S);};
+function downloadTextFile(filename,content,mime='text/plain;charset=utf-8'){
+  const url=URL.createObjectURL(new Blob([content],{type:mime}));
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function syncControls(){
+  $$('[data-k]').forEach(el=>{
+    const v=S[el.dataset.k];if(v===undefined||(dragging&&el.type==='range'))return;
+    if(el.type==='checkbox')el.checked=!!v;else el.value=v;
+  });
+  $$('[data-out]').forEach(b=>{
+    const k=b.dataset.out,v=S[k];if(v===undefined)return;
+    b.textContent=k==='maxDistanceLimit'&&v>=10?'∞':v+(b.dataset.unit||'');
+  });
+}
+$$('[data-k]').forEach(el=>{
+  const k=el.dataset.k,live=el.type==='range'||el.type==='color';
+  el.addEventListener(live?'input':'change',()=>post('set',{k,live,v:el.type==='checkbox'?el.checked:el.type==='range'?+el.value:el.value}));
+  if(live)el.addEventListener('change',()=>post('commit'));
+  if(el.type==='range'){
+    el.addEventListener('pointerdown',()=>{dragging=true;});
+    ['pointerup','pointercancel'].forEach(t=>el.addEventListener(t,()=>{dragging=false;syncControls();}));
+  }
+});
+$('chain').onchange=e=>post('chain',{on:e.target.checked});
+$('treset').onclick=()=>post('reset-touches');
+
+/* settings text */
+$('exp').onclick=()=>downloadTextFile('concept_map_settings.txt',formatSettingsText(S));
+$('imp').onclick=()=>$('impf').click();
+$('reload').onclick=refreshEditor;
+$('rtext').onclick=()=>{ed.value=formatSettingsText(D);ed.focus();};
+$('apply').onclick=()=>{
+  try{
+    const {updates,unknown}=parseTextSettings(ed.value);
+    wantEditor=true;post('apply-settings',{updates});
+    const note=unknown.length?` Unknown settings ignored: ${unknown.slice(0,8).join(', ')}${unknown.length>8?'…':''}.`:'';
+    alert(`Text settings applied.${note}`);
+  }catch(err){alert(`Settings were not applied. ${err.message}`);}
+};
+$('rdef').onclick=()=>{
+  if(!confirm('Reset preferences to built-in defaults? The map nodes/connections and API keys will be preserved.'))return;
+  wantEditor=true;post('reset-defaults');
+  alert('Preferences reset. Map contents and API keys were preserved.');
+};
+$('impf').onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const contents=String(ev.target.result||'');
+    try{
+      let updates;
+      if(contents.trim().startsWith('{')){
+        const parsed=JSON.parse(contents.trim());updates={};
+        for(const key of Object.keys(D))if(parsed[key]!==undefined)updates[key]=parsed[key];
+      }else{
+        const r=parseTextSettings(contents);updates=r.updates;
+        if(r.unknown.length)console.warn('Unknown settings ignored:',r.unknown);
+      }
+      wantEditor=true;post('apply-settings',{updates});
+      alert('Settings loaded. API keys and the local folder path were not changed.');
+    }catch(err){alert(`Could not import settings. ${err.message}`);}
+    e.target.value='';
+  };
+  reader.readAsText(file);
+};
+
+/* duplicate detector (graph is fetched from the main map on demand) */
+const pend=new Map();let rid=0;
+const getGraph=()=>new Promise(res=>{const id=++rid;pend.set(id,res);post('get-graph',{id});});
+const st=t=>{$('dst').textContent=t;};
+const dupData=n=>{const d={...n};delete d.id;delete d.x;delete d.y;return d;};
+function graphComponents(g){
+  const nodeByKey=new Map(g.nodes.map(n=>[n.id,n]));
+  const adjacency=new Map(g.nodes.map(n=>[n.id,[]]));
+  g.lines.forEach((line,index)=>{
+    if(adjacency.has(line.from)&&adjacency.has(line.to)){
+      adjacency.get(line.from).push({id:line.to,line,index});
+      adjacency.get(line.to).push({id:line.from,line,index});
+    }
+  });
+  const seen=new Set(),components=[];
+  for(const node of g.nodes){
+    if(seen.has(node.id))continue;
+    const stack=[node.id],ids=[];seen.add(node.id);
+    while(stack.length){
+      const id=stack.pop();ids.push(id);
+      for(const edge of adjacency.get(id)||[])if(!seen.has(edge.id)){seen.add(edge.id);stack.push(edge.id);}
+    }
+    const idSet=new Set(ids),nodes=ids.map(id=>nodeByKey.get(id)).filter(Boolean);
+    components.push({ids:ids.slice(),nodes,lines:g.lines.filter(l=>idSet.has(l.from)&&idSet.has(l.to))});
+  }
+  return components;
+}
+function signature(component){
+  const minX=Math.min(...component.nodes.map(n=>Number(n.x)||0));
+  const minY=Math.min(...component.nodes.map(n=>Number(n.y)||0));
+  const entries=component.nodes.map(n=>({
+    id:n.id,x:Math.round((Number(n.x)||0)-minX),y:Math.round((Number(n.y)||0)-minY),
+    data:JSON.stringify(dupData(n))
+  })).sort((a,b)=>a.x-b.x||a.y-b.y||a.data.localeCompare(b.data));
+  const indexById=new Map(entries.map((entry,i)=>[entry.id,i]));
+  const nodes=entries.map(({x,y,data})=>({x,y,data}));
+  const lines=component.lines.map(line=>{
+    const data={...line};delete data.id;delete data.from;delete data.to;
+    return{from:indexById.get(line.from),to:indexById.get(line.to),data:JSON.stringify(data)};
+  }).sort((a,b)=>a.from-b.from||a.to-b.to||a.data.localeCompare(b.data));
+  return JSON.stringify({nodes,lines});
+}
+async function detect(){
+  const bySig=new Map();
+  graphComponents(await getGraph()).forEach(c=>{
+    const sig=signature(c);
+    if(!bySig.has(sig))bySig.set(sig,[]);
+    bySig.get(sig).push({ids:c.ids});
+  });
+  groups=[...bySig.values()].filter(g=>g.length>1);
+  const all=groups.flat(),ids=new Set(all.flatMap(c=>c.ids));
+  post('dup',{comps:all.map(c=>c.ids)});
+  st(groups.length
+    ?`Found ${groups.length} exact duplicate group(s), covering ${all.length} graph instances and ${ids.size} nodes. Extra copies can be moved with “Segregate Duplicates”.`
+    :'No exact duplicated graph instances found.');
+}
+async function removeDuplicates(){
+  if(!groups.length)await detect();
+  if(!groups.length){st('No exact duplicate graph instances to delete.');return;}
+  const copies=groups.flatMap(g=>g.slice(1));
+  const nodeCount=copies.reduce((sum,c)=>sum+c.ids.length,0);
+  if(!copies.length){st('No extra duplicate instances to delete.');return;}
+  if(!confirm(`Delete ${copies.length} extra graph instance(s) containing ${nodeCount} nodes? Only exact structural/content matches are eligible. One copy of each graph will be kept.`))return;
+  post('graph-delete',{ids:copies.flatMap(c=>c.ids)});
+  groups=[];
+  st(`Deleted ${copies.length} exact duplicate graph instance(s) (${nodeCount} nodes). One copy of each exact graph was retained.`);
+}
+async function segregate(){
+  if(!groups.length)await detect();
+  if(!groups.length){st('No exact duplicated graph instances to segregate.');return;}
+  const moving=groups.flatMap(g=>g.slice(1));
+  if(!moving.length){st('No extra duplicate instances to move.');return;}
+  const g=await getGraph(),byId=new Map(g.nodes.map(n=>[n.id,n])),allNodes=g.nodes;
+  let cursorX=Math.max(0,...allNodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)))+180;
+  let cursorY=Math.max(0,...allNodes.map(n=>Number(n.y)||0));
+  const rowGap=50,colGap=180,moved=new Set();
+  moving.forEach(c=>{
+    const nodes=c.ids.map(id=>byId.get(id)).filter(Boolean);
+    if(!nodes.length)return;
+    const minX=Math.min(...nodes.map(n=>Number(n.x)||0));
+    const minY=Math.min(...nodes.map(n=>Number(n.y)||0));
+    const maxX=Math.max(...nodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)));
+    const maxY=Math.max(...nodes.map(n=>(Number(n.y)||0)+Math.max(40,Number(n.customHeight)||60)));
+    const width=Math.max(120,maxX-minX),height=Math.max(60,maxY-minY);
+    const dx=cursorX-minX,dy=cursorY-minY;
+    nodes.forEach(n=>{n.x=Math.round((Number(n.x)||0)+dx);n.y=Math.round((Number(n.y)||0)+dy);moved.add(n.id);});
+    cursorY+=height+rowGap;
+    if(cursorY>Math.max(1200,...allNodes.map(n=>(Number(n.y)||0)+500))){cursorY=0;cursorX+=width+colGap;}
+  });
+  post('graph-move',{moves:[...moved].map(id=>[id,byId.get(id).x,byId.get(id).y])});
+  st(`Moved ${moving.length} extra duplicate graph instance(s) into empty canvas space. Original copies were left in place; use Clear Duplicated Instances to remove highlights.`);
+}
+$('ddet').onclick=detect;$('ddel').onclick=removeDuplicates;$('dseg').onclick=segregate;
+$('dclr').onclick=()=>{groups=[];post('dup',{comps:[]});st('Duplicated-instance highlights cleared. No nodes or connections were deleted.');};
+$('ddrag').onchange=e=>post('dupdrag',{on:e.target.checked});
+
+/* Ctrl+S / Ctrl+Z / Ctrl+Y belong to the main map even when this panel has focus */
+addEventListener('keydown',e=>{
+  if(!(e.ctrlKey||e.metaKey)||e.altKey||!connected)return;
+  const k=e.key.toLowerCase(),t=e.target;
+  if(k!=='s'&&k!=='z'&&k!=='y')return;
+  if(k!=='s'&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&t.type==='text')))return;
+  e.preventDefault();
+  post('key',{key:e.key,shift:e.shiftKey,ctrl:e.ctrlKey,meta:e.metaKey});
+});
+
+/* bridge */
+window.addEventListener('message',e=>{
+  const d=e.data;
+  if(e.source!==parent||!d||d.ch!=='conceptmap-side')return;
+  if(d.type==='init'){D=d.D||{};PANELS=d.PANELS||[];inited=true;}
+  else if(d.type==='state'){
+    S=d.S||{};document.body.classList.toggle('touch-mode',!!d.touch);
+    syncControls();
+    if(wantEditor||!ed.value){wantEditor=false;refreshEditor();}
+    sendH();
+  }else if(d.type==='graph'){const f=pend.get(d.id);pend.delete(d.id);if(f)f(d);}
+});
+let lastH=0,inited=false,tries=0;
+const sendH=()=>{const h=Math.ceil(document.body.getBoundingClientRect().height);if(h&&h!==lastH){lastH=h;post('height',{h});}};
+const tryReady=()=>{if(inited||++tries>20)return;post('ready');setTimeout(tryReady,500);};
+if(connected){
+  new ResizeObserver(sendH).observe(document.body);
+  document.addEventListener('toggle',sendH,true);
+  tryReady();
+}
+</script>
+</body>
+</html>

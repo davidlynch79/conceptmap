@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Concept Map</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+      html { overscroll-behavior: none; }
+      body { --sw: 320px; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace; background: #0d1b2a; color: #e0e6ed; position: fixed; inset: 0; overflow: hidden; display: flex; flex-direction: column; touch-action: none; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+      input[type=text],input[type=password],select,textarea { background: #1b263b; border: 1px solid #778da9; color: #fff; padding: 6px; font: 11px monospace; outline: none; width: 100%; }
+      input[type=text]:focus,input[type=password]:focus,select:focus,textarea:focus { border-color: #00b4d8; }
+      button { background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 7px 10px; font: 11px monospace; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; touch-action: manipulation; width: 100%; transition: background 0.15s ease; }
+      button:hover { background: #0077b6; color: #fff; }
+      button:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(0.8); }
+      .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+      .ai-btn { background: #240046; border-color: #9d4edd; color: #e0aaff; font-weight: bold; }
+      .ai-btn:hover { background: #3c096c; color: #fff; }
+      .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
+      .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
+      label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; width: 100%; }
+      input[type=checkbox],input[type=radio] { cursor: pointer; accent-color: #00b4d8; width: 16px; height: 16px; min-width: 16px; }
+      input[type=color] { border: none; width: 28px; height: 28px; cursor: pointer; background: transparent; padding: 0; }
+      #toolbar { background: #1b263b; border: 1px solid #415a77; padding: 8px; font-size: 11px; z-index: 150; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4); overflow-x: hidden; overflow-y: scroll; max-height: 100vh; scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a; position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 180px; max-width: 85vw; left: 0; border-width: 0 1px 0 0; }
+      #toolbar::-webkit-scrollbar { width: 8px; }
+      #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
+      #toolbar::-webkit-scrollbar-thumb { background: #00b4d8; border: 2px solid #0d1b2a; border-radius: 4px; }
+      .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; position: relative; }
+      .tool-group.ai-accent { border-color: #9d4edd; background: #130924; }
+      .panel-grip { display: none; font: 9px monospace; color: #778da9; background: #1b263b; padding: 2px 4px; text-align: center; cursor: grab; border: 1px dotted #415a77; letter-spacing: 1px; margin-bottom: 2px; }
+      .panel-grip:active { cursor: grabbing; color: #00f5d4; }
+      body.draggable-panels-enabled .tool-group .panel-grip { display: block; }
+      #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
+      #toolbar .row-inline>* { flex: 1; }
+      .cap { font-size: 9.5px; color: #00f5d4; font-weight: bold; letter-spacing: 0.5px; }
+      .cap-ai { color: #e0aaff; font-weight: bold; }
+      .slider-hint { color: #778da9; font-size: 9px; line-height: 1.3; }
+      .directory-input-row { display: flex; align-items: stretch; gap: 5px; width: 100%; }
+      .directory-input-row input { flex: 1 1 auto; min-width: 0; }
+      .directory-input-row button { width: auto; flex: 0 0 auto; padding: 6px 9px; }
+      .region-mode-row { display: flex; align-items: center; gap: 5px; width: 100%; }
+      .region-mode-row>label { flex: 1 1 auto; width: auto; min-width: 0; gap: 4px; white-space: nowrap; }
+      .region-mode-row label:last-of-type { flex: 1.25 1 auto; }
+      .fake-checkbox:disabled { opacity: 1; filter: none; cursor: default; accent-color: #00b4d8; }
+      #sidebar-resizer { display: block; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; left: calc(var(--sw) - 3px); }
+      #sidebar-resizer:hover,#sidebar-resizer.resizing { background: #00b4d8; }
+      #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
+      #viewport { flex: 1; position: relative; overflow: auto; background: #0b132b; scrollbar-color: #415a77 #0d1b2a; touch-action: none; overscroll-behavior: none; margin-left: var(--sw); }
+      #viewport::-webkit-scrollbar { width: 12px; height: 12px; }
+      #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
+      #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
+      #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
+      #world { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; background-image: linear-gradient(to right,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.05) 1px,transparent 1px); background-size: 20px 20px; }
+      #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 2000; background: #1b263b; border: 1px solid #00b4d8; color: #00f5d4; font: 12px monospace; padding: 8px 16px; display: none; pointer-events: none; max-width: 80vw; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+      .view-btn { text-align: left; text-transform: none; padding: 5px 8px; }
+      .view-btn.active { background: #023e8a; border-color: #00f5d4; color: #00f5d4; font-weight: bold; }
+      #selection-box { position: absolute; display: none; pointer-events: none; z-index: 50; border: 1px dashed #00f5d4; background: rgba(0,245,212,.15); }
+      body.menu-hidden #toolbar,body.menu-hidden #sidebar-resizer { display: none; }
+      body.menu-hidden #viewport { margin: 0; }
+      body.menu-hidden #top-bar-controls { display: flex; }
+      @media (max-width:768px) {
+      #viewport { margin: 0; }
+      #sidebar-resizer { display: none; }
+      #toolbar { width: 300px; z-index: 300; }
+      }
+      #timeline-container { position: absolute; top: 50px; left: 50px; width: 800px; height: 55px; z-index: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4px 10px 4px 4px; background: rgba(27,38,59,.85); border: 1px dashed #778da9; box-shadow: 0 4px 12px rgba(0,0,0,.3); cursor: move; touch-action: none; }
+      #timeline-container.hidden { display: none; }
+      .timeline-title { position: absolute; top: 2px; left: 6px; font: 9px monospace; color: #778da9; letter-spacing: 1px; pointer-events: none; }
+      .timeline-axis { position: absolute; bottom: 18px; left: 10px; right: 15px; height: 2px; background: rgba(0,180,216,.5); pointer-events: none; }
+      .timeline-tick { position: absolute; bottom: 18px; width: 1px; height: 8px; background: rgba(0,180,216,.7); pointer-events: none; }
+      .timeline-label { position: absolute; bottom: 2px; transform: translateX(-50%); font: 9px monospace; color: #90e0ef; white-space: nowrap; pointer-events: none; }
+      .timeline-resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 16px; display: flex; align-items: center; justify-content: center; background: rgba(65,90,119,.6); border-left: 1px solid #778da9; cursor: e-resize; font-size: 10px; }
+      #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+      #svg-layer path { pointer-events: stroke; cursor: pointer; }
+      .line-selected { stroke-dasharray: 4,4; animation: dash 1s linear infinite; }
+      .line-label-text { font: 10px monospace; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
+      .node { position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: pre-wrap; word-break: break-word; box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none; }
+      .node.fixed-size { display: block; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
+      .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
+      .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
+      .node.duplicate-node { border: 3px solid #ff2d55 !important; background: #5a1024 !important; box-shadow: 0 0 0 4px rgba(255,45,85,.35), 0 0 18px rgba(255,45,85,.9) !important; }
+      .node-content { line-height: 1.3; white-space: pre-wrap; }
+      .node-content.has-url { color: #90e0ef; text-decoration: underline; }
+      .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
+      .collapse-btn { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:1px solid #061a40; border-radius:50%; background:#168aad; color:#fff; font:bold 16px/1 monospace; cursor:pointer; z-index:28; user-select:none; box-shadow:0 1px 4px rgba(0,0,0,.55); padding:0; }
+      .collapse-btn:hover { filter:brightness(1.2); transform:translateX(-50%) scale(1.08); }
+      .collapse-btn.is-collapsed { background:#e63946; border-color:#7f1d1d; }
+      .node.balls-expanded .collapse-btn { width:30px; height:30px; bottom:-15px; font-size:18px; }
+      .node-resize-handle { display: none; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; z-index: 20; cursor: se-resize; color: #00f5d4; font-size: 12px; line-height: 14px; text-align: right; }
+      .node.selected .node-resize-handle { display: block; }
+      .node-edit-input { width: 100%; height: 100%; min-width: 80px; min-height: 24px; padding: 4px; resize: both; overflow: auto; background: #0d1b2a; border-color: #00f5d4; color: #00f5d4; user-select: text; }
+      .node-edit-ball { position: absolute; top: -5px; left: -5px; width: 12px; height: 12px; background: #ffb703; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-edit-ball:hover { background: #ffea75; transform: scale(1.2); }
+      .node-expand-file-ball { position: absolute; bottom: -7px; left: -7px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; background: #00b4d8; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; font: bold 13px/1 monospace; color: #001219; user-select: none; }
+      .node-expand-file-ball:hover { background: #90e0ef; transform: scale(1.12); }
+      .node-drag-ball { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; background: #00f5d4; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-drag-ball:hover { background: #70ffef; transform: scale(1.2); }
+      .node-arrow-ball { position: absolute; bottom: -5px; right: -5px; width: 12px; height: 12px; background: #9d4edd; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-arrow-ball:hover { background: #c77dff; transform: scale(1.2); }
+      .node.balls-expanded { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,0.4); }
+      .node.balls-expanded .node-edit-ball { width: 28px; height: 28px; top: -14px; left: -14px; background: #ffea75; box-shadow: 0 0 8px rgba(255,183,3,0.8); }
+      .node.balls-expanded .node-expand-file-ball { width: 32px; height: 32px; bottom: -16px; left: -16px; font-size: 16px; background: #90e0ef; box-shadow: 0 0 8px rgba(0,180,216,0.8); }
+      .node.balls-expanded .node-drag-ball { width: 28px; height: 28px; top: -14px; right: -14px; background: #70ffef; box-shadow: 0 0 8px rgba(0,245,212,0.8); }
+      .node.balls-expanded .node-arrow-ball { width: 28px; height: 28px; bottom: -14px; right: -14px; background: #c77dff; box-shadow: 0 0 8px rgba(157,78,221,0.8); }
+      #zoom-controls { display: none; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom,0px)); z-index: 120; flex-direction: column; gap: 6px; }
+      body.touch-mode #zoom-controls { display: flex; }
+      #zoom-controls button { width: 48px; height: 48px; padding: 0; font-size: 22px; line-height: 1; background: rgba(27,38,59,.92); border-color: #00b4d8; color: #00f5d4; border-radius: 6px; }
+      #zoom-controls #zoom-reset-btn { font-size: 11px; }
+      body.touch-mode input[type=text],body.touch-mode input[type=password],body.touch-mode select,body.touch-mode textarea { font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <div id="top-bar-controls"><button id="floating-menu-btn" class="action-btn">☰ Menu</button></div>
+    <div id="toolbar">
+      <div class="tool-group row-inline" data-panel-id="panel-header">
+        <span class="cap" style="text-align:center">☰ MENU</span>
+        <button id="toolbar-hide-btn" class="danger-btn" style="width:auto; padding:4px 8px;">Hide</button>
+      </div>
+      <div class="tool-group" id="active-file-panel" data-panel-id="panel-active-file" style="border-color:#00f5d4">
+        <span class="cap">ACTIVE FILE (Ctrl+S saves to)</span>
+        <div id="active-file-name" style="color:#00f5d4;font-weight:bold;font-size:12px;word-break:break-all;user-select:text;-webkit-user-select:text">(no file linked)</div>
+        <div id="active-file-format" style="color:#90e0ef;font-size:11px">Type: TXT Extended Lines</div>
+        <span class="slider-hint" id="active-file-note">Ctrl+S will ask where to save, using this format.</span>
+      </div>
+      <div class="tool-group ai-accent" id="conceptmap_ai" data-panel-id="panel-gemini" style="padding:6px;overflow:hidden;min-height:0">
+        <div class="panel-grip">≡ AI PANEL</div>
+        <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="cap-ai">✨ AI ASSISTANT</span>
+          <button type="button" id="conceptmap-ai-collapse" class="ai-btn" aria-expanded="false" aria-controls="conceptmap-ai-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
+        </div>
+        <div id="conceptmap-ai-frame-wrap" style="display:none;min-width:0">
+          <iframe id="conceptmap-ai-frame" title="Concept Map AI panel" src="conceptmap_ai.html" style="display:block;width:100%;height:560px;min-height:420px;border:0;background:#130924" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
+        </div>
+      </div>
+    <div class="tool-group" data-panel-id="panel-io">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <button id="io-btn" class="action-btn" title="Open the dedicated import, export, and save manager">Import / Export &amp; Save Options &#8599;</button>
+      <span class="cap" style="margin-top:4px">SAVE FORMAT (Ctrl+S)</span>
+      <label><input type="radio" name="savefmt" value="lines" checked> TXT Extended Lines (default)</label>
+      <label><input type="radio" name="savefmt" value="txt-simple"> TXT Simple</label>
+      <label><input type="radio" name="savefmt" value="txt-indent"> TXT Indent</label>
+      <label><input type="radio" name="savefmt" value="json"> JSON</label>
+      <label><input type="radio" name="savefmt" value="html"> Full HTML</label>
+      <span class="slider-hint">Switches to the format of a file when it is imported; you can change it any time.</span>
+      <span class="slider-hint">Import, export, filename, save-as, connected-graph, bulk-copy, and mobile save tools are grouped in the separate manager.</span>
+      <div id="io-command-proxies" style="display:none!important" aria-hidden="true">
+        <button id="save-btn" type="button">Save as existing name (Ctrl+S)</button>
+        <label for="filename-input">Filename</label><input type="text" id="filename-input" spellcheck="false" autocomplete="off">
+        <button id="save-node-new-file-btn" type="button">Save canvas as new name</button>
+        <button id="save-connected-new-file-btn" type="button">Save connected graph only as new file</button>
+        <details id="bulk-save-options"><summary>Bulk Save Options</summary><button id="resave-all-file-nodes-btn" type="button">Resave all file nodes</button></details>
+        <button id="iphone-save-btn" type="button">Save on iPhone</button>
+        <button id="iphone-load-btn" type="button">Load on iPhone</button>
+        <input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
+        <span id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
+      </div>
+    </div>
+  <div class="tool-group" data-panel-id="panel-add">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <input type="text" id="node-text" placeholder="Box text or URL...">
+    <div class="row-inline">
+      <button id="add-btn">Add Box</button>
+      <button id="add-boxes-btn">Add Boxes</button>
+
+    </div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-interaction">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">INTERACTION MODE</span>
+    <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Drag Node/s</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows</label>
+    <span class="cap" style="margin-top:6px">DOUBLE-CLICK / LINK ACTION</span>
+    <span class="slider-hint">URL links always open in a new window. These settings control linked files.</span>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="new"> Open file in new window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="current"> Open file in current window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="expand"> Expand file in current window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="rotateFlip"> Rotate and or flip</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="openEmptySpace"> Open file in empty space</label>
+    <span class="cap" style="margin-top:6px">EDIT MODE</span>
+    <label><input type="radio" name="em" data-k="editMode" value="editInstead"> Edit instead of goto link</label>
+    <label><input type="radio" name="em" data-k="editMode" value="spot"> Edit click spot (ball)</label>
+    <span class="cap" style="margin-top:6px">SELECTION & DRAG OPTIONS</span>
+    <label><input type="checkbox" data-k="dragGraphBall" id="drag-graph-ball-chk" checked> Drag Graph (Ball)</label>
+    <label><input type="checkbox" data-k="singleTouchExpand" id="single-touch-expand-chk" checked> Single touch or click expand balls</label>
+    <div class="region-mode-row" aria-label="Region selection options">
+      <label><input type="checkbox" id="select-region-chk"> Select Region</label>
+      <label title="Hold Ctrl and drag on empty canvas to select a region."><input type="checkbox" id="ctrl-region-indicator" class="fake-checkbox" checked disabled aria-label="Ctrl plus Select Region indicator"> Ctrl+ Select Region</label>
+    </div>
+    <span class="cap" style="margin-top:6px">FILE DIRECTORY</span>
+    <div class="directory-input-row">
+      <input type="text" data-k="fileDir" id="file-dir" placeholder="Paste folder path here">
+      <button type="button" id="copy-dir-btn" title="Copy the folder path so you can paste it into the folder chooser">Copy</button>
+    </div>
+    <button id="pick-dir-btn">Select Directory</button>
+    <span class="slider-hint" id="pick-dir-status">Choose a folder with Select Directory. If you see “Cross origin subframes are not allowed,” download this HTML and open the .html file directly in a browser tab or window—not in an embedded preview. Browser security blocks folder pickers inside cross-origin frames.</span>
+  </div>
+  <div class="tool-group" data-panel-id="panel-views">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">VIEW HISTORY (nested views)</span>
+    <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
+    <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
+  </div>
+  <div class="tool-group row-inline" data-panel-id="panel-lock">
+    <div class="panel-grip" style="width:100%">≡ DRAG SUB-PANEL</div>
+    <button id="lock-btn" class="action-btn">Lock View</button>
+    <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
+  </div>
+  <div class="tool-group" data-panel-id="panel-fit">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
+    <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
+    <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
+  </div>
+      <div class="tool-group" data-panel-id="panel-line-style">
+        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+        <label>Type: <select id="arrow-style"><option value="end">Arrow (-&gt;)</option><option value="none">Line (--)</option></select>
+        </label>
+        <label>Width: <select id="line-width">
+          <option value="1" selected>Thin (1px)</option><option value="2">Medium (2px)</option>
+          <option value="4">Thick (4px)</option><option value="6">Extra Thick (6px)</option>
+        </select>
+      </label>
+      <div class="row-inline"><label>Color:</label><input type="color" id="line-color" value="#00b4d8"></div>
+    </div>
+    <div class="tool-group" id="line-controls-group" data-panel-id="panel-selected-line" style="display:none;border-color:#00f5d4">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <label>Line Label: <input type="text" id="selected-line-label" placeholder="Enter label..."></label>
+      <button id="delete-line-btn" class="danger-btn">Delete Line</button>
+    </div>
+    <div class="tool-group" data-panel-id="panel-history">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <div class="row-inline">
+        <button id="undo-btn" disabled>Undo</button>
+        <button id="redo-btn" disabled>Redo</button>
+      </div>
+    </div>
+    <div class="tool-group" data-panel-id="panel-clear">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <button id="clear-btn" class="danger-btn">Clear Map</button>
+    </div>
+<div class="tool-group" id="side-panel" data-panel-id="panel-side" style="padding:0;overflow:hidden;min-height:0">
+      <div class="panel-grip">≡ SIDE FUNCTIONS</div>
+      <iframe id="side-frame" title="Concept Map side functions" src="conceptmap_sidefunctions.html" style="display:block;width:100%;height:300px;border:0;background:#1b263b"></iframe>
+    </div>
+    <div class="tool-group" id="display-paragraph-panel" data-panel-id="panel-display-paragraph" style="padding:0;overflow:hidden;min-height:0;border-color:#90e0ef">
+      <div class="panel-grip">≡ DISPLAY PARAGRAPH</div>
+      <iframe id="display-paragraph-frame" title="Concept Map Display Paragraph" src="conceptmap_displayparagraph.html" style="display:block;width:100%;height:490px;border:0;background:#1b263b" loading="eager"></iframe>
+    </div>
+      <div class="tool-group" id="conceptmap-code-panel" data-panel-id="panel-code-explorer" style="padding:6px;overflow:hidden;min-height:0;border-color:#00b4d8;background:#0b1b2b">
+        <div class="panel-grip">≡ CODE STRUCTURE PANEL</div>
+        <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="cap" style="color:#00f5d4">⌘ CODE STRUCTURE EXPLORER</span>
+          <button type="button" id="conceptmap-code-collapse" class="action-btn" aria-expanded="false" aria-controls="conceptmap-code-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
+        </div>
+        <div id="conceptmap-code-frame-wrap" style="display:none;min-width:0">
+          <iframe id="conceptmap-code-frame" title="Concept Map Code Structure Explorer" src="conceptmap_code.html" style="display:block;width:100%;height:720px;min-height:520px;border:0;background:#0d1b2a" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
+        </div>
+      </div>
+  </div>
+  <div id="sidebar-resizer"></div>
+  <div id="viewport">
+    <div id="world">
+      <div id="selection-box"></div>
+      <div id="timeline-container" class="hidden">
+        <span class="timeline-title">1-YEAR TIMELINE</span>
+        <div class="timeline-axis"></div>
+        <div class="timeline-resize-handle">⋮</div>
+      </div>
+      <svg id="svg-layer">
+        <defs></defs>
+        <g id="lines-group"></g>
+        <g id="labels-group"></g>
+        <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none"/>
+      </svg>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="zoom-controls">
+    <button id="zoom-in-btn" aria-label="Zoom in">+</button>
+    <button id="zoom-reset-btn" aria-label="Reset zoom">100%</button>
+    <button id="zoom-out-btn" aria-label="Zoom out">&minus;</button>
+  </div>
+<script>const $=id=>document.getElementById(id);
+const $$=sel=>[...document.querySelectorAll(sel)];
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));
+const uid=()=>'id_'+Math.random().toString(36).slice(2,11);
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CHAIN={up:'#ffb703',down:'#ff5d8f',both:'#ffffff'};
+const viewport=$('viewport'),world=$('world'),toolbar=$('toolbar'),svgLayer=$('svg-layer');
+const svgDefs=svgLayer.querySelector('defs'),linesGroup=$('lines-group'),labelsGroup=$('labels-group');
+const liveArrow=$('live-drag-arrow'),selBox=$('selection-box'),timelineEl=$('timeline-container');
+const tlHandle=timelineEl.querySelector('.timeline-resize-handle'),sidebarResizer=$('sidebar-resizer');
+const DEFAULTS={
+nodes:[],lines:[],
+panelOrder:[
+"panel-header",
+"panel-active-file",
+"panel-gemini",
+"panel-io",
+"panel-add",
+"panel-interaction",
+"panel-views",
+"panel-lock",
+"panel-fit",
+"panel-line-style",
+"panel-selected-line",
+"panel-history",
+"panel-clear",
+"panel-side",
+"panel-display-paragraph",
+"panel-code-explorer"
+],
+draggablePanels:false,
+dragGraphBall:true,
+singleTouchExpand:true,
+showTimeline:false,
+showUrls:false,
+timelinePos:{x:50,y:50,width:800},
+sidebarWidth:320,
+fontMin:12,
+fontMax:14,
+maxLinksBound:1,
+colorDist1:true,
+colorDist1Hex:"#ffb703",
+colorDist2:false,
+colorDist2Hex:"#fb8500",
+colorDist3:false,
+colorDist3Hex:"#ff006e",
+maxDistanceLimit:10,
+inputMode:"desktop",
+autoSizeAll:true,
+interactionMode:"drag",
+linkOpenMode:"current", 
+editMode:"spot",
+fileDir:"",
+touchDragThreshold:10,
+touchHitPad:25,
+touchHoldMs:100,
+touchIgnoreExtra:true,
+touchAutoClear:true,
+aiProvider:"gemini",
+aiModel:"gemini-3.8-flash"
+};
+const TOUCH_KEYS=['touchDragThreshold','touchHitPad','touchHoldMs','touchIgnoreExtra','touchAutoClear'];
+let state=structuredClone(DEFAULTS);
+let hist=[],histT=[],histIdx=-1;
+let selected=new Set(),selectedLineId=null,editingId=null;
+let isLocked=false,lock=null;
+let duplicateNodeIds=new Set(),duplicateGroups=[],dupDrag=false,chainOn=true;
+let fitMode=null;
+let zoom=1;
+const MIN_ZOOM=0.3,MAX_ZOOM=3;
+let els=new Map();
+let view={links:new Map(),hidden:new Set(),lineDist:new Map(),chain:null};
+const mode=()=>state.interactionMode;
+const nodeById=id=>state.nodes.find(n=>n.id===id);
+const isTouchActive=()=>state.inputMode==='touch'||
+(state.inputMode==='auto'&&('ontouchstart'in window||navigator.maxTouchPoints>0));
+function parseTextAndUrl(input){
+const url=(input.match(/https?:\/\/[^\s]+/i)||[])[0];
+return url?{text:input.replace(url,'').trim()||url,url}:{text:input.trim()||'Node',url:null};
+}
+const normalizeLines=lines=>lines.map(l=>
+l.arrow==='start'?{...l,from:l.to,to:l.from,arrow:'end'}:l.arrow==='none'?l:{...l,arrow:'end'});
+function updateHistBtns(){
+$('undo-btn').disabled=histIdx<=0;
+$('redo-btn').disabled=histIdx>=hist.length-1;
+}
+function saveState(){
+hist=hist.slice(0,histIdx+1);
+histT=histT.slice(0,histIdx+1);
+hist.push(JSON.stringify(state));
+histT.push(typeof saveTarget!=='undefined'?saveTarget:null);
+if(hist.length>50){hist.shift();histT.shift();}else histIdx++;
+updateHistBtns();
+}
+function restore(i){
+if(i<0||i>=hist.length)return;
+histIdx=i;
+state=JSON.parse(hist[i]);
+setSaveTarget(histT[i]||null,true,true);
+selected.clear();selectedLineId=null;editingId=null;
+applyPanelOrder();
+render();updateHistBtns();
+}
+$('undo-btn').onclick=()=>restore(histIdx-1);
+$('redo-btn').onclick=()=>restore(histIdx+1);
+let saveTarget=null;
+let saveFormat='lines';
+const FORMAT_LABELS={lines:'TXT Extended Lines','txt-simple':'TXT Simple','txt-indent':'TXT Indent',json:'JSON',html:'Full HTML'};
+function updateActiveFileUI(){
+const label=FORMAT_LABELS[saveFormat]||saveFormat;
+const box=$('active-file-name');
+if(box){
+box.textContent=saveTarget?saveTarget.name:'(no file linked)';
+box.title=saveTarget?saveTarget.name:'';
+}
+const fmtBox=$('active-file-format');
+if(fmtBox)fmtBox.textContent='Type: '+label;
+const note=$('active-file-note');
+if(note)note.textContent=saveTarget?'Ctrl+S overwrites this file in this format.':'Ctrl+S will ask where to save, using this format.';
+$$('input[name="savefmt"]').forEach(r=>{r.checked=r.value===saveFormat;});
+}
+function setSaveTarget(t,syncFilename=true,fromHistory=false,skipHist=false){
+saveTarget=t||null;
+if(saveTarget&&FORMAT_LABELS[saveTarget.format])saveFormat=saveTarget.format;
+if(!fromHistory){
+try{if(typeof views!=='undefined'&&views[activeView])views[activeView].target=saveTarget;}catch(err){}
+if(!skipHist&&histIdx>=0)histT[histIdx]=saveTarget;
+}
+const filenameBox=$('filename-input');
+if(syncFilename&&filenameBox)filenameBox.value=saveTarget?.name||'';
+const targetLabel=$('save-target-label');
+if(targetLabel)targetLabel.textContent=saveTarget
+?`Saves to: ${saveTarget.name} (${saveTarget.format})`
+:'No file linked yet. Ctrl+S will ask where to save.';
+updateActiveFileUI();
+try{if(saveTarget&&saveTarget.handle&&typeof postIo==='function')postIo({type:'cm-save-handle',handle:saveTarget.handle,name:saveTarget.name});}catch(err){}
+try{if(typeof scheduleIoSync==='function')scheduleIoSync();}catch(err){}
+}
+$('filename-input').addEventListener('change',()=>{
+const value=$('filename-input').value.trim();
+if(!value)return;
+const old=saveTarget||{};
+setSaveTarget({...old,name:value},false);
+});
+
+function serializeLines(s){
+  const out = ['VERSION: 2.0_METADATA', `CREATED: ${new Date().toISOString()}`, `NODES: ${s.nodes.length}`, `LINES: ${s.lines.length}`, '--- NODES ---'];
+  s.nodes.forEach(n => {
+    const escapedText = (n.text || '').replace(/\r?\n/g, '\\n');
+    out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${escapedText}${n.url ? ` | URL: ${n.url}` : ''}${n.size ? ` | size: ${n.size}` : ''}${n.collapsed ? ' | collapsed: true' : ''}`);
+  });
+  out.push('--- CONNECTIONS ---');
+  s.lines.forEach(l => out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`));
+  return out.join('\n');
+}
+
+function serializeSimple(s){
+const out=s.nodes.map(n=>`${n.id} ${n.url ? `${n.text.replace(/\r?\n/g,' ')} ${n.url}` : n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x)} ${Math.round(n.y)}`);
+s.lines.forEach(l=>{
+const rev=l.arrow==='start';
+out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
+});
+return out.join('\n');
+}
+function serializeIndent(s){
+const kids=new Map(),parentCount=new Map();
+s.nodes.forEach(n=>{kids.set(n.id,[]);parentCount.set(n.id,0);});
+s.lines.forEach(l=>{
+const[p,c]=l.arrow==='start'?[l.to,l.from]:[l.from,l.to];
+if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parentCount.set(c,parentCount.get(c)+1);}
+});
+let roots=s.nodes.filter(n=>parentCount.get(n.id)===0);
+if(!roots.length)roots=[...s.nodes];
+roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));
+const seen=new Set(),out=[];
+const walk=(id,lvl)=>{
+if(seen.has(id))return;
+seen.add(id);
+const n=s.nodes.find(x=>x.id===id);
+if(!n)return;
+out.push('    '.repeat(lvl)+(n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')));
+(kids.get(id)||[]).forEach(c=>walk(c,lvl+1));
+};
+roots.forEach(r=>walk(r.id,0));
+s.nodes.forEach(n=>walk(n.id,0));
+return out.join('\n');
+}
+function getActiveSaveFormat(){return FORMAT_LABELS[saveFormat]?saveFormat:'lines';}
+$$('input[name="savefmt"]').forEach(r=>r.addEventListener('change',()=>{
+if(!r.checked)return;
+saveFormat=r.value;
+if(saveTarget)setSaveTarget({...saveTarget,format:saveFormat},false);
+else{updateActiveFileUI();scheduleIoSync();}
+}));
+function serializeFor(fmt,src=state){
+if(fmt==='lines')return serializeLines(src);
+if(fmt==='txt-simple')return serializeSimple(src);
+if(fmt==='txt-indent')return serializeIndent(src);
+if(fmt==='html')return`<!DOCTYPE html><html><head><title>Concept Map Export</title></head><body><script>const mapData = ${JSON.stringify(src, null, 2)};<\/script></body></html>`;
+return JSON.stringify(src,null,2);
+}
+function graphFormat(text){
+if(/^\s*<!doctype html|^\s*<html/i.test(text.trim()))return'html';
+if(text.trim().startsWith('{')||text.trim().startsWith('['))return'json';
+if(/^VERSION:\s*2\.0_METADATA\s*$/m.test(text)||/--- NODES ---/.test(text))return'lines';
+return/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)?'txt-simple':'txt-indent';
+}
+const SAVE_TYPES={
+json:{description:'Concept map JSON',accept:{'application/json':['.json']}},
+html:{description:'Concept map HTML',accept:{'text/html':['.html','.htm']}},
+lines:{description:'Extended lines',accept:{'text/plain':['.txt']}},
+'txt-simple':{description:'TXT simple',accept:{'text/plain':['.txt']}},
+'txt-indent':{description:'TXT indent',accept:{'text/plain':['.txt']}}
+};
+const defaultNameFor=fmt=>fmt==='json'?'concept_map.json':fmt==='html'?'concept_map.html':'concept_map.txt';
+async function writeHandle(h,content){
+let perm=await h.queryPermission({mode:'readwrite'});
+if(perm!=='granted')perm=await h.requestPermission({mode:'readwrite'});
+if(perm!=='granted')throw new Error('write permission was not granted');
+const w=await h.createWritable();
+await w.write(content);
+await w.close();
+}
+let saving=false;
+async function saveCurrent(){
+if(saving)return;
+saving=true;
+try{
+const fmt=getActiveSaveFormat();
+const t=saveTarget,content=serializeFor(fmt);
+if(t&&t.handle){
+await writeHandle(t.handle,content);
+toast('Saved '+t.name);
+return;
+}
+const name=t?t.name:defaultNameFor(fmt);
+if(!window.showSaveFilePicker){
+const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob([content],{type:'text/plain'}));
+a.download=name;a.click();URL.revokeObjectURL(a.href);
+toast('Downloaded '+name);
+return;
+}
+const picked=await window.showSaveFilePicker({suggestedName:name,types:[SAVE_TYPES[fmt]||SAVE_TYPES.lines]});
+await writeHandle(picked,content);
+setSaveTarget({handle:picked,name:picked.name,format:fmt});
+toast('Saved '+picked.name);
+}catch(err){
+if(err&&err.name!=='AbortError')toast('Save failed: '+(err.message||err));
+}finally{saving=false;}
+}
+function connectedGraphFrom(nodeId){
+const byId=new Map(state.nodes.map(n=>[n.id,n])),seen=new Set([nodeId]),queue=[nodeId];
+while(queue.length){const id=queue.shift();state.lines.forEach(l=>{let other=null;if(l.from===id)other=l.to;else if(l.to===id)other=l.from;if(other!==null&&byId.has(other)&&!seen.has(other)){seen.add(other);queue.push(other);}});}
+const nodes=state.nodes.filter(n=>seen.has(n.id));
+const ids=new Set(nodes.map(n=>n.id));
+return {...state,nodes,lines:state.lines.filter(l=>ids.has(l.from)&&ids.has(l.to))};
+}
+async function saveGraphAsNewFile(connectedOnly=false){
+if(saving)return;
+if(selected.size!==1){alert('Select exactly one node first. Its text will name the new file.');return;}
+const node=state.nodes.find(n=>n.id===[...selected][0]);
+if(!node)return;
+saving=true;
+try{
+const fmt=getActiveSaveFormat();
+const original=(node.text||'concept_map').trim().replace(/\.txt$/i,'').replace(/[\\/:*?"<>|]/g,'').trim()||'concept_map';
+const existingNames=new Set(state.nodes.filter(n=>n.id!==node.id).map(n=>fileNameFor(n.text).toLowerCase()));
+const inDirectory=async name=>{if(!dirHandle)return false;try{await dirHandle.getFileHandle(name);return true;}catch(err){if(err.name==='NotFoundError')return false;throw err;}};
+let candidate=original,number=1,filename=fileNameFor(candidate);
+if(dirHandle){
+let permission=await dirHandle.queryPermission({mode:'readwrite'});
+if(permission!=='granted')permission=await dirHandle.requestPermission({mode:'readwrite'});
+if(permission!=='granted')throw new Error('Write permission for the selected directory was not granted.');
+while(existingNames.has(filename.toLowerCase())||await inDirectory(filename)){number++;candidate=original+number;filename=fileNameFor(candidate);}
+node.text=candidate;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+const handle=await dirHandle.getFileHandle(filename,{create:true});
+await writeHandle(handle,serializeFor(fmt,graph));
+}else if(window.showSaveFilePicker){
+while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
+const picked=await window.showSaveFilePicker({suggestedName:filename,types:[SAVE_TYPES[fmt]||SAVE_TYPES.lines],excludeAcceptAllOption:false});
+const pickedName=picked.name||filename;
+const pickedBase=pickedName.replace(/\.txt$/i,'');
+node.text=pickedBase;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+await writeHandle(picked,serializeFor(fmt,graph));
+}else{
+while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
+node.text=candidate;
+const graph=connectedOnly?connectedGraphFrom(node.id):state;
+const content=serializeFor(fmt,graph),file=new File([content],filename,{type:'text/plain'});
+if(!navigator.share||navigator.canShare&&!navigator.canShare({files:[file]}))throw new Error('This browser cannot create a shareable TXT file. Use Save on iPhone or a browser that supports file saving.');
+await navigator.share({files:[file],title:filename});
+toast('Prepared '+filename+'. iOS does not let the page check whether that name already exists in Files.');
+}
+saveState();render();renderViews();
+if(dirHandle||window.showSaveFilePicker)toast((connectedOnly?'Saved connected graph: ':'Saved canvas: ')+filename);
+}catch(err){if(err&&err.name!=='AbortError')toast('Could not save new file: '+(err.message||err));}
+finally{saving=false;}
+}
+async function saveNodeAsNewFile(){return saveGraphAsNewFile(false);}
+async function saveConnectedGraphAsNewFile(){return saveGraphAsNewFile(true);}
+$('save-node-new-file-btn').onclick=saveNodeAsNewFile;
+$('save-connected-new-file-btn').onclick=saveConnectedGraphAsNewFile;
+async function resaveAllFileNodesInCanvas(){
+if(saving)return;
+if(!dirHandle){alert('Select the source directory first. This feature needs folder access to create a subfolder and copy the files.');return;}
+saving=true;
+try{
+let permission=await dirHandle.queryPermission({mode:'readwrite'});
+if(permission!=='granted')permission=await dirHandle.requestPermission({mode:'readwrite'});
+if(permission!=='granted')throw new Error('Write permission for the selected directory was not granted.');
+const fileNodes=[],seenNames=new Set(),missing=[];
+for(const node of state.nodes){
+  const filename=fileNameFor(node.text);
+  if(!filename||seenNames.has(filename.toLowerCase()))continue;
+  try{await dirHandle.getFileHandle(filename);fileNodes.push({node,filename});seenNames.add(filename.toLowerCase());}
+  catch(err){if(err.name==='NotFoundError')missing.push(filename);else throw err;}
+}
+if(!fileNodes.length){toast('No file nodes found: no canvas node names match TXT files in the selected directory.');return;}
+let folderName='new',suffix=1,destination=null;
+while(!destination){
+  try{await dirHandle.getDirectoryHandle(folderName);suffix++;folderName='new'+suffix;}
+  catch(err){if(err.name!=='NotFoundError')throw err;destination=await dirHandle.getDirectoryHandle(folderName,{create:true});}
+}
+let saved=0,failed=[];
+for(const item of fileNodes){
+  try{
+    const sourceHandle=await dirHandle.getFileHandle(item.filename);
+    const sourceFile=await sourceHandle.getFile();
+    const contents=await sourceFile.arrayBuffer();
+    const destinationHandle=await destination.getFileHandle(item.filename,{create:true});
+    await writeHandle(destinationHandle,contents);
+    saved++;
+  }catch(err){failed.push(item.filename+': '+(err.message||err));}
+}
+state.fileSubfolder=folderName;
+saveState();
+clearFileAvailability();
+const message=`Copied ${saved} of ${fileNodes.length} original files unchanged into subfolder "${folderName}". Original filenames and contents were preserved; the current canvas graph was not written over them.`+(missing.length?'\nCanvas nodes with no matching source file were skipped: '+missing.join(', '):'')+(failed.length?'\nFailed: '+failed.join(' | '):'');
+toast(message);
+if(failed.length||missing.length)alert(message);
+}catch(err){if(err&&err.name!=='AbortError')toast('Could not copy file nodes: '+(err.message||err));}
+finally{saving=false;}
+}
+$('resave-all-file-nodes-btn').onclick=resaveAllFileNodesInCanvas;
+async function saveOnIphone(){
+if(saving)return;
+saving=true;
+try{
+const fmt=getActiveSaveFormat();
+const t=saveTarget,content=serializeFor(fmt);
+const name=t?.name||'concept_map.txt';
+const mime=fmt==='json'?'application/json':fmt==='html'?'text/html':'text/plain';
+const file=new File([content],name,{type:mime});
+if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+await navigator.share({files:[file],title:name});
+toast('Choose Save to Files in the iPhone share sheet');
+}else{
+const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+toast('File prepared. Check Downloads or the browser share options.');
+}
+}catch(err){if(err&&err.name!=='AbortError')toast('iPhone save failed: '+(err.message||err));}
+finally{saving=false;}
+}
+function loadOnIphone(){ $('iphone-load-input').click(); }
+$('iphone-save-btn').onclick=saveOnIphone;
+$('iphone-load-btn').onclick=loadOnIphone;
+function loadMapText(raw,name,mobile){
+const t=raw.trim();
+if(!t)throw new Error('The selected file is empty.');
+let fmt;
+if(/^\s*<!doctype html|^\s*<html/i.test(t)){
+const m=t.match(/const mapData = (\{.*?\});/s);
+if(!m)throw new Error('No embedded concept-map JSON was found in this HTML file.');
+const data=JSON.parse(m[1]);
+if(!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('HTML does not contain valid map data.');
+applyImportedJson(data);fmt='html';
+}else if(t.startsWith('{')||t.startsWith('[')){
+const data=JSON.parse(t);
+if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error((mobile?'JSON file':'JSON')+' does not contain a concept map with nodes and lines.');
+applyImportedJson(data);fmt='json';
+}else{
+const parsed=parseGraphText(raw);
+if(!parsed.nodes.length)throw new Error(mobile?'No map nodes were found. Make sure this is an extended-lines, simple TXT, or indented TXT map.':'No map nodes were found in this TXT file.');
+state.nodes=parsed.nodes;state.lines=normalizeLines(parsed.lines||[]);afterExternalChange();fmt=graphFormat(raw);
+}
+setSaveTarget({handle:null,name,format:fmt});
+render();renderViews();
+}
+$('iphone-load-input').addEventListener('change',async e=>{
+const file=e.target.files?.[0];if(!file)return;
+try{loadMapText(await file.text(),file.name,true);toast('Loaded '+file.name);}
+catch(err){alert('Could not load this map: '+(err.message||err));}
+finally{e.target.value='';}
+});
+$('save-btn').onclick=saveCurrent;
+window.addEventListener('keydown',e=>{
+if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='s'){
+e.preventDefault();
+saveCurrent();
+}
+});
+window.addEventListener('keydown',e=>{
+if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.isContentEditable||editingId!==null)return;
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey){
+e.preventDefault();
+if(histIdx>0)restore(histIdx-1);
+return;
+}
+if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){
+e.preventDefault();
+if(histIdx<hist.length-1)restore(histIdx+1);
+return;
+}
+if(e.key==='Delete'||e.key==='Backspace'){
+e.preventDefault();
+let changed=false;
+if(selectedLineId){
+state.lines=state.lines.filter(l=>l.id!==selectedLineId);
+selectedLineId=null;
+changed=true;
+}
+if(selected.size>0&&!isLocked){
+state.nodes=state.nodes.filter(n=>!selected.has(n.id));
+state.lines=state.lines.filter(l=>!selected.has(l.from)&&!selected.has(l.to));
+selected.clear();
+changed=true;
+}
+if(changed){saveState();render();}
+}
+});
+const dir=l=>l.arrow==='start'?[l.to,l.from]:[l.from,l.to];
+const edges=l=>(l.arrow==='end'||l.arrow==='start')?[dir(l)]:[[l.from,l.to],[l.to,l.from]];
+function bfs(starts,up=false){
+const dist=new Map(starts.map(id=>[id,0])),lineDist=new Map(),queue=[...starts];
+while(queue.length){
+const cur=queue.shift(),d=dist.get(cur);
+for(const l of state.lines)for(const e of edges(l)){
+const[from,to]=up?[e[1],e[0]]:e;
+if(from!==cur)continue;
+if(!(lineDist.get(l.id)<=d+1))lineDist.set(l.id,d+1);
+if(!dist.has(to)){dist.set(to,d+1);queue.push(to);}
+}
+}
+return{dist,lineDist};
+}
+function componentOf(start){
+const seen=new Set([start]),queue=[start];
+while(queue.length){
+const cur=queue.shift();
+state.lines.forEach(l=>[[l.from,l.to],[l.to,l.from]].forEach(([a,b])=>{
+if(a===cur&&!seen.has(b)){seen.add(b);queue.push(b);}
+}));
+}
+return seen;
+}
+function hiddenIds(){
+if(isLocked&&lock)return lock.hidden;
+const hide=new Set(),kids=new Map(),parents=new Map(),all=new Set(state.nodes.map(n=>n.id));
+state.lines.forEach(l=>{const[p,c]=dir(l);if(!all.has(p)||!all.has(c))return;kids.set(p,[...(kids.get(p)||[]),c]);parents.set(c,[...(parents.get(c)||[]),p]);});
+// A collapse hides only descendants exclusive to this branch. Shared descendants
+// and any path that cycles back to the collapsed node remain visible.
+state.nodes.filter(n=>n.collapsed).forEach(root=>{
+ const candidate=new Set(),q=[...(kids.get(root.id)||[])];
+ while(q.length){const id=q.pop();if(id===root.id||candidate.has(id))continue;candidate.add(id);(kids.get(id)||[]).forEach(c=>{if(c!==root.id&&!candidate.has(c))q.push(c);});}
+ if(!candidate.size)return;
+ // Find candidate nodes that can return to the root through a directed cycle.
+ const cycle=new Set(),back=[...(parents.get(root.id)||[])];
+ while(back.length){const id=back.pop();if(!candidate.has(id)||cycle.has(id))continue;cycle.add(id);(parents.get(id)||[]).forEach(p=>{if(candidate.has(p)&&!cycle.has(p))back.push(p);});}
+ // Any descendant with an incoming edge from outside this branch is shared.
+ const visible=new Set(cycle),vq=[...cycle];
+ candidate.forEach(id=>{if((parents.get(id)||[]).some(p=>p!==root.id&&!candidate.has(p))){if(!visible.has(id)){visible.add(id);vq.push(id);}}});
+ // Keep everything downstream of shared or cyclic nodes visible too.
+ while(vq.length){const id=vq.pop();(kids.get(id)||[]).forEach(c=>{if(candidate.has(c)&&!visible.has(c)){visible.add(c);vq.push(c);}});}
+ candidate.forEach(id=>{if(!visible.has(id))hide.add(id);});
+});
+if(selected.size&&state.maxDistanceLimit<10){
+const{dist}=bfs([...selected]);
+state.nodes.forEach(n=>{const d=dist.get(n.id);if(d===undefined||d>state.maxDistanceLimit)hide.add(n.id);});
+}
+return hide;
+}
+function nodeFont(id){
+const n=view.links.get(id)||0,{fontMin:lo,fontMax:hi,maxLinksBound:max}=state;
+return n<=1?lo:n>=max?hi:Math.round(lo+(n-1)/(max-1)*(hi-lo));
+}
+function toWorld(cx,cy){
+const r=world.getBoundingClientRect();
+return{x:(cx-r.left)/zoom,y:(cy-r.top)/zoom};
+}
+function rect(n){
+const el=els.get(n.id);
+return el?{x:el.offsetLeft,y:el.offsetTop,width:el.offsetWidth,height:el.offsetHeight}:{x:n.x,y:n.y,width:60,height:20};
+}
+const center=r=>({x:r.x+r.width/2,y:r.y+r.height/2});
+function edgePoint(r,to){
+const c=center(r),dx=to.x-c.x,dy=to.y-c.y;
+const t=Math.min(r.width/2/Math.abs(dx),r.height/2/Math.abs(dy),1);
+return{x:c.x+dx*t,y:c.y+dy*t};
+}
+const visibleNodes=()=>state.nodes.filter(n=>els.has(n.id));
+const inside=(p,r)=>p.x>=r.x&&p.x<=r.x+r.width&&p.y>=r.y&&p.y<=r.y+r.height;
+function nearNode(p,pad){
+let best=null,bestD=Infinity;
+visibleNodes().forEach(n=>{
+const r=rect(n);
+const d=Math.hypot(p.x-clamp(p.x,r.x,r.x+r.width),p.y-clamp(p.y,r.y,r.y+r.height));
+if(d<=pad&&d<bestD){bestD=d;best=n;}
+});
+return best;
+}
+function closestNode(p,maxDist){
+let best=null,bestD=Infinity;
+visibleNodes().forEach(n=>{
+const d=Math.hypot(center(rect(n)).x-p.x,center(rect(n)).y-p.y);
+if(d<bestD&&d<=maxDist){bestD=d;best=n;}
+});
+return best;
+}
+function findBestEmptyDirection(node,allNodes){
+const angles=[0,Math.PI/4,Math.PI/2,3*Math.PI/4,Math.PI,5*Math.PI/4,3*Math.PI/2,7*Math.PI/4];
+let bestAngle=0;
+let maxMinDist=-1;
+angles.forEach(angle=>{
+const dirX=Math.cos(angle);
+const dirY=Math.sin(angle);
+let minDist=Infinity;
+allNodes.forEach(other=>{
+if(other.id===node.id)return;
+const ox=other.x-node.x;
+const oy=other.y-node.y;
+const dist=Math.hypot(ox,oy);
+if(dist===0)return;
+const dot=(ox*dirX+oy*dirY)/dist;
+if(dot>0.2){
+if(dist<minDist)minDist=dist;
+}
+});
+if(minDist>maxMinDist){
+maxMinDist=minDist;
+bestAngle=angle;
+}
+});
+return bestAngle;
+}
+function findEmptySpaceForGraph(){
+if(!state.nodes.length)return{x:150,y:150};
+let maxX=0;
+state.nodes.forEach(n=>{
+if(n.x>maxX)maxX=n.x;
+});
+return{x:maxX+350,y:150};
+}
+function arrangeGrid(nodes,r){
+if(!nodes.length)return;
+const sizes=nodes.map(n=>rect(n)),maxW=Math.max(...sizes.map(s=>s.width)),maxH=Math.max(...sizes.map(s=>s.height));
+let cols=1,best=-Infinity;
+for(let c=1;c<=nodes.length;c++){
+const s=Math.min(r.width/c/maxW,r.height/Math.ceil(nodes.length/c)/maxH);
+if(s>best+1e-9){best=s;cols=c;}
+}
+const cw=r.width/cols,ch=r.height/Math.ceil(nodes.length/cols);
+nodes.forEach((n,i)=>{
+n.x=Math.max(0,Math.round(r.x+(i%cols)*cw+Math.max(0,(cw-sizes[i].width)/2)));
+n.y=Math.max(0,Math.round(r.y+Math.floor(i/cols)*ch+Math.max(0,(ch-sizes[i].height)/2)));
+});
+}
+function arrangeSequence(nodes,r){
+if(!nodes.length)return;
+const sizes=nodes.map(n=>rect(n));
+const spanX=Math.max(0,r.width-Math.max(...sizes.map(s=>s.width)));
+const spanY=Math.max(0,r.height-Math.max(...sizes.map(s=>s.height)));
+nodes.forEach((n,i)=>{
+const t=nodes.length>1?i/(nodes.length-1):0;
+n.x=Math.max(0,Math.round(r.x+t*spanX));
+n.y=Math.max(0,Math.round(r.y+t*spanY));
+});
+}
+function collapseFileGraph(anchor){
+const expansion=anchor.fileExpansion;
+if(!expansion)return false;
+const nodeIds=new Set(expansion.nodeIds||[]);
+const lineIds=new Set(expansion.lineIds||[]);
+state.nodes=state.nodes.filter(n=>!nodeIds.has(n.id));
+state.lines=state.lines.filter(l=>!lineIds.has(l.id)&&!nodeIds.has(l.from)&&!nodeIds.has(l.to));
+nodeIds.forEach(id=>selected.delete(id));
+delete anchor.fileExpansion;
+return true;
+}
+function insertFileGraph(anchor,parsed,placement=state.linkOpenMode){
+if(!parsed?.nodes?.length||anchor.fileExpansion)return false;
+if(placement==='new'||placement==='current')placement='expand';
+const target=parsed.nodes.find(x=>x.text.trim().toLowerCase()===anchor.text.trim().toLowerCase())||parsed.nodes[0];
+const idMap=new Map(),nodeIds=[],lineIds=[];
+const addNode=node=>{state.nodes.push(node);nodeIds.push(node.id);};
+const addLine=line=>{state.lines.push(line);lineIds.push(line.id);};
+if(placement==='openEmptySpace'){
+const empty=findEmptySpaceForGraph(),rootId=uid();
+const minX=Math.min(...parsed.nodes.map(x=>x.x));
+const minY=Math.min(...parsed.nodes.map(x=>x.y));
+parsed.nodes.forEach(x=>{
+const id=x.id===target.id?rootId:uid();
+idMap.set(x.id,id);
+addNode({...x,id,x:Math.round(empty.x+x.x-minX),y:Math.round(empty.y+x.y-minY)});
+});
+parsed.lines.forEach(l=>{
+const from=idMap.get(l.from),to=idMap.get(l.to);
+if(from&&to)addLine({...l,id:uid(),from,to});
+});
+addLine({id:uid(),from:anchor.id,to:rootId,label:'submap link',arrow:'end',width:2,color:'#00f5d4'});
+}else{
+idMap.set(target.id,anchor.id);
+if(placement==='rotateFlip'){
+const bestAngle=findBestEmptyDirection(anchor,state.nodes);
+let sx=0,sy=0,count=0;
+parsed.nodes.forEach(x=>{
+if(x.id!==target.id){sx+=x.x-target.x;sy+=x.y-target.y;count++;}
+});
+const subAngle=count?Math.atan2(sy/count,sx/count):0;
+const angle=bestAngle-subAngle;
+parsed.nodes.forEach(x=>{
+if(x.id===target.id)return;
+const dx=x.x-target.x,dy=x.y-target.y;
+const id=uid();
+idMap.set(x.id,id);
+addNode({...x,id,x:Math.round(anchor.x+dx*Math.cos(angle)-dy*Math.sin(angle)),y:Math.round(anchor.y+dx*Math.sin(angle)+dy*Math.cos(angle))});
+});
+}else{
+const dx=anchor.x-target.x,dy=anchor.y-target.y;
+parsed.nodes.forEach(x=>{
+if(x.id===target.id)return;
+const id=uid();
+idMap.set(x.id,id);
+addNode({...x,id,x:x.x+dx,y:x.y+dy});
+});
+}
+parsed.lines.forEach(l=>{
+const from=idMap.get(l.from),to=idMap.get(l.to);
+if(from&&to)addLine({...l,id:uid(),from,to});
+});
+}
+if(!nodeIds.length&&!lineIds.length)return false;
+anchor.fileExpansion={nodeIds,lineIds,placement};
+return true;
+}
+function duplicateComponentForNode(id){
+if(!dupDrag)return null;
+const ids=duplicateGroups.find(g=>g.includes(id));
+return ids?{ids}:null;
+}
+function render(){
+view.links=new Map(state.nodes.map(n=>[n.id,0]));
+state.lines.forEach(l=>[l.from,l.to].forEach(id=>view.links.has(id)&&view.links.set(id,view.links.get(id)+1)));
+state.maxLinksBound=Math.max(1,state.maxLinksBound||0,...view.links.values());
+if(state.autoSizeAll)state.nodes.forEach(n=>{n.size='auto';delete n.customWidth;delete n.customHeight;});
+view.hidden=hiddenIds();
+view.lineDist=bfs([...selected]).lineDist;
+view.chain=(chainOn&&selected.size===1&&!selectedLineId)
+?{up:bfs([...selected],true).lineDist,down:bfs([...selected]).lineDist}:null;
+syncControls();
+document.body.style.setProperty('--sw',state.sidebarWidth+'px');
+drawTimeline();
+drawLineControls();
+els.forEach(el=>el.remove());
+els.clear();
+const parents=new Set(state.lines.map(l=>dir(l)[0]));
+state.nodes.forEach(n=>{
+if(view.hidden.has(n.id))return;
+if(!n.fileExpansion)ensureFileAvailability(n);
+const el=makeNode(n,parents);
+world.appendChild(el);
+els.set(n.id,el);
+});
+drawLines();
+updateExtent();
+scheduleIoSync();scheduleSideSync();
+}
+async function openNode(n){
+if(n.url){window.open(n.url,'_blank','noopener,noreferrer');return;}
+if(mode()==='arrow')return;
+if(state.editMode==='editInstead'){editingId=n.id;render();return;}
+try{
+const{text,handle}=await getFileContent(n.text);
+const parsed=parseGraphText(text);
+if(state.linkOpenMode==='current'){
+openInCurrent(n.text,parsed,{handle:handle||null,name:handle?.name||fileNameFor(n.text),format:graphFormat(text)});
+}else if(state.linkOpenMode==='new'){
+const currentFile=location.pathname.split('/').pop()||'index.html';
+const child=window.open(`${currentFile}#child`,'_blank');
+if(child)pendingChildren.set(child,{name:n.text,text,fileDir:state.fileDir});
+}else if(['expand','rotateFlip','openEmptySpace'].includes(state.linkOpenMode)){
+if(parsed.nodes.length&&insertFileGraph(n,parsed,state.linkOpenMode)){saveState();render();}
+}
+}catch(err){
+if(state.linkOpenMode==='current'||state.linkOpenMode==='new'){
+openInCurrent(n.text,{nodes:[{id:uid(),text:n.text,url:null,x:150,y:150,size:'auto',collapsed:false}],lines:[]},null);
+}else{
+editingId=n.id;
+render();
+}
+}
+}
+function makeNode(n,parents){
+const font=nodeFont(n.id),k=font/11;
+const el=document.createElement('div');
+el.className='node'+(selected.has(n.id)?' selected':'')+(n.ballsExpanded?' balls-expanded':'');
+if(duplicateNodeIds.has(n.id))el.classList.add('duplicate-node');
+el.dataset.id=n.id;
+if(editingId===n.id){el.style.minWidth='180px';el.style.minHeight='46px';}
+el.style.cssText+=`left:${n.x}px;top:${n.y}px;font-size:${font}px;padding:${(6 * k).toFixed(1)}px ${(10 * k).toFixed(1)}px`;
+if(!state.autoSizeAll&&n.customWidth&&n.customHeight){
+el.classList.add('fixed-size');
+el.style.width=Math.round(n.customWidth*k)+'px';
+el.style.height=Math.round(n.customHeight*k)+'px';
+}
+if(parents.has(n.id)){
+const btn=document.createElement('button');
+btn.type='button';
+btn.className='collapse-btn'+(n.collapsed?' is-collapsed':'');
+btn.textContent=n.collapsed?'+':'−';
+btn.title=n.collapsed?'Expand connected nodes':'Collapse connected nodes';
+btn.setAttribute('aria-label',btn.title);
+btn.onpointerdown=e=>e.stopPropagation();
+btn.onclick=e=>{e.stopPropagation();if(isLocked)return;n.collapsed=!n.collapsed;saveState();render();};
+el.appendChild(btn);
+}
+if(state.editMode==='spot'){
+const ball=document.createElement('div');
+ball.className='node-edit-ball';
+ball.title='Click to edit cell';
+ball.onpointerdown=e=>e.stopPropagation();
+ball.onclick=e=>{
+e.stopPropagation();
+editingId=n.id;
+render();
+};
+el.appendChild(ball);
+}
+const isExpandedFile=!!n.fileExpansion;
+const fileState=fileAvailability.get(fileAvailabilityKey(n));
+if(isExpandedFile||fileState?.status==='yes'){
+const expandFileBall=document.createElement('div');
+expandFileBall.className='node-expand-file-ball';
+expandFileBall.textContent=isExpandedFile?'−':'+';
+expandFileBall.title=isExpandedFile?'Collapse linked concept map':'Expand linked file as a concept map';
+expandFileBall.setAttribute('aria-label',expandFileBall.title);
+expandFileBall.onpointerdown=e=>e.stopPropagation();
+expandFileBall.onclick=async e=>{
+e.stopPropagation();
+if(n.fileExpansion){
+collapseFileGraph(n);
+saveState();render();
+return;
+}
+try{
+const{text,handle}=await getFileContent(n.text);
+const parsed=parseGraphText(text);
+if(state.linkOpenMode==='current'){
+openInCurrent(n.text,parsed,{handle:handle||null,name:handle?.name||fileNameFor(n.text),format:graphFormat(text)});
+return;
+}else if(state.linkOpenMode==='new'){
+const currentFile=location.pathname.split('/').pop()||'index.html';
+const child=window.open(`${currentFile}#child`,'_blank');
+if(child)pendingChildren.set(child,{name:n.text,text,fileDir:state.fileDir});
+return;
+}
+const placement=state.linkOpenMode;
+if(!parsed.nodes.length||!insertFileGraph(n,parsed,placement)){
+toast('No additional concept-map nodes found in this file');
+return;
+}
+saveState();render();
+}catch(err){
+toast('Could not open linked file map: '+err.message);
+}
+};
+expandFileBall.ondblclick=e=>{e.preventDefault();e.stopPropagation();};
+el.appendChild(expandFileBall);
+}
+if(state.dragGraphBall){
+const dragBall=document.createElement('div');
+dragBall.className='node-drag-ball';
+dragBall.title='Drag graph / subgraph';
+dragBall.onpointerdown=e=>{
+e.stopPropagation();
+if(!isLocked&&!selected.has(n.id)){selected.clear();selected.add(n.id);render();}
+const ids=isLocked?new Set([n.id]):new Set(selected);
+componentOf(n.id).forEach(c=>ids.add(c));
+startNodeDragWithIds(e,n,ids);
+};
+el.appendChild(dragBall);
+}
+const arrowBall=document.createElement('div');
+arrowBall.className='node-arrow-ball';
+arrowBall.title='Drag to create arrow';
+arrowBall.onpointerdown=e=>{
+e.stopPropagation();
+startArrow(e,n);
+};
+el.appendChild(arrowBall);
+if(editingId===n.id){
+const input=document.createElement('textarea');
+input.className='node-edit-input';
+input.style.minWidth='150px';input.style.minHeight='32px';
+input.value=n.url?`${n.text} ${n.url}`:n.text;
+const finish=()=>finishNodeEditing(n.id,input);
+input.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finish();}};
+input.onblur=()=>{
+  setTimeout(()=>{if(editingId===n.id&&document.activeElement!==input)input.focus();},0);
+};
+input.onpointerdown=e=>e.stopPropagation();
+el.appendChild(input);
+setTimeout(()=>{input.focus();input.select();},0);
+}else{
+const text=document.createElement('span');
+text.className='node-content'+(n.url?' has-url':'');
+text.textContent=displayNodeText(n.text);
+text.style.whiteSpace=displayParagraph.wordWrap?'pre-wrap':'pre';
+text.style.overflowWrap=displayParagraph.wordWrap?'anywhere':'normal';
+el.appendChild(text);
+if(n.url&&state.showUrls){
+const u=document.createElement('span');
+u.className='node-url-text';
+u.textContent=` (${n.url})`;
+el.appendChild(u);
+}
+}
+const handle=document.createElement('div');
+handle.className='node-resize-handle';
+handle.textContent='◢';
+handle.onpointerdown=e=>startResize(e,n,el);
+el.appendChild(handle);
+el.ondblclick=e=>{clearTimeout(selectionRenderTimer);selectionRenderTimer=null;e.stopPropagation();openNode(n);};
+el.onpointerdown=e=>nodeDown(e,n);
+return el;
+}
+function drawLines(){
+linesGroup.innerHTML=labelsGroup.innerHTML='';
+state.lines.forEach(l=>{if(!view.hidden.has(l.from)&&!view.hidden.has(l.to))drawLine(l);});
+}
+let linesQueued=false;
+const queueLines=()=>{
+if(linesQueued)return;
+linesQueued=true;
+requestAnimationFrame(()=>{linesQueued=false;drawLines();});
+};
+function svgEl(tag,attrs){
+const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+for(const k in attrs)e.setAttribute(k,attrs[k]);
+return e;
+}
+function markerFor(color){
+const id='arr-'+color.replace('#','');
+if(!$(id)){
+const m=svgEl('marker',{id,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'});
+m.appendChild(svgEl('path',{d:'M 0 1 L 10 5 L 0 9 z',fill:color}));
+svgDefs.appendChild(m);
+}
+return`url(#${id})`;
+}
+function drawLine(line){
+const a=nodeById(line.from),b=nodeById(line.to);
+if(!a||!b)return;
+const sel=selectedLineId===line.id;
+let color=line.color||'#00b4d8',width=line.width||1,dim=false;
+const step=view.lineDist.get(line.id);
+if(step>=1&&step<=3&&state['colorDist'+step]){
+color=state['colorDist'+step+'Hex'];
+}else if(view.chain){
+const up=view.chain.up.has(line.id),down=view.chain.down.has(line.id);
+if(up||down){color=up&&down?CHAIN.both:up?CHAIN.up:CHAIN.down;width++;}
+else dim=true;
+}
+const ra=rect(a),rb=rect(b);
+const p1=edgePoint(ra,center(rb)),p2=edgePoint(rb,center(ra));
+const d=`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+const path=svgEl('path',{d,stroke:color,fill:'none','stroke-width':(sel?Math.max(width+1,3):width)+'px'});
+if(dim)path.setAttribute('opacity','0.2');
+if(sel)path.classList.add('line-selected');
+if(line.arrow==='end'||line.arrow==='both')path.setAttribute('marker-end',markerFor(color));
+if(line.arrow==='start'||line.arrow==='both')path.setAttribute('marker-start',markerFor(color));
+const hit=svgEl('path',{d,stroke:'transparent','stroke-width':'25px',fill:'none'});
+const pick=e=>{
+if(e.pointerType==='touch'&&mode()==='drag'){
+const n=nearNode(toWorld(e.clientX,e.clientY),state.touchHitPad/zoom);
+if(n)return nodeDown(e,n);
+}
+e.stopPropagation();
+selectedLineId=line.id;selected.clear();
+render();
+$('selected-line-label').focus();
+};
+path.onpointerdown=hit.onpointerdown=pick;
+linesGroup.append(path,hit);
+if(line.label){
+const t=svgEl('text',{x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2,'text-anchor':'middle','dominant-baseline':'central',class:'line-label-text'});
+t.textContent=line.label;
+t.onpointerdown=pick;
+labelsGroup.appendChild(t);
+}
+}
+function drawLineControls(){
+const line=selectedLineId&&state.lines.find(l=>l.id===selectedLineId);
+if(selectedLineId&&!line)selectedLineId=null;
+$('line-controls-group').style.display=line?'flex':'none';
+if(!line)return;
+$('selected-line-label').value=line.label||'';
+if(line.arrow)$('arrow-style').value=line.arrow;
+if(line.width)$('line-width').value=String(line.width);
+if(line.color)$('line-color').value=line.color;
+}
+function drawTimeline(){
+timelineEl.classList.toggle('hidden',!state.showTimeline);
+if(!state.showTimeline)return;
+const tp=state.timelinePos,m0=new Date().getMonth(),y0=new Date().getFullYear(),usable=tp.width-25;
+Object.assign(timelineEl.style,{left:tp.x+'px',top:tp.y+'px',width:tp.width+'px'});
+timelineEl.querySelectorAll('.timeline-tick, .timeline-label').forEach(e=>e.remove());
+const add=(cls,left,text='')=>{
+const d=document.createElement('div');
+d.className=cls;d.style.left=left+'px';d.textContent=text;
+timelineEl.appendChild(d);
+};
+for(let i=0;i<=12;i++){
+const x=10+(i/12)*usable;
+add('timeline-tick',x);
+if(i<12)add('timeline-label',x+usable/24,`${MONTHS[(m0 + i) % 12]} '${String(y0 + (m0 + i >= 12 ? 1 : 0)).slice(-2)}`);
+}
+}
+function updateExtent(){
+let minX=100,minY=100,maxX=viewport.clientWidth/zoom,maxY=viewport.clientHeight/zoom;
+state.nodes.forEach(n=>{
+const el=els.get(n.id);
+const w=el?el.offsetWidth:120;
+const h=el?el.offsetHeight:50;
+minX=Math.min(minX,n.x);
+minY=Math.min(minY,n.y);
+maxX=Math.max(maxX,n.x+w+400);
+maxY=Math.max(maxY,n.y+h+400);
+});
+if(minX<100||minY<100){
+const dx=minX<100?100-minX:0;
+const dy=minY<100?100-minY:0;
+state.nodes.forEach(n=>{
+n.x+=dx;
+n.y+=dy;
+});
+maxX+=dx;
+maxY+=dy;
+}
+world.style.width=Math.round(maxX)+'px';
+world.style.height=Math.round(maxY)+'px';
+}
+const controls=$$('[data-k]');
+controls.forEach(el=>{
+const k=el.dataset.k,live=el.type==='range'||el.type==='color';
+el.addEventListener(live?'input':'change',()=>{
+if(el.type==='radio'&&!el.checked)return;
+let v=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:el.value;
+state[k]=v;
+if(!live)saveState();
+render();
+});
+if(live)el.addEventListener('change',saveState);
+});
+function syncControls(){
+controls.forEach(el=>{
+const v=state[el.dataset.k];
+if(el.type==='checkbox')el.checked=!!v;
+else if(el.type==='radio')el.checked=v===el.value;
+else el.value=v;
+});
+document.body.classList.toggle('touch-mode',isTouchActive());
+document.body.classList.toggle('draggable-panels-enabled',!!state.draggablePanels);
+if($('file-dir'))$('file-dir').value=state.fileDir||'';
+}
+const narrow=matchMedia('(max-width: 768px)');
+const setMenuHidden=h=>document.body.classList.toggle('menu-hidden',h);
+setMenuHidden(narrow.matches);
+narrow.addEventListener('change',e=>setMenuHidden(e.matches));
+$('toolbar-hide-btn').onclick=()=>setMenuHidden(true);
+$('floating-menu-btn').onclick=()=>setMenuHidden(false);
+function bindCollapse(btnId,wrapId,name){
+const btn=$(btnId),wrap=$(wrapId);
+if(!btn||!wrap)return;
+btn.addEventListener('click',()=>{
+const collapse=wrap.style.display!=='none';
+wrap.style.display=collapse?'none':'block';
+btn.textContent=collapse?'Expand ▼':'Collapse ▲';
+btn.setAttribute('aria-expanded',String(!collapse));
+btn.title=(collapse?'Expand the ':'Collapse the ')+name;
+});
+}
+bindCollapse('conceptmap-ai-collapse','conceptmap-ai-frame-wrap','AI assistant panel');
+bindCollapse('conceptmap-code-collapse','conceptmap-code-frame-wrap','Code Structure Explorer');
+function getPanelOrder(){
+return $$('#toolbar .tool-group').map(el=>el.dataset.panelId).filter(Boolean);
+}
+function applyPanelOrder(){
+if(!state.panelOrder||!state.panelOrder.length)return;
+const map=new Map($$('#toolbar .tool-group').map(el=>[el.dataset.panelId,el]));
+const want=state.panelOrder.map(id=>map.get(id)).filter(Boolean);
+const have=[...toolbar.children].filter(c=>want.includes(c));
+if(want.every((el,i)=>el===have[i]))return;
+want.forEach(el=>toolbar.appendChild(el));
+}
+$$('.panel-grip').forEach(grip=>{
+grip.addEventListener('pointerdown',e=>{
+if(!state.draggablePanels)return;
+e.stopPropagation();
+const panel=grip.closest('.tool-group');
+if(!panel)return;
+const placeholder=document.createElement('div');
+placeholder.style.height=panel.offsetHeight+'px';
+placeholder.style.border='1px dashed #00b4d8';
+placeholder.style.margin='4px 0';
+panel.style.opacity='0.5';
+panel.parentNode.insertBefore(placeholder,panel.nextSibling);
+const onPointerMove=moveEvent=>{
+const y=moveEvent.clientY;
+const siblings=[...toolbar.querySelectorAll('.tool-group:not([style*="opacity"])')];
+let nextSibling=null;
+for(const sib of siblings){
+const box=sib.getBoundingClientRect();
+if(y<box.top+box.height/2){nextSibling=sib;break;}
+}
+toolbar.insertBefore(placeholder,nextSibling);
+};
+const onPointerUp=()=>{
+panel.style.opacity='';
+toolbar.insertBefore(panel,placeholder);
+placeholder.remove();
+window.removeEventListener('pointermove',onPointerMove);
+window.removeEventListener('pointerup',onPointerUp);
+state.panelOrder=getPanelOrder();
+saveState();
+};
+window.addEventListener('pointermove',onPointerMove);
+window.addEventListener('pointerup',onPointerUp);
+});
+});
+const SETTING_KEYS=Object.keys(DEFAULTS).filter(k=>
+  !['nodes','lines','fileDir'].includes(k)
+);
+function applyImportedSettings(updates){
+  for(const key of SETTING_KEYS)if(updates[key]!==undefined)state[key]=updates[key];
+  applyPanelOrder();saveState();render();
+}
+function addBoxes(texts){
+texts.forEach(t=>{
+const i=state.nodes.length;
+state.nodes.push({id:uid(),...parseTextAndUrl(t),x:120+(i%10)*20,y:140+(i%10)*20,size:'auto',collapsed:false});
+});
+$('node-text').value='';
+saveState();render();
+}
+const createBox=()=>{const t=$('node-text').value;if(t.trim())addBoxes([t]);};
+const createBoxes=()=>{const t=$('node-text').value.trim();if(t)addBoxes(t.split(/\s+/));};
+$('add-btn').onclick=createBox;
+$('add-boxes-btn').onclick=createBoxes;
+$('node-text').onkeydown=e=>{if(e.key==='Enter')createBox();};
+$('clear-btn').onclick=()=>{
+if(isLocked||!confirm('Clear all nodes and connections?'))return;
+state={...state,nodes:[],lines:[]};
+selected.clear();selectedLineId=null;editingId=null;
+saveState();render();
+};
+function setLock(on){
+isLocked=on;
+$('lock-btn').disabled=on;
+$('unlock-btn').disabled=!on;
+}
+$('lock-btn').onclick=()=>{
+lock={selected:new Set(selected),hidden:new Set(hiddenIds()),maxDist:state.maxDistanceLimit};
+setLock(true);render();
+};
+$('unlock-btn').onclick=()=>{
+if(!isLocked)return;
+setLock(false);
+selected=new Set(lock.selected);
+state.maxDistanceLimit=lock.maxDist;
+lock=null;
+render();
+};
+function setFitMode(m){
+fitMode=m;
+$('fit-box-btn').classList.toggle('fit-active',m==='grid');
+$('fit-seq-btn').classList.toggle('fit-active',m==='sequence');
+viewport.style.cursor=m?'crosshair':'';
+}
+const toggleFit=m=>{
+if(!selected.size)return alert('Select at least one node first.');
+setFitMode(fitMode===m?null:m);
+};
+$('fit-box-btn').onclick=()=>toggleFit('grid');
+$('fit-seq-btn').onclick=()=>toggleFit('sequence');
+$('fit-screen-btn').onclick=()=>{
+const nodes=visibleNodes();
+if(!nodes.length)return;
+const pad=30/zoom;
+arrangeGrid(nodes,{
+x:viewport.scrollLeft/zoom+pad,y:viewport.scrollTop/zoom+pad,
+width:Math.max(60,viewport.clientWidth/zoom-pad*2),height:Math.max(40,viewport.clientHeight/zoom-pad*2)
+});
+saveState();render();
+};
+function updateSelectedLine(prop,value){
+const l=state.lines.find(x=>x.id===selectedLineId);
+if(l){l[prop]=value;render();saveState();}
+}
+$('arrow-style').onchange=e=>updateSelectedLine('arrow',e.target.value);
+$('line-width').onchange=e=>updateSelectedLine('width',parseInt(e.target.value,10));
+$('line-color').oninput=e=>updateSelectedLine('color',e.target.value);
+$('selected-line-label').oninput=e=>{
+const l=state.lines.find(x=>x.id===selectedLineId);
+if(l){l.label=e.target.value;render();}
+};
+$('selected-line-label').onchange=saveState;
+$('delete-line-btn').onclick=()=>{
+if(!selectedLineId)return;
+state.lines=state.lines.filter(l=>l.id!==selectedLineId);
+selectedLineId=null;saveState();render();
+};
+function setZoom(z,cx,cy,anchor){
+z=clamp(z,MIN_ZOOM,MAX_ZOOM);
+const vp=viewport.getBoundingClientRect();
+if(cx===undefined){cx=vp.left+vp.width/2;cy=vp.top+vp.height/2;}
+const a=anchor||toWorld(cx,cy);
+zoom=z;
+world.style.transform=`scale(${z})`;
+updateExtent();
+viewport.scrollLeft=a.x*z-(cx-vp.left);
+viewport.scrollTop=a.y*z-(cy-vp.top);
+$('zoom-reset-btn').textContent=Math.round(z*100)+'\%';
+}
+$('zoom-in-btn').onclick=()=>setZoom(zoom*1.25);
+$('zoom-out-btn').onclick=()=>setZoom(zoom/1.25);
+$('zoom-reset-btn').onclick=()=>setZoom(1);
+viewport.addEventListener('wheel',e=>{
+if(!(e.ctrlKey||e.metaKey))return;
+e.preventDefault();
+setZoom(zoom*(e.deltaY<0?1.15:0.87),e.clientX,e.clientY);
+},{passive:false});
+let g=null;
+function capture(id){
+try{if(!viewport.hasPointerCapture(id))viewport.setPointerCapture(id);}catch(err){}
+}
+function begin(e,spec){
+if(e.pointerType==='touch'){capture(e.pointerId);spec.touch=true;}
+g=spec;
+}
+function cancelGesture(){
+if(g&&g.moved)saveState();
+g=null;
+liveArrow.style.display=selBox.style.display='none';
+els.forEach(el=>el.classList.remove('target'));
+}
+function addLine(from,to){
+state.lines.push({
+id:uid(),from,to,label:'',
+arrow:$('arrow-style').value,width:+$('line-width').value,color:$('line-color').value
+});
+saveState();render();
+}
+function startPan(e,origin={x:e.clientX,y:e.clientY}){
+const l0=viewport.scrollLeft,t0=viewport.scrollTop;
+const gest={type:'pan',move:m=>{
+viewport.scrollLeft=l0-(m.clientX-origin.x);
+viewport.scrollTop=t0-(m.clientY-origin.y);
+}};
+begin(e,gest);
+gest.move(e);
+}
+function startArrow(e,src){
+if(!isLocked&&!selected.has(src.id)){selected.clear();selected.add(src.id);render();}
+const x0=e.clientX,y0=e.clientY;
+const gest={
+type:'arrow',protect:true,target:null,
+move(m){
+const c=center(rect(src));
+const tip={x:c.x+(m.clientX-x0)*1.5/zoom,y:c.y+(m.clientY-y0)*1.5/zoom};
+const s=edgePoint(rect(src),tip),color=$('line-color').value;
+liveArrow.setAttribute('x1',s.x);liveArrow.setAttribute('y1',s.y);
+liveArrow.setAttribute('x2',tip.x);liveArrow.setAttribute('y2',tip.y);
+liveArrow.setAttribute('stroke',color);
+liveArrow.setAttribute('marker-end',markerFor(color));
+liveArrow.style.display='block';
+gest.target=null;
+visibleNodes().forEach(n=>{if(n.id!==src.id&&inside(tip,rect(n)))gest.target=n.id;});
+els.forEach((el,id)=>el.classList.toggle('target',id===gest.target));
+},
+up(){
+liveArrow.style.display='none';
+els.forEach(el=>el.classList.remove('target'));
+if(gest.target)addLine(src.id,gest.target);
+}
+};
+begin(e,gest);
+}
+function startLine(e,p){
+['x1','x2'].forEach(a=>liveArrow.setAttribute(a,p.x));
+['y1','y2'].forEach(a=>liveArrow.setAttribute(a,p.y));
+liveArrow.setAttribute('stroke','#00f5d4');
+liveArrow.removeAttribute('marker-end');
+liveArrow.style.display='block';
+begin(e,{
+type:'line',
+move(m){const q=toWorld(m.clientX,m.clientY);liveArrow.setAttribute('x2',q.x);liveArrow.setAttribute('y2',q.y);},
+up(m){
+liveArrow.style.display='none';
+const a=closestNode(p,90/zoom),b=closestNode(toWorld(m.clientX,m.clientY),90/zoom);
+if(a&&b&&a.id!==b.id)addLine(a.id,b.id);
+}
+});
+}
+function startSelect(e,p){
+if(!isLocked&&!e.ctrlKey&&!e.metaKey&&!fitMode){selected.clear();render();}
+Object.assign(selBox.style,{left:p.x+'px',top:p.y+'px',width:'0px',height:'0px',display:'block'});
+begin(e,{
+type:'select',
+move(m){
+const q=toWorld(m.clientX,m.clientY);
+const r={x:Math.min(p.x,q.x),y:Math.min(p.y,q.y),width:Math.abs(q.x-p.x),height:Math.abs(q.y-p.y)};
+Object.assign(selBox.style,{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'});
+if(isLocked||fitMode)return;
+const before=selected.size;
+visibleNodes().forEach(n=>{
+const b=rect(n);
+if(!(b.x>r.x+r.width||b.x+b.width<r.x||b.y>r.y+r.height||b.y+b.height<r.y))selected.add(n.id);
+});
+if(selected.size!==before)render();
+},
+up(){
+if(fitMode){
+const r={x:parseFloat(selBox.style.left),y:parseFloat(selBox.style.top),width:parseFloat(selBox.style.width),height:parseFloat(selBox.style.height)};
+if(!isLocked&&r.width>20&&r.height>20){
+(fitMode==='sequence'?arrangeSequence:arrangeGrid)(visibleNodes().filter(n=>selected.has(n.id)),r);
+saveState();
+}
+setFitMode(null);
+}
+selBox.style.display='none';
+render();
+}
+});
+}
+function startNodeDragWithIds(e,n,ids){
+const touch=e.pointerType==='touch';
+if(touch)capture(e.pointerId);
+const starts=[...ids].map(nodeById).filter(Boolean).map(x=>({n:x,x:x.x,y:x.y}));
+const thresh=touch?state.touchDragThreshold:0,hold=touch?state.touchHoldMs:0,t0=performance.now();
+let active=thresh===0&&hold===0,ox=e.clientX,oy=e.clientY;
+const gest={
+type:'node',protect:true,moved:false,
+move(p){
+if(!active){
+if(Math.hypot(p.clientX-e.clientX,p.clientY-e.clientY)<=thresh)return;
+active=true;ox=p.clientX;oy=p.clientY;
+}
+const dx=(p.clientX-ox)/zoom,dy=(p.clientY-oy)/zoom;
+starts.forEach(s=>{
+s.n.x=s.x+dx;s.n.y=s.y+dy;
+const el=els.get(s.n.id);
+if(el){el.style.left=s.n.x+'px';el.style.top=s.n.y+'px';}
+});
+gest.moved=true;
+queueLines();
+},
+up(){
+if(gest.moved)saveState();
+if(gest.moved)render();
+}
+};
+begin(e,gest);
+}
+let selectionRenderTimer=null;
+function refreshSelectionOnly(){
+els.forEach((el,id)=>{
+el.classList.toggle('selected',selected.has(id));
+const n=nodeById(id);
+if(n)el.classList.toggle('balls-expanded',!!n.ballsExpanded);
+});
+view.lineDist=bfs([...selected]).lineDist;
+view.chain=(chainOn&&selected.size===1&&!selectedLineId)
+?{up:bfs([...selected],true).lineDist,down:bfs([...selected]).lineDist}:null;
+drawLineControls();
+drawLines();
+if(state.maxDistanceLimit<10){
+clearTimeout(selectionRenderTimer);
+selectionRenderTimer=setTimeout(()=>{selectionRenderTimer=null;render();},700);
+}
+}
+function nodeDown(e,n){
+if(editingId===n.id)return;
+clearTimeout(selectionRenderTimer);
+selectionRenderTimer=null;
+e.stopPropagation();
+selectedLineId=null;
+const touch=e.pointerType==='touch';
+if(touch)capture(e.pointerId);
+const m=mode();
+if(m==='arrow')return startArrow(e,n);
+if(!isLocked){
+if(e.ctrlKey||e.metaKey)selected.has(n.id)?selected.delete(n.id):selected.add(n.id);
+else if(!selected.has(n.id)){selected.clear();selected.add(n.id);}
+}
+if(state.singleTouchExpand&&!n.ballsExpanded){
+state.nodes.forEach(node=>{node.ballsExpanded=false;});
+n.ballsExpanded=true;
+refreshSelectionOnly();
+return;
+}
+refreshSelectionOnly();
+const duplicateComponent=duplicateComponentForNode(n.id);
+const ids=duplicateComponent?new Set(duplicateComponent.ids):(isLocked?new Set([n.id]):new Set(selected));
+const starts=[...ids].map(nodeById).filter(Boolean).map(x=>({n:x,x:x.x,y:x.y}));
+const thresh=touch?state.touchDragThreshold:0,hold=touch?state.touchHoldMs:0,t0=performance.now();
+let active=thresh===0&&hold===0,ox=e.clientX,oy=e.clientY;
+const gest={
+type:'node',protect:true,moved:false,
+move(p){
+if(!active){
+if(Math.hypot(p.clientX-e.clientX,p.clientY-e.clientY)<=thresh)return;
+if(hold>0&&performance.now()-t0<hold)return startPan(p,{x:e.clientX,y:e.clientY});
+active=true;ox=p.clientX;oy=p.clientY;
+return;
+}
+const dx=(p.clientX-ox)/zoom,dy=(p.clientY-oy)/zoom;
+starts.forEach(s=>{
+s.n.x=s.x+dx;s.n.y=s.y+dy;
+const el=els.get(s.n.id);
+if(el){el.style.left=s.n.x+'px';el.style.top=s.n.y+'px';}
+});
+gest.moved=true;
+queueLines();
+},
+up(p){
+if(gest.moved)saveState();
+if(gest.moved)render();
+}
+};
+begin(e,gest);
+}
+function startResize(e,n,el){
+e.stopPropagation();
+if(state.autoSizeAll)return;
+const r=el.getBoundingClientRect(),x0=e.clientX,y0=e.clientY;
+const gest={
+type:'resize',protect:true,moved:false,
+move(p){
+const k=nodeFont(n.id)/11;
+n.customWidth=Math.round(Math.max(80,(r.width+p.clientX-x0)/zoom)/k);
+n.customHeight=Math.round(Math.max(40,(r.height+p.clientY-y0)/zoom)/k);
+n.size='custom';
+gest.moved=true;
+render();
+},
+up(){if(gest.moved)saveState();}
+};
+begin(e,gest);
+}
+timelineEl.onpointerdown=e=>{
+const tp=state.timelinePos,p=toWorld(e.clientX,e.clientY),ox=p.x-tp.x,oy=p.y-tp.y;
+begin(e,{type:'timeline',protect:true,
+move(m){const q=toWorld(m.clientX,m.clientY);tp.x=q.x-ox;tp.y=q.y-oy;render();},
+up(){saveState();render();}});
+};
+tlHandle.onpointerdown=e=>{
+e.stopPropagation();
+const x0=e.clientX,w0=state.timelinePos.width;
+begin(e,{type:'timeline-resize',protect:true,
+move(m){state.timelinePos.width=Math.max(300,w0+(m.clientX-x0)/zoom);render();},
+up(){saveState();render();}});
+};
+sidebarResizer.onpointerdown=e=>{
+e.stopPropagation();
+sidebarResizer.classList.add('resizing');
+begin(e,{type:'sidebar',
+move(m){
+state.sidebarWidth=clamp(m.clientX,180,600);
+render();
+},
+up(){sidebarResizer.classList.remove('resizing');saveState();}});
+};
+let lastBlankTap=null,lastNodeCreateAt=0;
+function finishNodeEditing(id,input){
+  if(editingId!==id)return;
+  const n=nodeById(id);
+  if(n&&input?.value.trim())Object.assign(n,parseTextAndUrl(input.value));
+  editingId=null;saveState();render();
+}
+function createNodeAt(clientX,clientY){
+  if(Date.now()-lastNodeCreateAt<500)return;
+  lastNodeCreateAt=Date.now();
+  const p=toWorld(clientX,clientY);
+  const newNode={id:uid(),text:'',url:null,x:Math.round(p.x-40),y:Math.round(p.y-15),size:'auto',collapsed:false};
+  state.nodes.push(newNode);
+  editingId=newNode.id;
+  selected.clear();selected.add(newNode.id);selectedLineId=null;
+  saveState();render();
+}
+function isBlankCanvasTarget(target){
+  return target===viewport||target===world||target===svgLayer||target===selBox;
+}
+viewport.addEventListener('dblclick',async e=>{
+  clearTimeout(selectionRenderTimer);selectionRenderTimer=null;
+  const n=nearNode(toWorld(e.clientX,e.clientY),30/zoom);
+  if(n){
+    e.preventDefault();e.stopPropagation();
+    openNode(n);
+    return;
+  }
+  if(!isBlankCanvasTarget(e.target))return;
+  e.preventDefault();e.stopPropagation();
+  createNodeAt(e.clientX,e.clientY);
+});
+viewport.onpointerdown=e=>{
+if(e.target!==viewport&&e.target!==world&&e.target!==svgLayer)return;
+if(editingId){const active=document.querySelector('.node-edit-input');if(active)finishNodeEditing(editingId,active);}
+state.nodes.forEach(n=>{n.ballsExpanded=false;});
+if(selectedLineId){selectedLineId=null;render();}
+const m=mode();
+const p=toWorld(e.clientX,e.clientY);
+const boxing=$('select-region-chk').checked||e.ctrlKey||fitMode;
+if(boxing)return startSelect(e,p);
+const near=nearNode(p,(m==='drag'?state.touchHitPad:60)/zoom);
+if(near)return m==='drag'?nodeDown(e,near):startArrow(e,near);
+if(e.pointerType==='touch'&&!boxing)return startPan(e);
+if(m==='drag')return startPan(e);
+if(m==='arrow')return;
+startLine(e,p);
+};
+const touches=new Map(),ignored=new Set();
+let pinch=null,liveTouches=0,lastTouchDown=0;
+function onMove(e){
+if(e.pointerType==='touch'){
+const tap=touchTapStarts.get(e.pointerId);
+if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>12)tap.moved=true;
+if(ignored.has(e.pointerId))return;
+if(touches.has(e.pointerId))touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+if(pinch)return updatePinch();
+capture(e.pointerId);
+}
+if(g)g.move(e);
+}
+function onUp(e){
+if(e.pointerType==='touch'){
+const tap=touchTapStarts.get(e.pointerId);
+touchTapStarts.delete(e.pointerId);
+if(tap&&tap.blank&&!tap.moved&&e.type==='pointerup'&&touches.size<=1){
+  const now=performance.now();
+  if(lastBlankTap&&now-lastBlankTap.time<450&&Math.hypot(e.clientX-lastBlankTap.x,e.clientY-lastBlankTap.y)<32){
+    lastBlankTap=null;
+    e.preventDefault();
+    createNodeAt(e.clientX,e.clientY);
+  }else{
+    lastBlankTap={x:e.clientX,y:e.clientY,time:now};
+  }
+}else if(tap&&(!tap.blank||tap.moved)){lastBlankTap=null;}
+if(ignored.delete(e.pointerId))return;
+touches.delete(e.pointerId);
+if(pinch){
+if(touches.size<2)pinch=null;
+if(touches.size)return;
+}
+}
+if(!g)return;
+if(e.type==='pointercancel')return cancelGesture();
+const done=g;
+g=null;
+if(done.up)done.up(e);
+}
+window.addEventListener('pointermove',onMove);
+window.addEventListener('pointerup',onUp);
+window.addEventListener('pointercancel',onUp);
+function updatePinch(){
+const[a,b]=[...touches.values()];
+if(!b||!pinch)return;
+const dist=Math.max(10,Math.hypot(a.x-b.x,a.y-b.y));
+setZoom(pinch.zoom*dist/pinch.dist,(a.x+b.x)/2,(a.y+b.y)/2,pinch.anchor);
+}
+const touchTapStarts=new Map();
+viewport.addEventListener('pointerdown',e=>{
+if(e.pointerType!=='touch')return;
+lastTouchDown=performance.now();
+touchTapStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,time:performance.now(),blank:isBlankCanvasTarget(e.target),moved:false});
+const ignore=()=>{ignored.add(e.pointerId);e.stopImmediatePropagation();};
+if(state.touchIgnoreExtra&&touches.size>=1&&g&&g.protect)return ignore();
+if(touches.size>=2)return ignore();
+touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+if(touches.size<2)return;
+e.stopImmediatePropagation();
+cancelGesture();
+const[a,b]=[...touches.values()];
+pinch={dist:Math.max(10,Math.hypot(a.x-b.x,a.y-b.y)),zoom,anchor:toWorld((a.x+b.x)/2,(a.y+b.y)/2)};
+touches.forEach((_,id)=>capture(id));
+},true);
+viewport.addEventListener('touchmove',e=>{if(!e.target.closest('.node-edit-input'))e.preventDefault();},{passive:false});
+const stuck=()=>touches.size||ignored.size||pinch||(g&&g.touch);
+function resetTouchState(){touches.clear();ignored.clear();pinch=null;cancelGesture();}
+const sweep=()=>{if(!liveTouches&&stuck()){resetTouchState();render();}};
+['touchstart','touchend','touchcancel'].forEach(t=>window.addEventListener(t,e=>{
+liveTouches=e.touches.length;
+if(t!=='touchstart'&&!liveTouches&&state.touchAutoClear&&stuck())setTimeout(sweep,60);
+},{passive:true,capture:true}));
+let ioWin=null,ioTimer=null,ioHistoryCacheRef=null,ioHistoryCache=null;
+function ioHistoryMeta(){if(ioHistoryCacheRef===hist&&ioHistoryCache)return ioHistoryCache;ioHistoryCacheRef=hist;ioHistoryCache=hist.map((raw,index)=>{try{const st=JSON.parse(raw);return {index,nodes:Array.isArray(st.nodes)?st.nodes.length:0,lines:Array.isArray(st.lines)?st.lines.length:0};}catch(err){return {index,nodes:0,lines:0};}});return ioHistoryCache;}
+const ioPayload=()=>({
+type:'cm-state',state,
+defaults:{width:+$('line-width').value,color:$('line-color').value,arrow:$('arrow-style').value},
+saveTarget:saveTarget?{name:saveTarget.name,format:saveTarget.format}:null,
+saveFormat,
+history:ioHistoryMeta(),
+historyIdx:histIdx
+});
+function postIo(msg,target=ioWin){
+if(target&&!target.closed)try{target.postMessage(msg,'*');}catch(err){}
+}
+function scheduleIoSync(){
+if(!ioWin||ioWin.closed)return;
+clearTimeout(ioTimer);
+ioTimer=setTimeout(()=>postIo(ioPayload()),250);
+}
+$('io-btn').onclick=()=>{
+if(ioWin&&!ioWin.closed){ioWin.focus();return postIo(ioPayload());}
+ioWin=window.open('conceptmap_io.html','conceptmap_io','width=640,height=880,resizable=yes,scrollbars=yes');
+if(!ioWin)alert('Allow pop-ups to open the Import/Export tool.');
+};
+/* ===== SIDE PANEL BRIDGE: conceptmap_sidefunctions.html runs in #side-frame and talks to this page by postMessage ===== */
+const sideFrame=$('side-frame');
+let sideTimer=null,sideLast='',aiLast='',aiKeys={};
+const displayParagraphFrame=$('display-paragraph-frame');
+let displayParagraph={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:false,artificialWrapLength:30,abbreviationsEnabled:false,conversions:''};
+function displayNodeText(raw){
+ let words=String(raw??'').match(/\S+/g)||[];
+ if(displayParagraph.longestWord&&words.length){const clean=w=>w.match(/[\p{L}\p{N}]+/gu)?.join('')||w;let best=words.reduce((a,b)=>clean(b).length>clean(a).length?b:a,words[0]);words=[best];}
+ else if(displayParagraph.longerWords)words=words.filter(w=>(w.match(/[\p{L}\p{N}]+/gu)?.join('').length||0)>=Math.max(1,+displayParagraph.minWordLength||1));
+ if(displayParagraph.firstWords)words=words.slice(0,Math.max(1,+displayParagraph.firstCount||200));
+ let out=words.join(' ');
+ if(displayParagraph.abbreviationsEnabled){
+  const pairs=String(displayParagraph.conversions||'').split(/\r?\n/).map(line=>line.trim()).filter(line=>line&&!line.startsWith('#')).map(line=>line.split(/\s+/)).filter(a=>a.length>=2).map(a=>[a[0],a.slice(1).join(' ')]).sort((a,b)=>b[0].length-a[0].length);
+  for(const [from,to] of pairs){const escaped=from.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('\\b'+escaped+'\\b','gi'),m=>m===m.toUpperCase()?to.toUpperCase():m[0]===m[0].toUpperCase()?to[0].toUpperCase()+to.slice(1):to);}
+ }
+ if(displayParagraph.artificialWordWrap){const limit=Math.max(1,+displayParagraph.artificialWrapLength||30);out=out.split('\n').map(line=>{const ws=line.split(/\s+/);let lines=[],cur='';for(const w of ws){if(!w)continue;if(cur&&cur.length+1+w.length>limit){lines.push(cur);cur=w;}else cur+=(cur?' ':'')+w;}if(cur)lines.push(cur);return lines.join('\n');}).join('\n');}
+ return out;
+}
+const displayParagraphPost=m=>{try{displayParagraphFrame.contentWindow.postMessage({ch:'conceptmap-displayparagraph',...m},'*')}catch(err){}};
+async function loadAbbrevFile(){
+ try{
+  if(dirHandle){
+   let permission=await dirHandle.queryPermission({mode:'read'});
+   if(permission==='granted'){
+    const handle=await dirHandle.getFileHandle('abbrev.txt');
+    const file=await handle.getFile();
+    displayParagraphPost({type:'conversions-file',text:await file.text(),name:'abbrev.txt'});
+    return;
+   }
+  }
+  if(location.protocol==='http:'||location.protocol==='https:'){
+   const base=(state.fileDir||'').trim().replace(/\\/g,'/').replace(/\/$/,'');
+   const url=(base?base+'/':'')+'abbrev.txt';
+   const response=await fetch(url,{cache:'no-store'});
+   if(response.ok){displayParagraphPost({type:'conversions-file',text:await response.text(),name:'abbrev.txt'});return;}
+  }
+ }catch(err){if(err?.name!=='NotFoundError')console.debug('Using built-in abbreviation list; abbrev.txt unavailable:',err);}
+ displayParagraphPost({type:'abbrev-file-missing'});
+}
+
+const aiFrame=$('conceptmap-ai-frame');
+const aiPost=m=>{try{aiFrame.contentWindow.postMessage({channel:'conceptmap-ai',...m},'*');}catch(err){}};
+const sidePost=m=>{try{sideFrame.contentWindow.postMessage({ch:'conceptmap-side',...m},'*');}catch(err){}};
+function scheduleSideSync(force){
+if(force)sideLast=aiLast='';
+if(sideTimer)return;
+sideTimer=setTimeout(()=>{
+sideTimer=null;
+const m={type:'state',touch:isTouchActive(),S:Object.fromEntries(SETTING_KEYS.map(k=>[k,state[k]]))},j=JSON.stringify(m);
+if(j!==sideLast){sideLast=j;sidePost(m);}
+const a={type:'conceptmap-ai-state',provider:state.aiProvider,model:state.aiModel,sel:selected.size,keys:aiKeys},k=JSON.stringify(a);
+if(k!==aiLast){aiLast=k;aiPost(a);}
+},60);
+}
+window.addEventListener('message',e=>{
+const d=e.data;
+if(e.source===displayParagraphFrame.contentWindow&&d&&d.ch==='conceptmap-displayparagraph'){
+ if(d.type==='ready'){
+  displayParagraphPost({type:'settings',settings:displayParagraph});
+  displayParagraphPost({type:'load-abbrev'});
+ }
+ if(d.type==='settings'&&d.settings){displayParagraph={...displayParagraph,...d.settings};render();}
+ return;
+}
+if(e.source!==sideFrame.contentWindow||!d||d.ch!=='conceptmap-side')return;
+switch(d.type){
+case 'ready':sidePost({type:'init',D:Object.fromEntries(SETTING_KEYS.map(k=>[k,DEFAULTS[k]])),PANELS:getPanelOrder()});scheduleSideSync(true);break;
+case 'set':{
+if(!SETTING_KEYS.includes(d.k))break;
+let v=d.v;
+if(isLocked&&d.k==='maxDistanceLimit'){render();scheduleSideSync(true);break;}
+if(d.k==='fontMin')v=Math.min(v,state.fontMax);
+if(d.k==='fontMax')v=Math.max(v,state.fontMin);
+state[d.k]=v;
+if(!d.live)saveState();
+render();
+break;}
+case 'commit':saveState();scheduleSideSync(true);break;
+case 'chain':chainOn=!!d.on;render();break;
+case 'dupdrag':dupDrag=!!d.on;break;
+case 'dup':duplicateGroups=Array.isArray(d.comps)?d.comps:[];duplicateNodeIds=new Set(duplicateGroups.flat());render();break;
+case 'get-graph':sidePost({type:'graph',id:d.id,nodes:state.nodes,lines:state.lines});break;
+case 'graph-delete':{
+const ids=new Set(d.ids||[]);
+state.lines=state.lines.filter(l=>!ids.has(l.from)&&!ids.has(l.to));
+state.nodes=state.nodes.filter(n=>!ids.has(n.id));
+ids.forEach(id=>selected.delete(id));
+duplicateNodeIds.clear();duplicateGroups=[];
+saveState();render();
+break;}
+case 'graph-move':
+(d.moves||[]).forEach(([id,x,y])=>{const n=nodeById(id);if(n){n.x=x;n.y=y;}});
+saveState();render();
+break;
+case 'apply-settings':sideLast='';applyImportedSettings(d.updates||{});break;
+case 'reset-defaults':{
+const keep={nodes:state.nodes,lines:state.lines,fileDir:state.fileDir};
+state={...structuredClone(DEFAULTS),...keep};
+sideLast='';applyPanelOrder();saveState();render();
+break;}
+case 'reset-touches':resetTouchState();render();break;
+case 'key':window.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,shiftKey:!!d.shift,ctrlKey:!!d.ctrl,metaKey:!!d.meta,bubbles:true,cancelable:true}));break;
+case 'height':sideFrame.style.height=Math.max(60,Math.min(+d.h||0,6000))+'px';break;
+}
+});
+window.addEventListener('message',e=>{
+const d=e.data;
+if(e.source!==aiFrame.contentWindow||!d||d.channel!=='conceptmap-ai')return;
+switch(d.type){
+case 'ready':scheduleSideSync(true);break;
+case 'provider':if(typeof d.value==='string'){state.aiProvider=d.value;if(d.model)state.aiModel=String(d.model);saveState();}break;
+case 'model':state.aiModel=String(d.value);saveState();break;
+case 'key':if(typeof d.provider==='string'){aiKeys[d.provider]=String(d.value||'');scheduleSideSync();}break;
+case 'get':aiPost({type:'reply',id:d.id,nodes:state.nodes,lines:state.lines,sel:[...selected],tp:state.timelinePos});break;
+case 'apply':
+if(d.timeline)state.showTimeline=true;
+if(d.mode==='append'){state.nodes.push(...d.nodes);state.lines.push(...d.lines);}
+else{state.nodes=d.nodes;state.lines=d.lines;}
+saveState();render();
+break;
+case 'drill':openInCurrent(d.name,{nodes:d.nodes,lines:d.lines},null);break;
+case 'select':selected.clear();(d.ids||[]).forEach(id=>nodeById(id)&&selected.add(id));render();break;
+case 'toast':toast(String(d.text||''));break;
+case 'hotkey':window.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,shiftKey:!!d.shift,ctrlKey:!!d.ctrl,metaKey:!!d.meta,bubbles:true,cancelable:true}));break;
+}
+});
+function afterExternalChange(){
+selected.clear();selectedLineId=null;editingId=null;
+saveState();render();
+}
+function applyImportedJson(src){
+const keepTouch=Object.fromEntries([...TOUCH_KEYS,'fileDir'].map(k=>[k,state[k]]));
+state={...structuredClone(DEFAULTS),...keepTouch,...src,nodes:src.nodes||[],lines:normalizeLines(src.lines||[])};
+applyPanelOrder();
+afterExternalChange();
+}
+window.addEventListener('message',e=>{
+const d=e.data;
+if(!d||typeof d!=='object'||typeof d.type!=='string')return;
+if(d.type==='cm-child-ready'&&pendingChildren.has(e.source)){
+const payload=pendingChildren.get(e.source);
+pendingChildren.delete(e.source);
+return postIo({type:'cm-load-text',...payload},e.source);
+}
+if(d.type==='cm-load-text'&&e.source===window.opener){
+const parsed=parseGraphText(d.text);
+if(!state.fileDir&&d.fileDir)state.fileDir=d.fileDir;
+state.nodes=parsed.nodes;state.lines=parsed.lines;
+views[0].name=d.name||'Main map';
+afterExternalChange();renderViews();
+return;
+}
+if(d.type==='cm-io-ready'){ioWin=e.source;postIo(ioPayload(),e.source);if(saveTarget&&saveTarget.handle)postIo({type:'cm-save-handle',handle:saveTarget.handle,name:saveTarget.name},e.source);return;}
+if(e.source!==ioWin)return;
+if(d.type==='cm-save-target'){
+setSaveTarget(d.name?{handle:d.handle||null,name:d.name,format:d.format||saveFormat}:null);
+postIo(ioPayload(),e.source);
+}else if(d.type==='cm-save-handle'){
+if(d.handle&&saveTarget&&(!d.name||d.name===saveTarget.name)){
+setSaveTarget({...saveTarget,handle:d.handle},false);
+postIo(ioPayload(),e.source);
+}else if(d.handle&&d.name){
+setSaveTarget({handle:d.handle,name:d.name,format:saveTarget?.format||saveFormat},false);
+postIo(ioPayload(),e.source);
+}
+}else if(d.type==='cm-request-state'){
+postIo(ioPayload(),e.source);
+}else if(d.type==='cm-import-json'){
+try{
+if(!d.data||!Array.isArray(d.data.nodes)||!Array.isArray(d.data.lines))throw new Error('bad structure');
+applyImportedJson(d.data);
+postIo(ioPayload(),e.source);
+}catch(err){postIo({type:'cm-ack',ok:false,message:'JSON import failed: '+(err.message||err)},e.source);}
+}else if(d.type==='cm-import-graph'){
+try{
+if(!Array.isArray(d.nodes)||!Array.isArray(d.lines))throw new Error('bad graph structure');
+const incomingNodes=d.nodes.map(n=>({...n}));
+const incomingLines=d.lines.map(l=>({...l}));
+if(d.replace){
+state.nodes=incomingNodes;
+state.lines=normalizeLines(incomingLines);
+}else{
+const ids=new Set(state.nodes.map(n=>n.id));
+const remap=new Map();
+for(const node of incomingNodes){const oldId=node.id;let nextId=oldId;if(ids.has(nextId)){do{nextId=uid();}while(ids.has(nextId));}ids.add(nextId);remap.set(oldId,nextId);node.id=nextId;}
+state.nodes.push(...incomingNodes);
+state.lines.push(...incomingLines.map(l=>({...l,from:remap.get(l.from)||l.from,to:remap.get(l.to)||l.to})));
+state.lines=normalizeLines(state.lines);
+}
+afterExternalChange();renderViews();
+postIo({type:'cm-ack',ok:true,message:`Imported graph (${incomingNodes.length} nodes, ${incomingLines.length} lines).`},e.source);
+postIo(ioPayload(),e.source);
+}catch(err){postIo({type:'cm-ack',ok:false,message:'Graph import failed: '+(err.message||err)},e.source);}
+}else if(d.type==='cm-history-action'){
+try{
+if(d.action==='jump'){restore(Number(d.index));}
+else if(d.action==='delete'){
+const index=Number(d.index);
+if(index>=0&&index<hist.length){hist.splice(index,1);histT.splice(index,1);ioHistoryCacheRef=null;if(!hist.length){histIdx=-1;}else if(histIdx>=index)histIdx=Math.max(0,histIdx-1);updateHistBtns();}
+}
+else if(d.action==='clear'){hist=[];histT=[];histIdx=-1;ioHistoryCacheRef=null;ioHistoryCache=null;updateHistBtns();}
+postIo({type:'cm-ack',ok:true,message:d.action==='jump'?'Restored history state.':d.action==='delete'?'Deleted history state.':'Cleared history states.'},e.source);
+postIo(ioPayload(),e.source);
+}catch(err){postIo({type:'cm-ack',ok:false,message:'History action failed: '+(err.message||err)},e.source);}
+}else if(d.type==='cm-io-command'){
+try{
+switch(d.action){
+case 'save-current': $('save-btn').click(); break;
+case 'save-canvas-new': $('save-node-new-file-btn').click(); break;
+case 'save-connected-new': $('save-connected-new-file-btn').click(); break;
+case 'resave-all': $('resave-all-file-nodes-btn').click(); break;
+case 'iphone-save': $('iphone-save-btn').click(); break;
+case 'set-filename': {
+const name=String(d.name||'').trim();
+if(!name)throw new Error('Enter a filename first.');
+const old=saveTarget||{};
+$('filename-input').value=name;
+setSaveTarget({...old,name,format:old.format||saveFormat},false);
+break;
+}
+case 'load-file-text': {
+const name=String(d.name||'Imported map');
+loadMapText(String(d.text||''),name,false);
+postIo({type:'cm-ack',ok:true,message:'Loaded '+name},e.source);postIo(ioPayload(),e.source);break;
+}
+default: throw new Error('Unknown IO command: '+d.action);
+}
+}catch(err){postIo({type:'cm-ack',ok:false,message:(err.message||String(err))},e.source);}
+}
+});
+const pendingChildren=new Map();
+let dirHandle=null,lastReadHandle=null;
+const DIR_DB_NAME='concept-map-preferences',DIR_STORE='handles';
+function openDirectoryDb(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));
+    const req=indexedDB.open(DIR_DB_NAME,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DIR_STORE))req.result.createObjectStore(DIR_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error('Could not open directory storage'));
+  });
+}
+async function persistDirectoryHandle(handle){
+  try{const db=await openDirectoryDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DIR_STORE,'readwrite');tx.objectStore(DIR_STORE).put({id:'active',handle,name:handle.name,fileDir:state.fileDir});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}catch(err){console.warn('Could not persist selected directory handle:',err);}
+}
+async function restoreDirectoryHandle(){
+  try{
+    const db=await openDirectoryDb();
+    const saved=await new Promise((resolve,reject)=>{const req=db.transaction(DIR_STORE,'readonly').objectStore(DIR_STORE).get('active');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});db.close();
+    if(!saved?.handle)return;
+    dirHandle=saved.handle;
+    if(!state.fileDir)state.fileDir=saved.fileDir||saved.name||'';
+    if($('file-dir'))$('file-dir').value=state.fileDir;
+    const permission=await dirHandle.queryPermission({mode:'read'});
+    $('pick-dir-status').textContent=permission==='granted'?`Restored active folder: ${dirHandle.name}`:`Saved folder: ${dirHandle.name}. If access is denied, select the directory again.`;
+    clearFileAvailability();
+    if(typeof loadAbbrevFile==='function')loadAbbrevFile();
+  }catch(err){console.warn('Could not restore saved directory handle:',err);}
+}
+function toast(msg){
+const t=$('toast');
+t.textContent=msg;t.style.display='block';
+clearTimeout(toast.t);
+toast.t=setTimeout(()=>{t.style.display='none';},2600);
+}
+function fileNameFor(text){return text.trim().replace(/[\\/:*?"<>|]/g,'')+'.txt';}
+const fileAvailability=new Map();
+let fileAvailabilityRenderTimer=null;
+function fileAvailabilityKey(node){
+return`${dirHandle?.name || ''}\u0000${state.fileDir || ''}\u0000${fileNameFor(node.text)}`;
+}
+function queueFileAvailabilityRender(){
+clearTimeout(fileAvailabilityRenderTimer);
+fileAvailabilityRenderTimer=setTimeout(()=>{
+fileAvailabilityRenderTimer=null;
+render();
+},80);
+}
+function ensureFileAvailability(node){
+const key=fileAvailabilityKey(node);
+const cached=fileAvailability.get(key);
+if(cached&&(cached.status!=='no'||Date.now()-cached.checkedAt<30000))return;
+if(cached)fileAvailability.delete(key);
+const entry={status:'checking'};
+fileAvailability.set(key,entry);
+entry.promise=(async()=>{
+const fileName=fileNameFor(node.text);
+const activeDirHandle=dirHandle;
+const activeFolder=state.fileDir||'';
+let exists=false;
+if(activeDirHandle){
+try{
+const handle=await activeDirHandle.getFileHandle(fileName);
+await handle.getFile();
+exists=true;
+}catch(err){}
+}
+if(!exists){
+const relPath=activeFolder?`${activeFolder.replace(/\/$/, '')}/${fileName}`:fileName;
+try{
+const response=await fetch(relPath,{cache:'no-store'});
+if(response.ok){
+const type=response.headers.get('content-type')||'';
+if(!/text\/html/i.test(type))exists=true;
+else{
+const preview=(await response.text()).trimStart();
+exists=!/^<!doctype html\b|^<html\b/i.test(preview);
+}
+}
+}catch(err){
+exists=false;
+}
+}
+if(fileAvailability.get(key)!==entry)return;
+entry.status=exists?'yes':'no';
+entry.checkedAt=Date.now();
+if(state.nodes.some(current=>current.id===node.id&&fileAvailabilityKey(current)===key)){
+queueFileAvailabilityRender();
+}
+})();
+}
+function clearFileAvailability(){fileAvailability.clear();}
+function parseSimpleTxt(text){
+const nodes=[],lines=[],idMap=new Map(),d={width:+$('line-width').value,color:$('line-color').value};
+text.split(/\r?\n/).filter(l=>l.trim()).forEach(line=>{
+const tk=line.trim().split(/\s+/);
+if(tk.length<3)return;
+if(tk[0]==='-1'||tk[0]==='-2'){
+lines.push({id:uid(),from:idMap.get(tk[1])||tk[1],to:idMap.get(tk[2])||tk[2],arrow:tk[0]==='-2'?'none':'end',width:d.width,color:d.color,label:''});
+return;
+}
+let x=120+(nodes.length%8)*140,y=140+Math.floor(nodes.length/8)*60,content=tk.slice(1);
+const py=parseFloat(tk[tk.length-1]),px=parseFloat(tk[tk.length-2]);
+if(!isNaN(px)&&!isNaN(py)){x=px;y=py;content=tk.slice(1,-2);}
+const id=uid();idMap.set(tk[0],id);
+nodes.push({id,...parseTextAndUrl(content.join(' ')),x,y,size:'auto',collapsed:false});
+});
+return{nodes,lines};
+}
+function parseIndentTxt(text){
+const nodes=[],lines=[],stack=[],d={width:+$('line-width').value,color:$('line-color').value};
+let y=140;
+text.split(/\r?\n/).filter(l=>l.trim()).forEach(line=>{
+let lvl=0,i=0;
+while(i<line.length){
+if(line[i]==='\t'){lvl++;i++;}
+else if(line.substr(i,4)==='    '){lvl++;i+=4;}
+else if(line.substr(i,2)==='  '){lvl++;i+=2;}
+else break;
+}
+const node={id:uid(),...parseTextAndUrl(line.trim()),x:120+lvl*180,y,size:'auto',collapsed:false};
+y+=50;
+nodes.push(node);
+stack[lvl]=node;stack.length=lvl+1;
+let parent=null;
+for(let k=lvl-1;k>=0&&!parent;k--)parent=stack[k];
+if(lvl>0&&parent)lines.push({id:uid(),from:parent.id,to:node.id,arrow:'end',width:d.width,color:d.color,label:''});
+});
+return{nodes,lines};
+}
+
+function parseExtendedLines(text){
+  const nodes = [], lines = [];
+  let section = '';
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line === '--- NODES ---') { section = 'nodes'; continue; }
+    if (line === '--- CONNECTIONS ---') { section = 'lines'; continue; }
+    if (!section || /^VERSION:|^CREATED:|^NODES:|^LINES:/.test(line)) continue;
+    if (section === 'nodes') {
+      const parts = line.split(' | '), id = parts[0]?.trim();
+      if (!id) continue;
+      const pos = (line.match(/\|\s*x:([+-]?\d+(?:\.\d+)?)\s+y:([+-]?\d+(?:\.\d+)?)/) || []);
+      const textMatch = line.match(/\|\s*text:\s*([\s\S]*?)(?=\s*\|\s*(?:URL:|size:|collapsed:)|$)/);
+      const urlMatch = line.match(/\|\s*URL:\s*([^|]*)/);
+      const sizeMatch = line.match(/\|\s*size:\s*([^|]*)/);
+      const collapsedMatch = line.match(/\|\s*collapsed:\s*(true|false)/i);
+      
+      let textContent = textMatch ? textMatch[1].trim() : parts.slice(2).join(' | ').replace(/^text:\s*/, '');
+      textContent = textContent.replace(/\\n/g, '\n');
+      
+      const parsed = parseTextAndUrl(textContent);
+      const url = urlMatch ? urlMatch[1].trim() : (parsed.url || null);
+      const node = {
+        id,
+        text: parsed.text,
+        url,
+        x: pos[1] ? Number(pos[1]) : 120 + (nodes.length % 8) * 140,
+        y: pos[2] ? Number(pos[2]) : 140 + Math.floor(nodes.length / 8) * 60,
+        size: sizeMatch ? sizeMatch[1].trim() : 'auto',
+        collapsed: collapsedMatch ? collapsedMatch[1].toLowerCase() === 'true' : false
+      };
+      nodes.push(node);
+    } else if (section === 'lines') {
+      const id = (line.match(/\bid:([^|]+)/) || [])[1]?.trim() || uid();
+      const from = (line.match(/\bfrom:([^|]+)/) || [])[1]?.trim();
+      const to = (line.match(/\bto:([^|]+)/) || [])[1]?.trim();
+      if (!from || !to) continue;
+      lines.push({
+        id,
+        from,
+        to,
+        arrow: ((line.match(/\barrow:([^|]+)/) || [])[1] || 'end').trim(),
+        width: Number(((line.match(/\bwidth:([^|]+)/) || [])[1] || '1').trim()),
+        color: ((line.match(/\bcolor:([^|]+)/) || [])[1] || '#00b4d8').trim(),
+        label: ((line.match(/\blabel:([\s\S]*)$/) || [])[1] || '').trim()
+      });
+    }
+  }
+  return { nodes, lines };
+}
+
+function parseGraphText(text){
+const trimmed=text.trim();
+if(/^<!doctype html|^<html/i.test(trimmed)){
+  const match=trimmed.match(/const mapData = (\{.*?\});/s);
+  if(match)return JSON.parse(match[1]);
+}
+if(trimmed.startsWith('{')||trimmed.startsWith('['))return JSON.parse(trimmed);
+if(/^VERSION:\s*2\.0_METADATA\s*$/m.test(text)||/--- NODES ---/.test(text))return parseExtendedLines(text);
+return/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)?parseSimpleTxt(text):parseIndentTxt(text);
+}
+$('copy-dir-btn').onclick=async()=>{
+const path=$('file-dir').value.trim();
+if(!path){
+$('pick-dir-status').textContent='Enter or paste a folder path into the directory field first.';
+return;
+}
+state.fileDir=path;
+clearFileAvailability();
+saveState();
+const copiedMessage='Path copied. Click Select Directory, paste it into the chooser’s path/location field when available, then confirm Select Folder.';
+try{
+await navigator.clipboard.writeText(path);
+$('pick-dir-status').textContent=copiedMessage;
+toast('Folder path copied');
+}catch(err){
+const temp=document.createElement('textarea');
+temp.value=path;
+temp.setAttribute('readonly','');
+temp.style.position='fixed';
+temp.style.left='-10000px';
+temp.style.top='0';
+document.body.appendChild(temp);
+temp.focus();
+temp.select();
+let copied=false;
+try{copied=document.execCommand('copy');}catch(_){}
+temp.remove();
+if(copied){
+$('pick-dir-status').textContent=copiedMessage;
+toast('Folder path copied');
+}else{
+$('pick-dir-status').textContent='Clipboard access was blocked. Select the path in the directory field and copy it manually, then paste it into the folder chooser if it has a path/location field.';
+}
+}
+};
+$('pick-dir-btn').onclick=async()=>{
+if(window.top!==window.self){
+const msg='This HTML is running inside an embedded preview. Your browser blocks folder selection from cross-origin frames. Download this HTML and open the downloaded .html file directly in a browser tab or window, then click Select Directory again.';
+$('pick-dir-status').textContent=msg;
+toast('Open the downloaded HTML directly in your browser.');
+alert(msg);
+return;
+}
+if(!window.showDirectoryPicker){
+alert('Folder selection is not supported in this browser. Try a recent Chromium-based browser such as Chrome or Edge.');
+return;
+}
+try{
+const options={id:'concept-map-directory',mode:'read'};
+if(dirHandle)options.startIn=dirHandle;
+else options.startIn='documents';
+$('pick-dir-status').textContent='Opening folder chooser at the last-used location when supported…';
+const chosen=await window.showDirectoryPicker(options);
+dirHandle=chosen;
+clearFileAvailability();
+$('file-dir').value=chosen.name;
+state.fileDir=chosen.name;
+$('pick-dir-status').textContent=`Active folder: ${chosen.name}`;
+lastReadHandle=null;
+await persistDirectoryHandle(chosen);
+saveState();
+render();
+}catch(err){
+if(err.name!=='AbortError'){
+const blocked=/cross.origin sub.?frames?|same.origin policy/i.test(err.message||'');
+const msg=blocked?'The browser blocked the folder picker because this page is embedded in a cross-origin frame. Download this HTML and open the .html file directly in a browser tab or window, then try again.':'Could not open folder chooser: '+err.message;
+$('pick-dir-status').textContent=msg;
+toast(msg);
+if(blocked)alert(msg);
+}
+}
+};
+$('file-dir').onchange=e=>{
+state.fileDir=e.target.value.trim();
+clearFileAvailability();
+saveState();
+render();
+};
+async function getFileContent(name){
+const fileName=fileNameFor(name);
+if(dirHandle){
+const preferredFolder=(state.fileSubfolder||'').trim();
+if(preferredFolder){
+try{
+const subfolder=await dirHandle.getDirectoryHandle(preferredFolder);
+const handle=await subfolder.getFileHandle(fileName);
+lastReadHandle=handle;
+const file=await handle.getFile();
+return{text:await file.text(),handle};
+}catch(err){
+if(err.name!=='NotFoundError')console.warn('Resaved subfolder lookup failed:',err);
+}
+}
+try{
+const handle=await dirHandle.getFileHandle(fileName);
+lastReadHandle=handle;
+const file=await handle.getFile();
+return{text:await file.text(),handle};
+}catch(err){
+console.warn('Directory handle file lookup failed:',err);
+}
+}
+const relPath=state.fileDir?`${state.fileDir.replace(/\/$/, '')}/${fileName}`:fileName;
+const res=await fetch(relPath);
+if(!res.ok)throw new Error(`Could not load ${relPath} (${res.status})`);
+lastReadHandle=null;
+return{text:await res.text(),handle:null};
+}
+const views=[{name:'Main map',depth:0,nodes:null,lines:null}];
+let activeView=0;
+const cloneJ=o=>JSON.parse(JSON.stringify(o));
+function saveActiveView(){views[activeView].nodes=cloneJ(state.nodes);views[activeView].lines=cloneJ(state.lines);}
+function loadView(v){
+state.nodes=cloneJ(v.nodes);state.lines=cloneJ(v.lines);
+selected.clear();selectedLineId=null;editingId=null;
+saveState();render();renderViews();
+}
+function openInCurrent(name,parsed,target){
+saveActiveView();
+const v={name,depth:views[activeView].depth+1,nodes:parsed.nodes,lines:parsed.lines,target:target||null};
+views.splice(activeView+1,0,v);
+activeView++;
+setSaveTarget(v.target,true,false,true);
+loadView(v);
+}
+function gotoView(i){
+if(i===activeView||!views[i])return;
+saveActiveView();
+activeView=i;
+setSaveTarget(views[i].target,true,false,true);
+loadView(views[i]);
+}
+function parentIndex(){
+for(let i=activeView-1;i>=0;i--)if(views[i].depth<views[activeView].depth)return i;
+return-1;
+}
+function renderViews(){
+const list=$('views-list');
+list.innerHTML='';
+views.forEach((v,i)=>{
+const b=document.createElement('button');
+b.className='view-btn'+(i===activeView?' active':'');
+b.style.marginLeft=(v.depth*14)+'px';
+b.textContent=(i===activeView?'\u25B6 ':(v.depth?'\u21B3 ':''))+v.name;
+b.onclick=()=>gotoView(i);
+list.appendChild(b);
+});
+$('view-parent-btn').disabled=parentIndex()<0;
+}
+$('view-parent-btn').onclick=()=>{const p=parentIndex();if(p>=0)gotoView(p);};
+applyPanelOrder();
+saveState();
+render();
+renderViews();
+updateActiveFileUI();
+restoreDirectoryHandle();
+if(window.opener&&location.hash==='#child'){
+try{window.opener.postMessage({type:'cm-child-ready'},'*');}catch(err){}
+}
+</script> 
+
+<script>
+(()=>{
+ const frame=document.getElementById('conceptmap-code-frame');
+ if(!frame)return;
+ let lastAutomaticSnapshotAt=0;
+ const sendSnapshot=(force=false)=>{
+  const now=Date.now();
+  if(!force&&lastAutomaticSnapshotAt&&now-lastAutomaticSnapshotAt<1000)return;
+  try{
+   const snapshot='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+   frame.contentWindow.postMessage({channel:'conceptmap-code',type:'main-source',filename:'conceptmap.html',mode:'live-page snapshot',source:snapshot},'*');
+   if(!force)lastAutomaticSnapshotAt=now;
+  }catch(err){
+   try{frame.contentWindow.postMessage({channel:'conceptmap-code',type:'source-error',message:'Could not serialize the main page: '+err.message},'*')}catch(ignore){}
+  }
+ };
+ window.addEventListener('message',event=>{
+  if(event.source!==frame.contentWindow||!event.data||event.data.channel!=='conceptmap-code'||event.data.type!=='request-main-source')return;
+  sendSnapshot(event.data.reason==='user');
+ });
+ const childIsReady=()=>{try{return !!frame.contentWindow&&frame.contentWindow.location.href!=='about:blank'}catch(ignore){return true}};
+ frame.addEventListener('load',()=>{if(childIsReady())sendSnapshot(false)});
+ try{if(childIsReady()&&frame.contentDocument&&frame.contentDocument.readyState==='complete')sendSnapshot(false)}catch(ignore){}
+})();
+</script>
+</body>
+</html>

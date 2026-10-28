@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Concept Map — Import, Export & Save</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#0d1b2a;color:#e0e6ed;min-height:100vh;padding:14px;font-size:12px}h1{font-size:14px;color:#00f5d4;letter-spacing:1px;margin-bottom:10px}h2{font-size:11px;color:#90e0ef;text-transform:uppercase;border-bottom:1px solid #415a77;padding-bottom:4px;margin-bottom:8px;letter-spacing:1px}.panel{background:#1b263b;border:1px solid #415a77;padding:10px;margin-bottom:12px}#status{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:12px;border:1px solid #415a77;background:#0d1b2a;font-size:11px}#status-dot{width:9px;height:9px;border-radius:50%;background:#ff4d6d;flex:none}#status.connected #status-dot{background:#00f5d4}#status-text{flex:1;min-width:0}.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:6px 10px;font-size:11px;font-family:monospace;cursor:pointer;text-transform:uppercase;letter-spacing:.35px}button:hover:not(:disabled){background:#0077b6;color:#fff}button:disabled{opacity:.4;cursor:not-allowed}.action-btn{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold}.danger-btn{background:#7209b7;border-color:#f72585;color:#ff4d6d}.hint{color:#778da9;font-size:10.5px;line-height:1.5;margin-bottom:7px}label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:5px}input[type=checkbox]{accent-color:#00b4d8}input[type=text],select{width:100%;background:#1b263b;border:1px solid #778da9;color:#fff;padding:7px;font:11px monospace;min-width:0}input:focus{outline:1px solid #00b4d8}#log{background:#0b132b;border:1px solid #415a77;padding:6px 8px;max-height:110px;overflow:auto;font-size:10.5px;color:#90e0ef;white-space:pre-wrap}.ok{color:#00f5d4}.err{color:#ff4d6d}#dropzone{border:1px dashed #778da9;padding:14px;text-align:center;color:#778da9;font-size:11px;margin-bottom:8px}#dropzone.over{border-color:#00f5d4;color:#00f5d4;background:rgba(0,245,212,.08)}.history-item{display:flex;justify-content:space-between;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #415a77;padding:5px 7px;margin-bottom:4px;font-size:10px}.history-item.active{border-color:#00f5d4;color:#00f5d4}.history-item>span{flex:1;min-width:0}.history-item button{padding:3px 6px;font-size:9px}.dropdown{border:1px solid #415a77;background:#101c31;margin-bottom:7px}.dropdown>summary{cursor:pointer;list-style:none;color:#00f5d4;font-weight:bold;padding:9px 10px;letter-spacing:.4px}.dropdown>summary::-webkit-details-marker{display:none}.dropdown>summary:after{content:'＋';float:right;color:#90e0ef}.dropdown[open]>summary:after{content:'−'}.dropdown-body{padding:9px;border-top:1px solid #415a77;display:flex;flex-direction:column;gap:7px}.field-label{display:block;color:#90e0ef;font-size:10px;margin-bottom:4px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:6px}.filename-row{display:flex;gap:6px;align-items:stretch}.filename-row input{flex:1;min-width:0}.filename-row button{flex:none}.status-note{font-size:10px;color:#778da9;line-height:1.4}.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:430px){body{padding:8px}.two-col,.format-grid{grid-template-columns:1fr}.history-item{align-items:flex-start}}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;background:#0d1b2a;color:#e0e6ed;min-height:100vh;padding:14px;font-size:12px}h1{font-size:14px;color:#00f5d4;letter-spacing:1px;margin-bottom:10px}h2{font-size:11px;color:#90e0ef;text-transform:uppercase;border-bottom:1px solid #415a77;padding-bottom:4px;margin-bottom:8px;letter-spacing:1px}.panel{background:#1b263b;border:1px solid #415a77;padding:10px;margin-bottom:12px}#status{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:12px;border:1px solid #415a77;background:#0d1b2a;font-size:11px}#status-dot{width:9px;height:9px;border-radius:50%;background:#ff4d6d;flex:none}#status.connected #status-dot{background:#00f5d4}#status-text{flex:1;min-width:0}.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:6px 10px;font-size:11px;font-family:monospace;cursor:pointer;text-transform:uppercase;letter-spacing:.35px}button:hover:not(:disabled){background:#0077b6;color:#fff}button:disabled{opacity:.4;cursor:not-allowed}.action-btn{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold}.danger-btn{background:#7209b7;border-color:#f72585;color:#ff4d6d}.hint{color:#778da9;font-size:10.5px;line-height:1.5;margin-bottom:7px}label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:5px}input[type=checkbox]{accent-color:#00b4d8}input[type=text],select,textarea{width:100%;background:#1b263b;border:1px solid #778da9;color:#fff;padding:7px;font:11px monospace;min-width:0}input:focus,textarea:focus{outline:1px solid #00b4d8}#log{background:#0b132b;border:1px solid #415a77;padding:6px 8px;max-height:110px;overflow:auto;font-size:10.5px;color:#90e0ef;white-space:pre-wrap}.ok{color:#00f5d4}.err{color:#ff4d6d}#dropzone{border:1px dashed #778da9;padding:14px;text-align:center;color:#778da9;font-size:11px;margin-bottom:8px}#dropzone.over{border-color:#00f5d4;color:#00f5d4;background:rgba(0,245,212,.08)}.history-item{display:flex;justify-content:space-between;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #415a77;padding:5px 7px;margin-bottom:4px;font-size:10px}.history-item.active{border-color:#00f5d4;color:#00f5d4}.history-item>span{flex:1;min-width:0}.history-item button{padding:3px 6px;font-size:9px}.dropdown{border:1px solid #415a77;background:#101c31;margin-bottom:7px}.dropdown>summary{cursor:pointer;list-style:none;color:#00f5d4;font-weight:bold;padding:9px 10px;letter-spacing:.4px}.dropdown>summary::-webkit-details-marker{display:none}.dropdown>summary:after{content:'＋';float:right;color:#90e0ef}.dropdown[open]>summary:after{content:'−'}.dropdown-body{padding:9px;border-top:1px solid #415a77;display:flex;flex-direction:column;gap:7px}.field-label{display:block;color:#90e0ef;font-size:10px;margin-bottom:4px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:6px}.filename-row{display:flex;gap:6px;align-items:stretch}.filename-row input{flex:1;min-width:0}.filename-row button{flex:none}.status-note{font-size:10px;color:#778da9;line-height:1.4}.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:430px){body{padding:8px}.two-col,.format-grid{grid-template-columns:1fr}.history-item{align-items:flex-start}}
 </style>
 </head>
 <body>
@@ -73,6 +73,15 @@
   <input type="file" id="import-simple-file" accept=".txt,text/plain" hidden>
   <input type="file" id="import-indent-file" accept=".txt,text/plain" hidden>
   <input type="file" id="import-html-file" accept=".html,.htm,text/html" hidden>
+
+  <details class="dropdown" id="import-paragraphs-dropdown" open style="margin-top:10px;">
+    <summary>Import Paragraphs Text</summary>
+    <div class="dropdown-body">
+      <div class="hint">Paste text below. Paragraphs separated by empty lines will be created as multi-line nodes. Click <a href="#" id="example-paragraph-btn" style="color:#00f5d4">here for an example</a>.</div>
+      <textarea id="paragraphs-textarea" rows="6" placeholder="Paste paragraphs here..."></textarea>
+      <button id="import-paragraphs-btn" class="action-btn" disabled>Import Paragraphs</button>
+    </div>
+  </details>
 </div>
 
 <div class="panel">
@@ -93,7 +102,7 @@ const statusEl=$('status'),statusText=$('status-text'),logEl=$('log'),dropzone=$
 let saveFormat='lines';
 const FORMAT_LABELS={lines:'TXT Extended Lines','txt-simple':'TXT Simple','txt-indent':'TXT Indent',json:'JSON',html:'Full HTML'};
 function updateFormatNote(){$('format-note').textContent='Save format: '+(FORMAT_LABELS[saveFormat]||saveFormat)+' (change it in the main menu).';}
-const allButtons=['save-btn','save-canvas-new-btn','save-connected-new-btn','resave-all-btn','iphone-save-btn','iphone-load-btn','export-json-btn','export-lines-btn','export-simple-btn','export-indent-btn','export-html-btn','import-json-btn','import-lines-btn','import-simple-btn','import-indent-btn','import-html-btn'];
+const allButtons=['save-btn','save-canvas-new-btn','save-connected-new-btn','resave-all-btn','iphone-save-btn','iphone-load-btn','export-json-btn','export-lines-btn','export-simple-btn','export-indent-btn','export-html-btn','import-json-btn','import-lines-btn','import-simple-btn','import-indent-btn','import-html-btn','import-paragraphs-btn'];
 function log(msg,cls){const row=document.createElement('div');if(cls)row.className=cls;row.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;logEl.appendChild(row);logEl.scrollTop=logEl.scrollHeight;}
 function setConnected(yes){statusEl.classList.toggle('connected',yes);allButtons.forEach(id=>$(id).disabled=!yes||(!mapState&&!id.startsWith('import-')));$('clear-history-btn').disabled=!yes||!historyStates.length;}
 function post(msg){if(!opener_||opener_.closed){log('Main concept map window is closed or unreachable. Open this manager from the main map.','err');statusText.textContent='Main map window not reachable.';setConnected(false);return false;}try{opener_.postMessage(msg,'*');return true;}catch(err){log('Could not communicate with main map: '+err.message,'err');return false;}}
@@ -103,9 +112,20 @@ function download(filename,content,type){const blob=new Blob([content],{type});c
 function slug(value){return(String(value||'concept_map').trim().replace(/[^a-z0-9_-]+/gi,'_').replace(/^_+|_+$/g,'')||'concept_map').slice(0,100);}
 function prefix(){if(mapState&&mapState.nodes&&mapState.nodes.length){const first=[...mapState.nodes].sort((a,b)=>(a.y-b.y)||(a.x-b.x))[0];if(first&&String(first.text||'').trim())return slug(first.text);}return 'concept_map';}
 function dateStamp(){return new Date().toISOString().slice(0,10);}
-function formatLines(state){const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${state.nodes.length}`,`LINES: ${state.lines.length}`,'--- NODES ---'];state.nodes.forEach(n=>out.push(`${n.id} | x:${Math.round(n.x||0)} y:${Math.round(n.y||0)} | text: ${n.text||'Node'}${n.url?` | URL: ${n.url}`:''}${n.size?` | size: ${n.size}`:''}${n.collapsed?' | collapsed: true':''}`));out.push('--- CONNECTIONS ---');state.lines.forEach(l=>out.push(`LINE | id:${l.id||''} | from:${l.from} | to:${l.to} | arrow:${l.arrow||'end'} | width:${l.width||1} | color:${l.color||'#00b4d8'} | label:${l.label||''}`));return out.join('\n');}
-function formatSimple(state){const out=[];state.nodes.forEach(n=>out.push(`${n.id} ${n.url?`${n.text} ${n.url}`:n.text} ${Math.round(n.x||0)} ${Math.round(n.y||0)}`));state.lines.forEach(l=>{const rev=l.arrow==='start';out.push(`${l.arrow==='none'?'-2':'-1'} ${rev?l.to:l.from} ${rev?l.from:l.to}`);});return out.join('\n');}
-function formatIndent(state){const kids=new Map(),parents=new Map();state.nodes.forEach(n=>{kids.set(n.id,[]);parents.set(n.id,0);});state.lines.forEach(l=>{const p=l.arrow==='start'?l.to:l.from,c=l.arrow==='start'?l.from:l.to;if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parents.set(c,parents.get(c)+1);}});let roots=state.nodes.filter(n=>parents.get(n.id)===0);if(!roots.length)roots=[...state.nodes];roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));const seen=new Set(),out=[];function walk(id,depth){if(seen.has(id))return;seen.add(id);const n=state.nodes.find(x=>x.id===id);if(!n)return;out.push('    '.repeat(depth)+(n.url?`${n.text} ${n.url}`:n.text));(kids.get(id)||[]).forEach(id2=>walk(id2,depth+1));}roots.forEach(n=>walk(n.id,0));state.nodes.forEach(n=>walk(n.id,0));return out.join('\n');}
+
+function formatLines(state){
+  const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${state.nodes.length}`,`LINES: ${state.lines.length}`,'--- NODES ---'];
+  state.nodes.forEach(n=>{
+    const escapedText = (n.text || 'Node').replace(/\r?\n/g, '\\n');
+    out.push(`${n.id} | x:${Math.round(n.x||0)} y:${Math.round(n.y||0)} | text: ${escapedText}${n.url?` | URL: ${n.url}`:''}${n.size?` | size: ${n.size}`:''}${n.collapsed?' | collapsed: true':''}`);
+  });
+  out.push('--- CONNECTIONS ---');
+  state.lines.forEach(l=>out.push(`LINE | id:${l.id||''} | from:${l.from} | to:${l.to} | arrow:${l.arrow||'end'} | width:${l.width||1} | color:${l.color||'#00b4d8'} | label:${l.label||''}`));
+  return out.join('\n');
+}
+
+function formatSimple(state){const out=[];state.nodes.forEach(n=>out.push(`${n.id} ${n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x||0)} ${Math.round(n.y||0)}`));state.lines.forEach(l=>{const rev=l.arrow==='start';out.push(`${l.arrow==='none'?'-2':'-1'} ${rev?l.to:l.from} ${rev?l.from:l.to}`);});return out.join('\n');}
+function formatIndent(state){const kids=new Map(),parents=new Map();state.nodes.forEach(n=>{kids.set(n.id,[]);parents.set(n.id,0);});state.lines.forEach(l=>{const p=l.arrow==='start'?l.to:l.from,c=l.arrow==='start'?l.from:l.to;if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parents.set(c,parents.get(c)+1);}});let roots=state.nodes.filter(n=>parents.get(n.id)===0);if(!roots.length)roots=[...state.nodes];roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));const seen=new Set(),out=[];function walk(id,depth){if(seen.has(id))return;seen.add(id);const n=state.nodes.find(x=>x.id===id);if(!n)return;out.push('    '.repeat(depth)+(n.url?`${n.text.replace(/\r?\n/g, ' ')} ${n.url}`:n.text.replace(/\r?\n/g, ' ')));(kids.get(id)||[]).forEach(id2=>walk(id2,depth+1));}roots.forEach(n=>walk(n.id,0));state.nodes.forEach(n=>walk(n.id,0));return out.join('\n');}
 function setTargetUI(target){
  const previous=saveTarget;
  if(target){const keepHandle=previous&&previous.name===target.name?previous.handle:null;saveTarget={...target,handle:target.handle||keepHandle||null};}
@@ -120,9 +140,57 @@ function renderHistory(){const box=$('history-list');box.innerHTML='';if(!histor
 function receiveState(d){if(d.saveFormat&&FORMAT_LABELS[d.saveFormat]){saveFormat=d.saveFormat;updateFormatNote();}if(d.state&&Array.isArray(d.state.nodes)&&Array.isArray(d.state.lines))mapState=d.state;if(d.defaults)defaults=d.defaults;if(Array.isArray(d.history))historyStates=d.history;if(Number.isInteger(d.historyIdx))historyIdx=d.historyIdx;if(Object.prototype.hasOwnProperty.call(d,'saveTarget'))setTargetUI(d.saveTarget);setConnected(true);if(mapState)statusText.textContent=`Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;renderHistory();}
 function parseTextAndUrl(input){const match=String(input).match(/https?:\/\/[^\s]+/i);if(match){const url=match[0];return{text:String(input).replace(url,'').trim()||url,url};}return{text:String(input).trim()||'Node',url:null};}
 function newId(){return 'id_'+Math.random().toString(36).slice(2,11);}
-function parseExtended(text){const newNodes=[],newLines=[];let mode=null;text.split(/\r?\n/).forEach(line=>{const trimmed=line.trim();if(trimmed==='--- NODES ---'){mode='nodes';return;}if(trimmed==='--- CONNECTIONS ---'){mode='lines';return;}if(mode==='nodes'){const parts=trimmed.split('|').map(x=>x.trim());if(parts.length<2)return;const id=parts[0],coords=parts[1];const xm=coords.match(/x:\s*(-?\d+(?:\.\d+)?)/),ym=coords.match(/y:\s*(-?\d+(?:\.\d+)?)/);let textRaw='',url=null,size='auto',collapsed=false;for(const part of parts.slice(2)){if(part.startsWith('text:'))textRaw=part.slice(5).trim();else if(part.startsWith('URL:'))url=part.slice(4).trim();else if(part.startsWith('size:'))size=part.slice(5).trim();else if(part.startsWith('collapsed:'))collapsed=part.slice(10).trim()==='true';}newNodes.push({id,text:textRaw||'Node',url,x:xm?+xm[1]:100,y:ym?+ym[1]:100,size,collapsed});}else if(mode==='lines'&&trimmed.startsWith('LINE')){const parts=trimmed.split('|').map(x=>x.trim());const take=(prefix,fallback='')=>{const p=parts.find(x=>x.startsWith(prefix));return p?p.slice(prefix.length).trim():fallback;};const from=take('from:'),to=take('to:');if(from&&to)newLines.push({id:take('id:',newId()),from,to,arrow:take('arrow:','end'),width:parseFloat(take('width:','1'))||1,color:take('color:','#00b4d8'),label:take('label:','')});}});return{nodes:newNodes,lines:newLines};}
+
+function parseExtended(text){
+  const newNodes=[],newLines=[];let mode=null;
+  text.split(/\r?\n/).forEach(line=>{
+    const trimmed=line.trim();
+    if(trimmed==='--- NODES ---'){mode='nodes';return;}
+    if(trimmed==='--- CONNECTIONS ---'){mode='lines';return;}
+    if(mode==='nodes'){
+      const parts=trimmed.split('|').map(x=>x.trim());
+      if(parts.length<2)return;
+      const id=parts[0],coords=parts[1];
+      const xm=coords.match(/x:\s*(-?\d+(?:\.\d+)?)/),ym=coords.match(/y:\s*(-?\d+(?:\.\d+)?)/);
+      let textRaw='',url=null,size='auto',collapsed=false;
+      for(const part of parts.slice(2)){
+        if(part.startsWith('text:'))textRaw=part.slice(5).trim().replace(/\\n/g, '\n');
+        else if(part.startsWith('URL:'))url=part.slice(4).trim();
+        else if(part.startsWith('size:'))size=part.slice(5).trim();
+        else if(part.startsWith('collapsed:'))collapsed=part.slice(10).trim()==='true';
+      }
+      newNodes.push({id,text:textRaw||'Node',url,x:xm?+xm[1]:100,y:ym?+ym[1]:100,size,collapsed});
+    }else if(mode==='lines'&&trimmed.startsWith('LINE')){
+      const parts=trimmed.split('|').map(x=>x.trim());
+      const take=(prefix,fallback='')=>{const p=parts.find(x=>x.startsWith(prefix));return p?p.slice(prefix.length).trim():fallback;};
+      const from=take('from:'),to=take('to:');
+      if(from&&to)newLines.push({id:take('id:',newId()),from,to,arrow:take('arrow:','end'),width:parseFloat(take('width:','1'))||1,color:take('color:','#00b4d8'),label:take('label:','')});
+    }
+  });
+  return{nodes:newNodes,lines:newLines};
+}
+
 function parseSimple(text){const lines=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],connections=[],map=new Map();lines.forEach(line=>{const t=line.trim().split(/\s+/);if(t.length<3)return;const first=t[0];if(first==='-1'||first==='-2'){connections.push({id:newId(),from:map.get(t[1])||t[1],to:map.get(t[2])||t[2],arrow:first==='-2'?'none':'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});return;}let x=80+(nodes.length%8)*140,y=140+Math.floor(nodes.length/8)*60,content=t.slice(1),py=Number(t[t.length-1]),px=Number(t[t.length-2]);if(Number.isFinite(px)&&Number.isFinite(py)){x=px;y=py;content=t.slice(1,-2);}const parsed=parseTextAndUrl(content.join(' '));const id=newId();map.set(first,id);nodes.push({id,text:parsed.text,url:parsed.url,x,y,size:'auto',collapsed:false});});return{nodes,lines:connections};}
 function parseIndent(text){const source=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],lines=[],stack=[];let y=140;source.forEach(line=>{let level=0,i=0;while(i<line.length){if(line[i]==='\t'){level++;i++;}else if(line.slice(i,i+4)==='    '){level++;i+=4;}else if(line.slice(i,i+2)==='  '){level++;i+=2;}else break;}const p=parseTextAndUrl(line.trim()),node={id:newId(),text:p.text,url:p.url,x:80+level*180,y,size:'auto',collapsed:false};y+=50;nodes.push(node);stack[level]=node;stack.length=level+1;if(level>0){const parent=stack[level-1];if(parent)lines.push({id:newId(),from:parent.id,to:node.id,arrow:'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});}});return{nodes,lines};}
+
+function parseParagraphs(text){
+  const rawParagraphs=text.split(/\r?\n\s*\r?\n/).map(p=>p.trim()).filter(Boolean);
+  const nodes=[];
+  rawParagraphs.forEach((para, idx)=>{
+    const parsed=parseTextAndUrl(para);
+    nodes.push({
+      id: newId(),
+      text: parsed.text,
+      url: parsed.url,
+      x: 120 + (idx % 5) * 220,
+      y: 140 + Math.floor(idx / 5) * 160,
+      size: 'auto',
+      collapsed: false
+    });
+  });
+  return {nodes, lines: []};
+}
+
 function announceTarget(handle,name,format){currentFileHandle=handle||null;currentFileName=name;currentFormatType=format;post({type:'cm-save-target',name,format});if(handle&&!post({type:'cm-save-handle',handle,name}))log('The selected file handle could not be shared with the main map; overwrite remains available from this panel.','err');}
 function importJson(text,name,handle=null){const data=JSON.parse(text);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('JSON must contain arrays named nodes and lines.');post({type:'cm-import-json',data});announceTarget(handle,name,'json');log(`Sent JSON "${name}" to the map.`);}
 function importGraph(text,name,format,handle=null){let parsed;if(format==='lines'){parsed=parseExtended(text);if(!parsed.nodes.length)throw new Error('No extended-lines nodes were found.');}else if(format==='simple')parsed=parseSimple(text);else parsed=parseIndent(text);if(!parsed.nodes.length&&!parsed.lines.length)throw new Error('No map records were found.');const fmt=format==='lines'?'lines':format==='simple'?'txt-simple':'txt-indent';post({type:'cm-import-graph',nodes:parsed.nodes,lines:parsed.lines,replace:replaceChk.checked,name,format:fmt});if(replaceChk.checked)announceTarget(handle,name,fmt);log(`Sent ${format} "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map.`);}
@@ -167,6 +235,28 @@ $('export-simple-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return 
 $('export-indent-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_indented_${dateStamp()}.txt`;download(exportName,formatIndent(mapState),'text/plain;charset=utf-8');log('Exported TXT Indent as '+exportName+'.');};
 $('export-html-btn').onclick=()=>{if(!mapState)return;const exportName=`${prefix()}_view_${dateStamp()}.html`;const content=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p><script>const mapData = ${JSON.stringify(mapState,null,2)};<\/script></body></html>`;download(exportName,content,'text/html;charset=utf-8');log('Exported Full HTML view as '+exportName+'.');};
 $('import-json-btn').onclick=()=>chooseFile('import-json-file','json');$('import-lines-btn').onclick=()=>chooseFile('import-lines-file','lines');$('import-simple-btn').onclick=()=>chooseFile('import-simple-file','simple');$('import-indent-btn').onclick=()=>chooseFile('import-indent-file','indent');$('import-html-btn').onclick=()=>chooseFile('import-html-file','html');
+
+$('example-paragraph-btn').onclick=(e)=>{
+  e.preventDefault();
+  $('paragraphs-textarea').value = "how are you\ngood\n\nwhere are you going\nto the store";
+};
+
+$('import-paragraphs-btn').onclick=()=>{
+  const val=$('paragraphs-textarea').value;
+  if(!val.trim()){
+    log('Please enter paragraph text before importing.', 'err');
+    return;
+  }
+  try {
+    const parsed=parseParagraphs(val);
+    if(!parsed.nodes.length) throw new Error('No valid paragraphs found.');
+    post({type:'cm-import-graph',nodes:parsed.nodes,lines:parsed.lines,replace:replaceChk.checked,name:'Paragraphs Import',format:'lines'});
+    log(`Imported ${parsed.nodes.length} paragraph nodes to the canvas.`, 'ok');
+  } catch(err) {
+    log('Paragraph import failed: '+err.message, 'err');
+  }
+};
+
 $('clear-history-btn').onclick=()=>{post({type:'cm-history-action',action:'clear'});log('Requested clearing all history states.');};
 $('refresh-btn').onclick=requestState;
 ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('over');}));['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('over');}));dropzone.addEventListener('drop',async e=>{const file=e.dataTransfer.files&&e.dataTransfer.files[0];if(!file)return;let handle=null;try{const item=e.dataTransfer.items&&e.dataTransfer.items[0];if(item&&item.getAsFileSystemHandle){const picked=await item.getAsFileSystemHandle();if(picked&&picked.kind==='file')handle=picked;}}catch(err){}handleImport(file,'auto',handle);});document.body.addEventListener('dragover',e=>e.preventDefault());document.body.addEventListener('drop',e=>e.preventDefault());
