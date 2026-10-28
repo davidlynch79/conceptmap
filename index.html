@@ -16,14 +16,11 @@
       .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
       .ai-btn { background: #240046; border-color: #9d4edd; color: #e0aaff; font-weight: bold; }
       .ai-btn:hover { background: #3c096c; color: #fff; }
-      .help-btn { background: #0077b6; border-color: #00b4d8; color: #fff; font-weight: bold; }
       .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
       .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
       label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; width: 100%; }
       input[type=checkbox],input[type=radio] { cursor: pointer; accent-color: #00b4d8; width: 16px; height: 16px; min-width: 16px; }
       input[type=color] { border: none; width: 28px; height: 28px; cursor: pointer; background: transparent; padding: 0; }
-      .legend-up { color: #ffb703; font-weight: bold; }
-      .legend-down { color: #ff5d8f; font-weight: bold; }
       #toolbar { background: #1b263b; border: 1px solid #415a77; padding: 8px; font-size: 11px; z-index: 150; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4); overflow-x: hidden; overflow-y: scroll; max-height: 100vh; scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a; position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 180px; max-width: 85vw; left: 0; border-width: 0 1px 0 0; }
       #toolbar::-webkit-scrollbar { width: 8px; }
       #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
@@ -33,17 +30,10 @@
       .panel-grip { display: none; font: 9px monospace; color: #778da9; background: #1b263b; padding: 2px 4px; text-align: center; cursor: grab; border: 1px dotted #415a77; letter-spacing: 1px; margin-bottom: 2px; }
       .panel-grip:active { cursor: grabbing; color: #00f5d4; }
       body.draggable-panels-enabled .tool-group .panel-grip { display: block; }
-      .panel-body { display: flex; flex-direction: column; gap: 6px; }
-      .panel-body.collapsed { display: none; }
       #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
       #toolbar .row-inline>* { flex: 1; }
-      #settings-text-editor { width: 100%; min-height: 150px; max-height: 42vh; resize: vertical; white-space: pre; overflow: auto; line-height: 1.45; font-size: 10px; user-select: text; -webkit-user-select: text; }
-      #settings-text-editor:focus { border-color: #00f5d4; }
       .cap { font-size: 9.5px; color: #00f5d4; font-weight: bold; letter-spacing: 0.5px; }
       .cap-ai { color: #e0aaff; font-weight: bold; }
-      .slider-label { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
-      .slider-label input[type=range] { width: 100%; cursor: pointer; accent-color: #00b4d8; height: 22px; }
-      .slider-label b { color: #00f5d4; font-weight: normal; }
       .slider-hint { color: #778da9; font-size: 9px; line-height: 1.3; }
       .directory-input-row { display: flex; align-items: stretch; gap: 5px; width: 100%; }
       .directory-input-row input { flex: 1 1 auto; min-width: 0; }
@@ -52,9 +42,6 @@
       .region-mode-row>label { flex: 1 1 auto; width: auto; min-width: 0; gap: 4px; white-space: nowrap; }
       .region-mode-row label:last-of-type { flex: 1.25 1 auto; }
       .fake-checkbox:disabled { opacity: 1; filter: none; cursor: default; accent-color: #00b4d8; }
-      .range-wrap { position: relative; width: 100%; min-width: 120px; height: 22px; }
-      .range-wrap input { position: absolute; left: 0; top: 0; width: 100%; background: transparent; pointer-events: none; appearance: none; -webkit-appearance: none; }
-      .range-wrap input::-webkit-slider-thumb { pointer-events: auto; cursor: pointer; appearance: none; -webkit-appearance: none; width: 18px; height: 18px; background: #00b4d8; border-radius: 50%; }
       #sidebar-resizer { display: block; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; left: calc(var(--sw) - 3px); }
       #sidebar-resizer:hover,#sidebar-resizer.resizing { background: #00b4d8; }
       #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
@@ -87,15 +74,18 @@
       #svg-layer path { pointer-events: stroke; cursor: pointer; }
       .line-selected { stroke-dasharray: 4,4; animation: dash 1s linear infinite; }
       .line-label-text { font: 10px monospace; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
-      .node { position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: nowrap; box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none; }
-      .node.fixed-size { display: block; white-space: normal; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
+      .node { position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: pre-wrap; word-break: break-word; box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none; }
+      .node.fixed-size { display: block; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
       .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
       .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
       .node.duplicate-node { border: 3px solid #ff2d55 !important; background: #5a1024 !important; box-shadow: 0 0 0 4px rgba(255,45,85,.35), 0 0 18px rgba(255,45,85,.9) !important; }
-      .node-content { line-height: 1.3; }
+      .node-content { line-height: 1.3; white-space: pre-wrap; }
       .node-content.has-url { color: #90e0ef; text-decoration: underline; }
       .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
-      .collapse-btn { color: #00f5d4; font-weight: bold; cursor: pointer; margin-right: 2px; }
+      .collapse-btn { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:1px solid #061a40; border-radius:50%; background:#168aad; color:#fff; font:bold 16px/1 monospace; cursor:pointer; z-index:28; user-select:none; box-shadow:0 1px 4px rgba(0,0,0,.55); padding:0; }
+      .collapse-btn:hover { filter:brightness(1.2); transform:translateX(-50%) scale(1.08); }
+      .collapse-btn.is-collapsed { background:#e63946; border-color:#7f1d1d; }
+      .node.balls-expanded .collapse-btn { width:30px; height:30px; bottom:-15px; font-size:18px; }
       .node-resize-handle { display: none; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; z-index: 20; cursor: se-resize; color: #00f5d4; font-size: 12px; line-height: 14px; text-align: right; }
       .node.selected .node-resize-handle { display: block; }
       .node-edit-input { width: 100%; height: 100%; min-width: 80px; min-height: 24px; padding: 4px; resize: both; overflow: auto; background: #0d1b2a; border-color: #00f5d4; color: #00f5d4; user-select: text; }
@@ -117,17 +107,6 @@
       #zoom-controls button { width: 48px; height: 48px; padding: 0; font-size: 22px; line-height: 1; background: rgba(27,38,59,.92); border-color: #00b4d8; color: #00f5d4; border-radius: 6px; }
       #zoom-controls #zoom-reset-btn { font-size: 11px; }
       body.touch-mode input[type=text],body.touch-mode input[type=password],body.touch-mode select,body.touch-mode textarea { font-size: 16px; }
-      .modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; justify-content: center; align-items: center; background: rgba(13,27,42,.85); backdrop-filter: blur(4px); }
-      .modal-overlay.active { display: flex; }
-      .modal-content { display: flex; flex-direction: column; width: 620px; max-width: 90vw; max-height: 85vh; overflow: hidden; background: #1b263b; border: 1px solid #00b4d8; box-shadow: 0 8px 32px rgba(0,0,0,.6); font-family: monospace; }
-      .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #0d1b2a; border-bottom: 1px solid #415a77; }
-      .modal-header h2 { font-size: 14px; color: #00f5d4; letter-spacing: 1px; }
-      .modal-close { background: transparent; border: none; color: #ff4d6d; font-size: 20px; width: auto; cursor: pointer; }
-      .modal-body { padding: 16px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
-      .help-section { margin-bottom: 16px; }
-      .help-section h3 { color: #90e0ef; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #415a77; padding-bottom: 4px; margin-bottom: 8px; }
-      .help-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
-      .help-key { color: #00f5d4; font-weight: bold; }
     </style>
   </head>
   <body>
@@ -147,63 +126,12 @@
         <div class="panel-grip">≡ AI PANEL</div>
         <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <span class="cap-ai">✨ AI ASSISTANT</span>
-          <button type="button" id="conceptmap-ai-collapse" class="ai-btn" aria-expanded="true" aria-controls="conceptmap-ai-frame-wrap" style="width:auto;padding:4px 8px">Collapse ▲</button>
+          <button type="button" id="conceptmap-ai-collapse" class="ai-btn" aria-expanded="false" aria-controls="conceptmap-ai-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
         </div>
-        <div id="conceptmap-ai-frame-wrap" style="display:block;min-width:0">
+        <div id="conceptmap-ai-frame-wrap" style="display:none;min-width:0">
           <iframe id="conceptmap-ai-frame" title="Concept Map AI panel" src="conceptmap_ai.html" style="display:block;width:100%;height:560px;min-height:420px;border:0;background:#130924" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
         </div>
       </div>
-      <div class="tool-group" id="conceptmap-code-panel" data-panel-id="panel-code-explorer" style="padding:6px;overflow:hidden;min-height:0;border-color:#00b4d8;background:#0b1b2b">
-        <div class="panel-grip">≡ CODE STRUCTURE PANEL</div>
-        <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span class="cap" style="color:#00f5d4">⌘ CODE STRUCTURE EXPLORER</span>
-          <button type="button" id="conceptmap-code-collapse" class="action-btn" aria-expanded="false" aria-controls="conceptmap-code-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
-        </div>
-        <div id="conceptmap-code-frame-wrap" style="display:none;min-width:0">
-          <iframe id="conceptmap-code-frame" title="Concept Map Code Structure Explorer" src="conceptmap_code.html" style="display:block;width:100%;height:720px;min-height:520px;border:0;background:#0d1b2a" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
-        </div>
-      </div>
-      <div class="tool-group ai-accent" id="conceptmap_ai_proxy" style="display:none!important" aria-hidden="true" data-panel-id="panel-gemini-proxy">
-        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-        <div class="row-inline">
-          <span class="cap-ai">✨ AI ASSISTANT</span>
-          <div>
-            <button type="button" class="panel-toggle-btn action-btn" data-target="body-gemini" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
-          </div>
-        </div>
-        <div id="body-gemini" class="panel-body collapsed">
-          <label>AI Provider: <select id="ai-provider">
-            <option value="gemini">Gemini</option>
-            <option value="claude">Claude (Anthropic)</option>
-            <option value="openai">ChatGPT / OpenAI API</option>
-          </select>
-        </label>
-        <label><span id="ai-key-caption">Gemini API Key:</span>
-          <input type="password" id="ai-api-key" autocomplete="off" placeholder="Paste selected provider's API key">
-        </label>
-        <label>Model: <select id="ai-model"></select>
-        </label>
-        <span class="slider-hint">Use an API key for the selected provider. OpenAI API usage is billed separately from a ChatGPT subscription; Claude API usage is separate from the Claude app subscription. Keep API keys private; do not export or share settings files that contain them.</span>
-        <span class="cap">GENERATE FROM TOPIC</span>
-        <textarea id="gemini-prompt" rows="2" placeholder="e.g. Distributed system consensus protocols..."></textarea>
-        <div class="row-inline">
-          <button id="gemini-generate-btn" class="ai-btn">Generate Map</button>
-          <button id="gemini-append-btn" style="background:#2a9d8f">Append</button>
-        </div>
-        <button id="gemini-roadmap-btn" class="action-btn" title="Creates 1-year timeline sequence">Generate as 1-Year Roadmap</button>
-        <span class="cap" style="margin-top:4px">CONTEXTUAL SELECTION TOOLS</span>
-        <button id="gemini-expand-btn" class="ai-btn" disabled title="Select 1 node to branch out">🌱 Expand Selected Node</button>
-        <button id="gemini-drill-btn" class="action-btn" disabled title="Select 1 node to build a dedicated sub-map">🔍 AI Drill-Down (Sub-Map)</button>
-        <button id="gemini-bridge-btn" class="action-btn" disabled title="Select 2 nodes to find relationships">🔗 Connect 2 Selected Nodes</button>
-        <span class="cap" style="margin-top:4px">WHITEBOARD / IMAGE TO MAP</span>
-        <input type="file" id="gemini-img-input" accept="image/*" style="font-size:10px">
-        <button id="gemini-img-btn" class="ai-btn">Convert Image to Concept Map</button>
-        <span class="cap" style="margin-top:4px">ASK MAP (AI COPILOT)</span>
-        <input type="text" id="gemini-ask-input" placeholder="e.g. What are the key bottlenecks?">
-        <button id="gemini-ask-btn" class="action-btn">Analyze & Highlight</button>
-        <span class="slider-hint" id="gemini-status">Choose an AI provider and enter its API key to activate AI features.</span>
-      </div>
-    </div>
     <div class="tool-group" data-panel-id="panel-io">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <button id="io-btn" class="action-btn" title="Open the dedicated import, export, and save manager">Import / Export &amp; Save Options &#8599;</button>
@@ -227,95 +155,13 @@
         <span id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
       </div>
     </div>
-    <div class="tool-group" data-panel-id="panel-settings-io">
-      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <div class="row-inline">
-        <span class="cap">SETTINGS PREFERENCES</span>
-        <div>
-          <button type="button" class="panel-toggle-btn action-btn" data-target="body-settings" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
-        </div>
-      </div>
-      <div id="body-settings" class="panel-body collapsed">
-        <div class="row-inline">
-          <button id="export-settings-btn" class="action-btn" title="Download readable, commented settings text">Export TXT</button>
-          <button id="import-settings-btn" class="action-btn" title="Import a commented text settings file or an older JSON settings file">Import Settings</button>
-          <input type="file" id="import-settings-file" accept=".txt,.cfg,.conf,.json,text/plain,application/json" style="display:none">
-        </div>
-        <label for="settings-text-editor">Direct Settings Text Editor</label>
-        <textarea id="settings-text-editor" rows="9" spellcheck="false" autocomplete="off" placeholder="SECTION;setting;value // explanation"></textarea>
-        <span class="slider-hint">One setting per line. Edit the value before //; the inline comment explains its meaning. Unknown settings are ignored. API keys and the local folder path are not included in exports. Reset Text Field loads built-in defaults into this editor only; click Apply Text to apply them. Reset Preferences applies defaults immediately while preserving the map and API keys.</span>
-        <div class="row-inline">
-          <button type="button" id="settings-refresh-text-btn">Reload Current</button>
-          <button type="button" id="settings-apply-text-btn" class="action-btn">Apply Text</button>
-        </div>
-        <div class="row-inline">
-          <button type="button" id="settings-reset-text-btn" title="Load built-in default settings into the editor only; does not apply them">Reset Text Field</button>
-          <button type="button" id="settings-reset-defaults-btn" class="danger-btn" title="Apply default preferences while preserving map content and API keys">Reset Preferences</button>
-        </div>
-        <label><input type="checkbox" data-k="draggablePanels" id="draggable-panels-chk"> Make sub menus draggable</label>
-      </div>
-    </div>
-    <div class="tool-group" data-panel-id="panel-interface">
-      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <div class="row-inline">
-        <span class="cap">INTERFACE OPTIONS</span>
-        <div>
-          <button type="button" class="panel-toggle-btn action-btn" data-target="body-interface" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
-        </div>
-      </div>
-      <div id="body-interface" class="panel-body collapsed">
-        <label>Interface Mode: <select data-k="inputMode">
-          <option value="auto">Auto-Detect</option>
-          <option value="desktop">Desktop Mode</option>
-          <option value="touch">Touch / Phone Mode</option>
-        </select>
-      </label>
-    </div>
-  </div>
-  <div class="tool-group" data-panel-id="panel-touch">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <div class="row-inline">
-      <span class="cap">TOUCH TUNING (ANTI-STICKY)</span>
-      <div>
-        <button type="button" class="panel-toggle-btn action-btn" data-target="body-touch" style="padding:2px 6px;font-size:9px;width:auto;">Settings</button>
-      </div>
-    </div>
-    <div id="body-touch" class="panel-body collapsed">
-      <div class="slider-label">
-        <span>Drag starts after: <b data-out="touchDragThreshold" data-unit="px"></b></span>
-        <input type="range" data-k="touchDragThreshold" min="0" max="30" step="1">
-        <span class="slider-hint">higher = ignores finger jitter</span>
-      </div>
-      <div class="slider-label">
-        <span>Node touch padding: <b data-out="touchHitPad" data-unit="px"></b></span>
-        <input type="range" data-k="touchHitPad" min="0" max="60" step="1">
-        <span class="slider-hint">near-miss touches still grab the node</span>
-      </div>
-      <div class="slider-label">
-        <span>Hold before drag: <b data-out="touchHoldMs" data-unit="ms"></b></span>
-        <input type="range" data-k="touchHoldMs" min="0" max="600" step="25">
-        <span class="slider-hint">0 = off. Moving earlier pans the screen</span>
-      </div>
-      <label><input type="checkbox" data-k="touchIgnoreExtra"> Ignore extra fingers while dragging</label>
-      <label><input type="checkbox" data-k="touchAutoClear"> Auto-clear stuck touches</label>
-      <button id="tt-reset-btn">Reset touches now</button>
-    </div>
-  </div>
   <div class="tool-group" data-panel-id="panel-add">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <input type="text" id="node-text" placeholder="Box text or URL...">
     <div class="row-inline">
       <button id="add-btn">Add Box</button>
       <button id="add-boxes-btn">Add Boxes</button>
-      <details id="duplicate-detector-options" style="flex-basis:100%;width:100%">
-        <summary style="cursor:pointer;color:#00f5d4;padding:5px 0;font-weight:bold">Duplicate Detector Options</summary>
-        <button id="duplicate-node-detect-btn" class="action-btn" title="Find exact duplicate graph instances">Detect Duplicates</button>
-        <label title="When enabled, dragging any highlighted node moves its entire duplicate graph instance as one unit"><input type="checkbox" id="duplicate-node-drag-chk"> Drag Duplicates</label>
-        <button id="duplicate-node-delete-btn" class="action-btn" title="Delete extra copies only when the entire graph instance matches exactly">Delete Duplicates</button>
-        <button id="duplicate-node-segregate-btn" class="action-btn" title="Move extra copies of exact duplicate graph instances into empty canvas space">Segregate Duplicates</button>
-        <button id="duplicate-node-clear-btn" title="Clear duplicated-instance highlights without deleting graph data">Clear Duplicated Instances</button>
-        <span id="duplicate-node-status" class="slider-hint">Highlights exact duplicate graph instances. Deletion keeps one copy and removes only structurally identical instances.</span>
-      </details>
+
     </div>
   </div>
   <div class="tool-group" data-panel-id="panel-interaction">
@@ -365,41 +211,6 @@
     <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
     <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
   </div>
-  <div class="tool-group" data-panel-id="panel-font">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <div class="slider-label">
-      <span>Linkage Font Range: <b data-out="fontMin"></b>&ndash;<b data-out="fontMax"></b></span>
-      <div class="range-wrap">
-        <input type="range" data-k="fontMin" min="6" max="36" step="1">
-        <input type="range" data-k="fontMax" min="6" max="36" step="1">
-      </div>
-    </div>
-  </div>
-  <div class="tool-group" data-panel-id="panel-dist-color">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <span class="cap">DISTANCE-BASED LINE COLORING</span>
-    <div class="row-inline"><label><input type="checkbox" data-k="colorDist1"> 1 away line</label><input type="color" data-k="colorDist1Hex"></div>
-    <div class="row-inline"><label><input type="checkbox" data-k="colorDist2"> 2 away line</label><input type="color" data-k="colorDist2Hex"></div>
-    <div class="row-inline"><label><input type="checkbox" data-k="colorDist3"> 3 away line</label><input type="color" data-k="colorDist3Hex"></div>
-  </div>
-  <div class="tool-group" data-panel-id="panel-max-dist">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <div class="slider-label">
-      <span>Hide nodes &gt; dist: <b data-out="maxDistanceLimit"></b></span>
-      <input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1">
-    </div>
-  </div>
-  <div class="tool-group" data-panel-id="panel-autosize">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
-    <label><input type="checkbox" id="highlight-chain-chk" checked> Highlight Chain <span class="legend-up">&#9644;up</span>
-      <span class="legend-down">&#9644;down</span></label>
-      </div>
-      <div class="tool-group" data-panel-id="panel-toggles">
-        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-        <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
-        <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
-      </div>
       <div class="tool-group" data-panel-id="panel-line-style">
         <div class="panel-grip">≡ DRAG SUB-PANEL</div>
         <label>Type: <select id="arrow-style"><option value="end">Arrow (-&gt;)</option><option value="none">Line (--)</option></select>
@@ -427,10 +238,24 @@
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <button id="clear-btn" class="danger-btn">Clear Map</button>
     </div>
-    <div class="tool-group" data-panel-id="panel-help">
-      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <button id="help-btn" class="help-btn">? Help Guide</button>
+<div class="tool-group" id="side-panel" data-panel-id="panel-side" style="padding:0;overflow:hidden;min-height:0">
+      <div class="panel-grip">≡ SIDE FUNCTIONS</div>
+      <iframe id="side-frame" title="Concept Map side functions" src="conceptmap_sidefunctions.html" style="display:block;width:100%;height:300px;border:0;background:#1b263b"></iframe>
     </div>
+    <div class="tool-group" id="display-paragraph-panel" data-panel-id="panel-display-paragraph" style="padding:0;overflow:hidden;min-height:0;border-color:#90e0ef">
+      <div class="panel-grip">≡ DISPLAY PARAGRAPH</div>
+      <iframe id="display-paragraph-frame" title="Concept Map Display Paragraph" src="conceptmap_displayparagraph.html" style="display:block;width:100%;height:490px;border:0;background:#1b263b" loading="eager"></iframe>
+    </div>
+      <div class="tool-group" id="conceptmap-code-panel" data-panel-id="panel-code-explorer" style="padding:6px;overflow:hidden;min-height:0;border-color:#00b4d8;background:#0b1b2b">
+        <div class="panel-grip">≡ CODE STRUCTURE PANEL</div>
+        <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="cap" style="color:#00f5d4">⌘ CODE STRUCTURE EXPLORER</span>
+          <button type="button" id="conceptmap-code-collapse" class="action-btn" aria-expanded="false" aria-controls="conceptmap-code-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
+        </div>
+        <div id="conceptmap-code-frame-wrap" style="display:none;min-width:0">
+          <iframe id="conceptmap-code-frame" title="Concept Map Code Structure Explorer" src="conceptmap_code.html" style="display:block;width:100%;height:720px;min-height:520px;border:0;background:#0d1b2a" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
+        </div>
+      </div>
   </div>
   <div id="sidebar-resizer"></div>
   <div id="viewport">
@@ -455,43 +280,6 @@
     <button id="zoom-reset-btn" aria-label="Reset zoom">100%</button>
     <button id="zoom-out-btn" aria-label="Zoom out">&minus;</button>
   </div>
-  <div id="help-modal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header"><h2>Concept Map with Gemini Guide</h2><button id="modal-close-btn" class="modal-close">&times;</button></div>
-      <div class="modal-body">
-        <div class="help-section">
-          <h3>AI Features</h3>
-          <div class="help-grid">
-            <span class="help-key">Generate / Append</span>
-            <span>Builds or appends full knowledge graphs with nodes and directed lines using the selected AI model.</span>
-            <span class="help-key">1-Year Roadmap</span>
-            <span>Creates timeline-aware concepts mapped directly across the 12-month calendar overlay.</span>
-            <span class="help-key">Expand Selected</span>
-            <span>Select 1 node and click "🌱 Expand Selected Node" to branch out sub-topics.</span>
-            <span class="help-key">Connect 2 Nodes</span>
-            <span>Select 2 nodes to find and create missing relationship links or bridge concepts.</span>
-            <span class="help-key">AI Drill-Down</span>
-            <span>Generates an in-depth child map inside the view stack with back-navigation.</span>
-            <span class="help-key">Whiteboard to Map</span>
-            <span>Upload an image or diagram photo to transcribe it into connected digital nodes.</span>
-            <span class="help-key">Ask Map (Copilot)</span>
-            <span>Ask questions about your concept map. Gemini answers and highlights key paths.</span>
-          </div>
-        </div>
-        <div class="help-section">
-          <h3>Shortcuts & Touch</h3>
-          <div class="help-grid">
-            <span class="help-key">Pan & Zoom</span>
-            <span>Two-finger pinch to zoom; drag empty space to pan. Ctrl+Wheel zooms.</span>
-            <span class="help-key">Draw Connections</span>
-            <span>Drag from near a node towards another node to link them, or use the bottom-right arrow ball.</span>
-            <span class="help-key">Delete</span>
-            <span>Press Del or Backspace with nodes or lines selected.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 <script>const $=id=>document.getElementById(id);
 const $$=sel=>[...document.querySelectorAll(sel)];
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));
@@ -509,24 +297,18 @@ panelOrder:[
 "panel-active-file",
 "panel-gemini",
 "panel-io",
-"panel-settings-io",
-"panel-interface",
-"panel-touch",
 "panel-add",
 "panel-interaction",
 "panel-views",
 "panel-lock",
 "panel-fit",
-"panel-font",
-"panel-dist-color",
-"panel-max-dist",
-"panel-autosize",
-"panel-toggles",
 "panel-line-style",
 "panel-selected-line",
 "panel-history",
 "panel-clear",
-"panel-help"
+"panel-side",
+"panel-display-paragraph",
+"panel-code-explorer"
 ],
 draggablePanels:false,
 dragGraphBall:true,
@@ -557,16 +339,14 @@ touchHoldMs:100,
 touchIgnoreExtra:true,
 touchAutoClear:true,
 aiProvider:"gemini",
-aiModel:"gemini-3.8-flash",
-geminiKey:"",
-claudeKey:"",
-openaiKey:""
+aiModel:"gemini-3.8-flash"
 };
 const TOUCH_KEYS=['touchDragThreshold','touchHitPad','touchHoldMs','touchIgnoreExtra','touchAutoClear'];
 let state=structuredClone(DEFAULTS);
 let hist=[],histT=[],histIdx=-1;
 let selected=new Set(),selectedLineId=null,editingId=null;
 let isLocked=false,lock=null;
+let duplicateNodeIds=new Set(),duplicateGroups=[],dupDrag=false,chainOn=true;
 let fitMode=null;
 let zoom=1;
 const MIN_ZOOM=0.3,MAX_ZOOM=3;
@@ -605,363 +385,6 @@ render();updateHistBtns();
 }
 $('undo-btn').onclick=()=>restore(histIdx-1);
 $('redo-btn').onclick=()=>restore(histIdx+1);
-const AI_PROVIDERS={
-gemini:{
-label:'Gemini',key:'geminiKey',defaultModel:'gemini-3.8-flash',
-models:[
-['gemini-3.8-flash','Gemini 3.8 Flash'],
-['gemini-3.7-flash','Gemini 3.7 Flash'],
-['gemini-3.1-pro-preview','Gemini 3.1 Pro Preview']
-]
-},
-claude:{
-label:'Claude',key:'claudeKey',defaultModel:'claude-sonnet-5-5',
-models:[
-['claude-sonnet-5-5','Claude Sonnet 5.5'],
-['claude-opus-5-5','Claude Opus 5.5'],
-['claude-haiku-5-5','Claude Haiku 5.5']
-]
-},
-openai:{
-label:'ChatGPT / OpenAI',key:'openaiKey',defaultModel:'gpt-5.1',
-models:[
-['gpt-5.1','GPT-5.1'],
-['gpt-5-mini','GPT-5 mini'],
-['gpt-4.1','GPT-4.1']
-]
-}
-};
-const aiProvider=()=>AI_PROVIDERS[state.aiProvider]||AI_PROVIDERS.gemini;
-function syncAIControls(forceKey=false){
-if(!AI_PROVIDERS[state.aiProvider])state.aiProvider='gemini';
-const provider=aiProvider();
-const providerSelect=$('ai-provider'),modelSelect=$('ai-model'),keyInput=$('ai-api-key');
-if(!providerSelect||!modelSelect||!keyInput)return;
-providerSelect.value=state.aiProvider in AI_PROVIDERS?state.aiProvider:'gemini';
-const options=provider.models.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
-if(modelSelect.dataset.provider!==state.aiProvider){
-modelSelect.innerHTML=options;
-modelSelect.dataset.provider=state.aiProvider;
-}
-if(!provider.models.some(([value])=>value===state.aiModel))state.aiModel=provider.defaultModel;
-modelSelect.value=state.aiModel;
-$('ai-key-caption').textContent=`${provider.label} API Key:`;
-if(forceKey||document.activeElement!==keyInput)keyInput.value=state[provider.key]||'';
-keyInput.placeholder=state.aiProvider==='gemini'?'AIzaSy...':'Paste API key for '+provider.label;
-}
-function storeActiveAIKey(){
-state[aiProvider().key]=$('ai-api-key').value.trim();
-}
-function getAIAuth(){
-storeActiveAIKey();
-const provider=aiProvider(),apiKey=state[provider.key];
-if(!apiKey)throw new Error(`Enter your ${provider.label} API key in the AI settings.`);
-return{provider:state.aiProvider,apiKey,model:$('ai-model').value||provider.defaultModel,config:provider};
-}
-$('ai-provider').addEventListener('change',()=>{
-storeActiveAIKey();
-state.aiProvider=$('ai-provider').value in AI_PROVIDERS?$('ai-provider').value:'gemini';
-state.aiModel=aiProvider().defaultModel;
-syncAIControls(true);
-$('gemini-status').textContent=`${aiProvider().label} selected. Enter its API key to use AI features.`;
-saveState();
-});
-$('ai-model').addEventListener('change',()=>{state.aiModel=$('ai-model').value;saveState();});
-$('ai-api-key').addEventListener('input',()=>{state[aiProvider().key]=$('ai-api-key').value;});
-$('ai-api-key').addEventListener('change',()=>{storeActiveAIKey();});
-function readGeminiParts(contents){
-return(contents||[]).map(message=>({
-role:message.role==='model'?'assistant':(message.role||'user'),
-parts:message.parts||[]
-}));
-}
-function parseAIJson(raw){
-const clean=String(raw||'{}').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
-try{return JSON.parse(clean);}catch(firstError){
-const a=clean.indexOf('{'),b=clean.lastIndexOf('}');
-if(a>=0&&b>a){
-try{return JSON.parse(clean.slice(a,b+1));}catch(secondError){}
-}
-throw new Error('The AI did not return valid JSON. Try again or use a different model.');
-}
-}
-function responseText(data,provider){
-if(provider==='gemini')return data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('\n')||'{}';
-if(provider==='claude')return data.content?.filter(p=>p.type==='text').map(p=>p.text).join('\n')||'{}';
-if(data.output_text)return data.output_text;
-return(data.output||[]).flatMap(item=>item.content||[]).filter(part=>part.type==='output_text'||part.type==='text').map(part=>part.text||'').join('\n')||'{}';
-}
-async function requestAI(contents,systemInstruction=null){
-const auth=getAIAuth(),{provider,apiKey,model,config}=auth;
-const statusEl=$('gemini-status');
-const promptRules='Return only one valid JSON object. Do not wrap the JSON in Markdown fences or add explanatory prose.';
-const instructions=systemInstruction?`${systemInstruction}\n\n${promptRules}`:promptRules;
-statusEl.textContent=`Connecting to ${config.label} (${model})...`;
-let url,headers={'Content-Type':'application/json'},body;
-const messages=readGeminiParts(contents);
-if(provider==='gemini'){
-url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-body={
-contents:messages.map(m=>({role:m.role==='assistant'?'model':'user',parts:m.parts})),
-generationConfig:{temperature:0.2,responseMimeType:'application/json'},
-systemInstruction:{parts:[{text:instructions}]}
-};
-}else if(provider==='claude'){
-url='https://api.anthropic.com/v1/messages';
-headers['x-api-key']=apiKey;
-headers['anthropic-version']='2023-06-01';
-headers['anthropic-dangerous-direct-browser-access']='true';
-body={
-model,max_tokens:8192,system:instructions,
-messages:messages.map(m=>({
-role:m.role==='assistant'?'assistant':'user',
-content:m.parts.map(part=>{
-if(part.text!==undefined)return{type:'text',text:part.text};
-if(part.inlineData)return{type:'image',source:{type:'base64',media_type:part.inlineData.mimeType||'image/png',data:part.inlineData.data}};
-return null;
-}).filter(Boolean)
-}))
-};
-}else{
-url='https://api.openai.com/v1/responses';
-headers.Authorization=`Bearer ${apiKey}`;
-body={
-model,instructions,
-input:messages.map(m=>({
-role:m.role==='assistant'?'assistant':'user',
-content:m.parts.map(part=>{
-if(part.text!==undefined)return{type:'input_text',text:part.text};
-if(part.inlineData)return{type:'input_image',image_url:`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`};
-return null;
-}).filter(Boolean)
-})),
-text:{format:{type:'json_object'}}
-};
-}
-let response;
-try{
-response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});
-}catch(err){
-throw new Error(`${config.label} request could not reach the API (${err.message}). If this is a browser/CORS block, try opening the HTML from a local web server or using a trusted API proxy.`);
-}
-const data=await response.json().catch(()=>({}));
-if(!response.ok||data.error){
-const message=data.error?.message||data.message||`HTTP ${response.status}`;
-const browserHint=provider==='claude'?' If the browser blocks the request, use a local trusted setup that supports Anthropic API access.':'';
-throw new Error(`${config.label} API error: ${message}.${browserHint}`);
-}
-statusEl.textContent=`Processing ${config.label} response...`;
-return parseAIJson(responseText(data,provider));
-}
-function makeAiNodes(items,position,includeUrls=true){
-const idMap=new Map();
-const nodes=items.map((n,i)=>{
-const id=uid();
-idMap.set(n.id,id);
-return{id,text:n.text,url:includeUrls?(n.url||null):null,
-...position(n,i),size:'auto',collapsed:false};
-});
-return{nodes,idMap};
-}
-function makeAiLines(lines,idMap,nodes,color='#00b4d8',width=1){
-return(lines||[]).map(l=>({
-id:uid(),from:idMap.get(l.from)||nodes[0]?.id,to:idMap.get(l.to)||nodes[1]?.id,
-label:l.label||'',arrow:l.arrow||'end',width,color
-})).filter(l=>l.from&&l.to);
-}
-function makeAiMap(data,position,includeUrls=true){
-const mapped=makeAiNodes(data.nodes||[],position,includeUrls);
-return{nodes:mapped.nodes,lines:makeAiLines(data.lines,mapped.idMap,mapped.nodes)};
-}
-const askAIText=(prompt,instruction=null)=>
-requestAI([{role:'user',parts:[{text:prompt}]}],instruction);
-async function generateMapWithAI(promptText,append=false,isRoadmap=false){
-if(!promptText.trim())return alert('Please enter a topic or prompt for the AI.');
-const statusEl=$('gemini-status');
-const systemInstruction=`You are a knowledge architect creating concept maps.
-Return ONLY a valid JSON object matching this schema:
-{
-  "nodes": [{ "id": "string", "text": "string", "url": "optional string URL", "month": 0 }],
-  "lines": [{ "from": "id_string", "to": "id_string", "label": "string", "arrow": "end" }]
-}
-${isRoadmap ? 'Assign "month" (0 to 11) for each milestone across the 12 calendar months.' : ''}`;
-try{
-const data=await askAIText(promptText,systemInstruction);
-if(!Array.isArray(data.nodes))throw new Error('Invalid JSON format received.');
-const tp=state.timelinePos,usable=tp.width-25;
-const count=append?state.nodes.length:0;
-const startX=100+(count*25)%300,startY=100+Math.floor(count/5)*140;
-const mapped=makeAiMap(data,(n,i)=>{
-if(isRoadmap){
-const month=clamp(typeof n.month==='number'?n.month:i%12,0,11);
-return{x:Math.round(tp.x+10+month/11*usable),y:Math.round(tp.y+70+i%3*60)};
-}
-return{x:startX+i%4*230,y:startY+Math.floor(i/4)*110};
-});
-if(isRoadmap)state.showTimeline=true;
-if(append){state.nodes.push(...mapped.nodes);state.lines.push(...mapped.lines);}
-else{state.nodes=mapped.nodes;state.lines=mapped.lines;}
-saveState();render();
-statusEl.textContent=`Generated ${data.nodes.length} nodes successfully.`;
-toast(`Generated ${data.nodes.length} nodes via ${aiProvider().label}`);
-}catch(err){
-statusEl.textContent='AI error: '+err.message;
-toast('AI error: '+err.message);
-}
-}
-$('gemini-generate-btn').onclick=()=>generateMapWithAI($('gemini-prompt').value,false,false);
-$('gemini-append-btn').onclick=()=>generateMapWithAI($('gemini-prompt').value,true,false);
-$('gemini-roadmap-btn').onclick=()=>generateMapWithAI($('gemini-prompt').value||'1-Year Milestone Roadmap',false,true);
-async function expandSelectedNode(){
-if(selected.size!==1)return alert('Select exactly 1 node to expand.');
-const parentNode=nodeById([...selected][0]);
-const statusEl=$('gemini-status');
-statusEl.textContent=`Expanding "${parentNode.text}" with ${aiProvider().label}...`;
-const prompt=`Given the core concept "${parentNode.text}", provide 4 to 5 direct sub-concepts or key aspects that branch out from it.
-Return JSON:
-{
-  "nodes": [{ "id": "string", "text": "string", "url": "optional url" }],
-  "lines": [{ "from": "parent", "to": "string", "label": "string" }]
-}`;
-try{
-const data=await askAIText(prompt);
-if(!data.nodes)throw new Error('Bad response structure');
-const count=data.nodes.length,radius=180;
-const{nodes:newNodes}=makeAiNodes(data.nodes,(_,i)=>{
-const angle=i/count*2*Math.PI;
-return{x:Math.round(parentNode.x+Math.cos(angle)*radius),y:Math.round(parentNode.y+Math.sin(angle)*radius)};
-});
-const newLines=newNodes.map((n,i)=>({
-id:uid(),from:parentNode.id,to:n.id,
-label:data.lines?.[i]?.label||'branches to',arrow:'end',width:1,color:'#9d4edd'
-}));
-state.nodes.push(...newNodes);
-state.lines.push(...newLines);
-saveState();render();
-statusEl.textContent=`Expanded with ${newNodes.length} sub-concepts.`;
-toast(`Expanded concept with ${newNodes.length} nodes`);
-}catch(err){
-statusEl.textContent='AI error: '+err.message;
-}
-}
-$('gemini-expand-btn').onclick=expandSelectedNode;
-async function connectSelectedNodes(){
-if(selected.size!==2)return alert('Select exactly 2 nodes to connect.');
-const[n1,n2]=[...selected].map(nodeById);
-const statusEl=$('gemini-status');
-statusEl.textContent=`Analyzing connection between "${n1.text}" and "${n2.text}" with ${aiProvider().label}...`;
-const prompt=`Analyze how concept "${n1.text}" relates to concept "${n2.text}".
-Return JSON with the relationship and an optional intermediary bridge node if helpful:
-{
-  "bridgeText": "optional middle concept if needed, or null",
-  "label1": "relationship from 1 to bridge/2",
-  "label2": "relationship from bridge to 2 (if bridge exists)"
-}`;
-try{
-const data=await askAIText(prompt);
-if(data.bridgeText){
-const bridgeNode={
-id:uid(),text:data.bridgeText,url:null,
-x:Math.round((n1.x+n2.x)/2),
-y:Math.round((n1.y+n2.y)/2)+20,
-size:'auto',collapsed:false
-};
-state.nodes.push(bridgeNode);
-state.lines.push({id:uid(),from:n1.id,to:bridgeNode.id,label:data.label1||'',arrow:'end',width:2,color:'#00f5d4'});
-state.lines.push({id:uid(),from:bridgeNode.id,to:n2.id,label:data.label2||'',arrow:'end',width:2,color:'#00f5d4'});
-}else{
-state.lines.push({id:uid(),from:n1.id,to:n2.id,label:data.label1||'relates to',arrow:'end',width:2,color:'#00f5d4'});
-}
-saveState();render();
-statusEl.textContent='Connection established!';
-toast(`Connected nodes with ${aiProvider().label}`);
-}catch(err){
-statusEl.textContent='AI error: '+err.message;
-}
-}
-$('gemini-bridge-btn').onclick=connectSelectedNodes;
-async function drillDownSelectedNode(){
-if(selected.size!==1)return alert('Select 1 node to drill down into.');
-const node=nodeById([...selected][0]);
-const statusEl=$('gemini-status');
-statusEl.textContent=`Creating deep-dive map for "${node.text}"...`;
-const prompt=`Create an in-depth standalone concept map exploring: "${node.text}".
-Return JSON:
-{
-  "nodes": [{ "id": "string", "text": "string" }],
-  "lines": [{ "from": "id", "to": "id", "label": "string", "arrow": "end" }]
-}`;
-try{
-const parsed=await askAIText(prompt);
-if(!parsed.nodes)throw new Error('Bad data');
-const{nodes:newNodes,lines:newLines}=makeAiMap(parsed,
-(_,i)=>({x:100+i%3*240,y:120+Math.floor(i/3)*120}),false);
-openInCurrent(node.text,{nodes:newNodes,lines:newLines},null);
-statusEl.textContent=`Opened sub-map for "${node.text}".`;
-toast(`Drilled down into "${node.text}"`);
-}catch(err){
-statusEl.textContent='AI error: '+err.message;
-}
-}
-$('gemini-drill-btn').onclick=drillDownSelectedNode;
-async function convertImageToMap(){
-const fileInput=$('gemini-img-input');
-const externalImage=window.__conceptMapAIImageData;
-if(!externalImage&&(!fileInput.files||!fileInput.files[0]))return alert('Please choose an image file first.');
-const file=externalImage||fileInput.files[0];
-const statusEl=$('gemini-status');
-statusEl.textContent=`Transcribing diagram image with ${aiProvider().label}...`;
-const processDataUrl=async(dataUrl)=>{
-try{
-const base64Data=dataUrl.split(',')[1];
-const contents=[{role:'user',parts:[{inlineData:{mimeType:file.type||file.mimeType||'image/png',data:base64Data}},{text:'Transcribe this diagram/whiteboard/sketch into a concept map JSON with "nodes" and "lines".'}]}];
-const parsed=await requestAI(contents);
-if(!parsed.nodes)throw new Error('Invalid transcription structure.');
-const{nodes:newNodes,lines:newLines}=makeAiMap(parsed,(_,i)=>({x:120+i%4*220,y:140+Math.floor(i/4)*110}),false);
-state.nodes=newNodes;state.lines=newLines;saveState();render();
-statusEl.textContent=`Transcribed ${newNodes.length} nodes from image!`;
-toast(`Whiteboard transcribed: ${newNodes.length} nodes created`);
-}catch(err){statusEl.textContent='Image error: '+err.message;}
-finally{if(externalImage)window.__conceptMapAIImageData=null;}
-};
-if(externalImage){await processDataUrl(externalImage.dataUrl);return;}
-const reader=new FileReader();reader.onload=()=>processDataUrl(reader.result);reader.readAsDataURL(file);
-}
-$('gemini-img-btn').onclick=convertImageToMap;
-async function askMapCopilot(){
-const question=$('gemini-ask-input').value.trim();
-if(!question)return alert('Enter a question about the current map.');
-if(!state.nodes.length)return alert('The canvas is empty.');
-const statusEl=$('gemini-status');
-statusEl.textContent=`Analyzing map with ${aiProvider().label} Copilot...`;
-const mapSummary={
-nodes:state.nodes.map(n=>({id:n.id,text:n.text})),
-lines:state.lines.map(l=>({from:l.from,to:l.to,label:l.label}))
-};
-const prompt=`Current Concept Map Data:
-${JSON.stringify(mapSummary)}
-
-User Question: "${question}"
-Answer the question based on the map and identify the relevant node IDs to highlight.
-Return JSON:
-{
-  "answer": "string explanation",
-  "highlightNodeIds": ["id1", "id2"]
-}`;
-try{
-const res=await askAIText(prompt);
-selected.clear();
-(res.highlightNodeIds||[]).forEach(id=>{
-if(nodeById(id))selected.add(id);
-});
-render();
-statusEl.textContent=res.answer||'Analysis complete.';
-alert('Copilot Answer:\n\n'+(res.answer||'Relevant nodes highlighted on map.'));
-}catch(err){
-statusEl.textContent='Copilot error: '+err.message;
-}
-}
-$('gemini-ask-btn').onclick=askMapCopilot;
 let saveTarget=null;
 let saveFormat='lines';
 const FORMAT_LABELS={lines:'TXT Extended Lines','txt-simple':'TXT Simple','txt-indent':'TXT Indent',json:'JSON',html:'Full HTML'};
@@ -1001,17 +424,20 @@ if(!value)return;
 const old=saveTarget||{};
 setSaveTarget({...old,name:value},false);
 });
+
 function serializeLines(s){
-const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${s.nodes.length}`,`LINES: ${s.lines.length}`,'--- NODES ---'];
-s.nodes.forEach(n=>{
-out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${n.text}${n.url ? ` | URL: ${n.url}` : ''}${n.size ? ` | size: ${n.size}` : ''}${n.collapsed ? ' | collapsed: true' : ''}`);
-});
-out.push('--- CONNECTIONS ---');
-s.lines.forEach(l=>out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`));
-return out.join('\n');
+  const out = ['VERSION: 2.0_METADATA', `CREATED: ${new Date().toISOString()}`, `NODES: ${s.nodes.length}`, `LINES: ${s.lines.length}`, '--- NODES ---'];
+  s.nodes.forEach(n => {
+    const escapedText = (n.text || '').replace(/\r?\n/g, '\\n');
+    out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${escapedText}${n.url ? ` | URL: ${n.url}` : ''}${n.size ? ` | size: ${n.size}` : ''}${n.collapsed ? ' | collapsed: true' : ''}`);
+  });
+  out.push('--- CONNECTIONS ---');
+  s.lines.forEach(l => out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`));
+  return out.join('\n');
 }
+
 function serializeSimple(s){
-const out=s.nodes.map(n=>`${n.id} ${n.url ? `${n.text} ${n.url}` : n.text} ${Math.round(n.x)} ${Math.round(n.y)}`);
+const out=s.nodes.map(n=>`${n.id} ${n.url ? `${n.text.replace(/\r?\n/g,' ')} ${n.url}` : n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x)} ${Math.round(n.y)}`);
 s.lines.forEach(l=>{
 const rev=l.arrow==='start';
 out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
@@ -1034,7 +460,7 @@ if(seen.has(id))return;
 seen.add(id);
 const n=s.nodes.find(x=>x.id===id);
 if(!n)return;
-out.push('    '.repeat(lvl)+(n.url?`${n.text} ${n.url}`:n.text));
+out.push('    '.repeat(lvl)+(n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')));
 (kids.get(id)||[]).forEach(c=>walk(c,lvl+1));
 };
 roots.forEach(r=>walk(r.id,0));
@@ -1314,10 +740,24 @@ return seen;
 }
 function hiddenIds(){
 if(isLocked&&lock)return lock.hidden;
-const hide=new Set(),kids=new Map();
-state.lines.forEach(l=>{const[p,c]=dir(l);kids.set(p,[...(kids.get(p)||[]),c]);});
-const hideBelow=id=>(kids.get(id)||[]).forEach(c=>{if(!hide.has(c)){hide.add(c);hideBelow(c);}});
-state.nodes.forEach(n=>n.collapsed&&hideBelow(n.id));
+const hide=new Set(),kids=new Map(),parents=new Map(),all=new Set(state.nodes.map(n=>n.id));
+state.lines.forEach(l=>{const[p,c]=dir(l);if(!all.has(p)||!all.has(c))return;kids.set(p,[...(kids.get(p)||[]),c]);parents.set(c,[...(parents.get(c)||[]),p]);});
+// A collapse hides only descendants exclusive to this branch. Shared descendants
+// and any path that cycles back to the collapsed node remain visible.
+state.nodes.filter(n=>n.collapsed).forEach(root=>{
+ const candidate=new Set(),q=[...(kids.get(root.id)||[])];
+ while(q.length){const id=q.pop();if(id===root.id||candidate.has(id))continue;candidate.add(id);(kids.get(id)||[]).forEach(c=>{if(c!==root.id&&!candidate.has(c))q.push(c);});}
+ if(!candidate.size)return;
+ // Find candidate nodes that can return to the root through a directed cycle.
+ const cycle=new Set(),back=[...(parents.get(root.id)||[])];
+ while(back.length){const id=back.pop();if(!candidate.has(id)||cycle.has(id))continue;cycle.add(id);(parents.get(id)||[]).forEach(p=>{if(candidate.has(p)&&!cycle.has(p))back.push(p);});}
+ // Any descendant with an incoming edge from outside this branch is shared.
+ const visible=new Set(cycle),vq=[...cycle];
+ candidate.forEach(id=>{if((parents.get(id)||[]).some(p=>p!==root.id&&!candidate.has(p))){if(!visible.has(id)){visible.add(id);vq.push(id);}}});
+ // Keep everything downstream of shared or cyclic nodes visible too.
+ while(vq.length){const id=vq.pop();(kids.get(id)||[]).forEach(c=>{if(candidate.has(c)&&!visible.has(c)){visible.add(c);vq.push(c);}});}
+ candidate.forEach(id=>{if(!visible.has(id))hide.add(id);});
+});
 if(selected.size&&state.maxDistanceLimit<10){
 const{dist}=bfs([...selected]);
 state.nodes.forEach(n=>{const d=dist.get(n.id);if(d===undefined||d>state.maxDistanceLimit)hide.add(n.id);});
@@ -1487,121 +927,10 @@ if(!nodeIds.length&&!lineIds.length)return false;
 anchor.fileExpansion={nodeIds,lineIds,placement};
 return true;
 }
-let duplicateNodeIds=new Set();
-let duplicateComponentGroups=[];
-function duplicateNodeData(n){
-  const data={...n};
-  delete data.id; delete data.x; delete data.y;
-  return data;
-}
-function getGraphComponents(){
-  const nodeByKey=new Map(state.nodes.map(n=>[n.id,n]));
-  const adjacency=new Map(state.nodes.map(n=>[n.id,[]]));
-  state.lines.forEach((line,index)=>{
-    if(adjacency.has(line.from)&&adjacency.has(line.to)){
-      adjacency.get(line.from).push({id:line.to,line,index});
-      adjacency.get(line.to).push({id:line.from,line,index});
-    }
-  });
-  const seen=new Set(),components=[];
-  for(const node of state.nodes){
-    if(seen.has(node.id))continue;
-    const stack=[node.id],ids=[]; seen.add(node.id);
-    while(stack.length){
-      const id=stack.pop(); ids.push(id);
-      for(const edge of adjacency.get(id)||[])if(!seen.has(edge.id)){seen.add(edge.id);stack.push(edge.id);}
-    }
-    const idSet=new Set(ids),nodes=ids.map(id=>nodeByKey.get(id)).filter(Boolean);
-    const lines=state.lines.filter(l=>idSet.has(l.from)&&idSet.has(l.to));
-    components.push({ids:ids.slice(),nodes,lines});
-  }
-  return components;
-}
-function signatureForComponent(component){
-  const minX=Math.min(...component.nodes.map(n=>Number(n.x)||0));
-  const minY=Math.min(...component.nodes.map(n=>Number(n.y)||0));
-  const entries=component.nodes.map(n=>({
-    id:n.id, x:Math.round((Number(n.x)||0)-minX), y:Math.round((Number(n.y)||0)-minY),
-    data:JSON.stringify(duplicateNodeData(n))
-  })).sort((a,b)=>a.x-b.x||a.y-b.y||a.data.localeCompare(b.data));
-  const indexById=new Map(entries.map((entry,i)=>[entry.id,i]));
-  const nodes=entries.map(({x,y,data})=>({x,y,data}));
-  const lines=component.lines.map(line=>{
-    const data={...line}; delete data.id; delete data.from; delete data.to;
-    return {from:indexById.get(line.from),to:indexById.get(line.to),data:JSON.stringify(data)};
-  }).sort((a,b)=>a.from-b.from||a.to-b.to||a.data.localeCompare(b.data));
-  return JSON.stringify({nodes,lines});
-}
-function detectDuplicateNodes(){
-  const bySignature=new Map();
-  getGraphComponents().forEach(component=>{
-    const signature=signatureForComponent(component);
-    if(!bySignature.has(signature))bySignature.set(signature,[]);
-    bySignature.get(signature).push(component);
-  });
-  duplicateComponentGroups=[...bySignature.values()].filter(group=>group.length>1);
-  duplicateNodeIds=new Set();
-  duplicateComponentGroups.forEach(group=>group.forEach(component=>component.ids.forEach(id=>duplicateNodeIds.add(id))));
-  render();
-  const instances=duplicateComponentGroups.reduce((sum,group)=>sum+group.length,0);
-  $('duplicate-node-status').textContent=duplicateComponentGroups.length
-    ? `Found ${duplicateComponentGroups.length} exact duplicate group(s), covering ${instances} graph instances and ${duplicateNodeIds.size} nodes. Extra copies can be moved with “Segregate Duplicates”.`
-    : 'No exact duplicated graph instances found.';
-}
-function deleteDuplicateInstances(){
-  if(!duplicateComponentGroups.length)detectDuplicateNodes();
-  if(!duplicateComponentGroups.length){$('duplicate-node-status').textContent='No exact duplicate graph instances to delete.';return;}
-  const copiesToDelete=duplicateComponentGroups.flatMap(group=>group.slice(1));
-  const nodeCount=copiesToDelete.reduce((sum,component)=>sum+component.ids.length,0);
-  if(!copiesToDelete.length){$('duplicate-node-status').textContent='No extra duplicate instances to delete.';return;}
-  if(!confirm(`Delete ${copiesToDelete.length} extra graph instance(s) containing ${nodeCount} nodes? Only exact structural/content matches are eligible. One copy of each graph will be kept.`))return;
-  const deleteIds=new Set(copiesToDelete.flatMap(component=>component.ids));
-  state.lines=state.lines.filter(line=>!deleteIds.has(line.from)&&!deleteIds.has(line.to));
-  state.nodes=state.nodes.filter(node=>!deleteIds.has(node.id));
-  deleteIds.forEach(id=>selected.delete(id));
-  duplicateNodeIds.clear(); duplicateComponentGroups=[];
-  saveState(); render();
-  $('duplicate-node-status').textContent=`Deleted ${copiesToDelete.length} exact duplicate graph instance(s) (${nodeCount} nodes). One copy of each exact graph was retained.`;
-}
-function duplicateComponentForNode(nodeId){
-  if(!$('duplicate-node-drag-chk').checked)return null;
-  for(const group of duplicateComponentGroups){
-    const component=group.find(item=>item.ids.includes(nodeId));
-    if(component)return component;
-  }
-  return null;
-}
-function clearDuplicateNodeHighlights(){
-  duplicateNodeIds.clear();
-  duplicateComponentGroups=[];
-  render();
-  $('duplicate-node-status').textContent='Duplicated-instance highlights cleared. No nodes or connections were deleted.';
-}
-function segregateDuplicateInstances(){
-  if(!duplicateComponentGroups.length)detectDuplicateNodes();
-  if(!duplicateComponentGroups.length){$('duplicate-node-status').textContent='No exact duplicated graph instances to segregate.';return;}
-  const moving=[];
-  duplicateComponentGroups.forEach(group=>group.slice(1).forEach(component=>moving.push(component)));
-  if(!moving.length){$('duplicate-node-status').textContent='No extra duplicate instances to move.';return;}
-  const allNodes=state.nodes;
-  let cursorX=Math.max(0,...allNodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)))+180;
-  let cursorY=Math.max(0,...allNodes.map(n=>Number(n.y)||0));
-  const rowGap=50, colGap=180;
-  moving.forEach(component=>{
-    const nodes=component.nodes;
-    const minX=Math.min(...nodes.map(n=>Number(n.x)||0));
-    const minY=Math.min(...nodes.map(n=>Number(n.y)||0));
-    const maxX=Math.max(...nodes.map(n=>(Number(n.x)||0)+Math.max(80,Number(n.customWidth)||120)));
-    const maxY=Math.max(...nodes.map(n=>(Number(n.y)||0)+Math.max(40,Number(n.customHeight)||60)));
-    const width=Math.max(120,maxX-minX),height=Math.max(60,maxY-minY);
-    const dx=cursorX-minX,dy=cursorY-minY;
-    nodes.forEach(n=>{n.x=Math.round((Number(n.x)||0)+dx);n.y=Math.round((Number(n.y)||0)+dy);});
-    cursorY+=height+rowGap;
-    if(cursorY>Math.max(1200, ...allNodes.map(n=>(Number(n.y)||0)+500))){cursorY=0;cursorX+=width+colGap;}
-  });
-  saveState();
-  render();
-  $('duplicate-node-status').textContent=`Moved ${moving.length} extra duplicate graph instance(s) into empty canvas space. Original copies were left in place; use Clear Duplicated Instances to remove highlights.`;
+function duplicateComponentForNode(id){
+if(!dupDrag)return null;
+const ids=duplicateGroups.find(g=>g.includes(id));
+return ids?{ids}:null;
 }
 function render(){
 view.links=new Map(state.nodes.map(n=>[n.id,0]));
@@ -1610,15 +939,12 @@ state.maxLinksBound=Math.max(1,state.maxLinksBound||0,...view.links.values());
 if(state.autoSizeAll)state.nodes.forEach(n=>{n.size='auto';delete n.customWidth;delete n.customHeight;});
 view.hidden=hiddenIds();
 view.lineDist=bfs([...selected]).lineDist;
-view.chain=($('highlight-chain-chk').checked&&selected.size===1&&!selectedLineId)
+view.chain=(chainOn&&selected.size===1&&!selectedLineId)
 ?{up:bfs([...selected],true).lineDist,down:bfs([...selected]).lineDist}:null;
 syncControls();
 document.body.style.setProperty('--sw',state.sidebarWidth+'px');
 drawTimeline();
 drawLineControls();
-$('gemini-expand-btn').disabled=(selected.size!==1);
-$('gemini-drill-btn').disabled=(selected.size!==1);
-$('gemini-bridge-btn').disabled=(selected.size!==2);
 els.forEach(el=>el.remove());
 els.clear();
 const parents=new Set(state.lines.map(l=>dir(l)[0]));
@@ -1631,7 +957,7 @@ els.set(n.id,el);
 });
 drawLines();
 updateExtent();
-scheduleIoSync();
+scheduleIoSync();scheduleSideSync();
 }
 async function openNode(n){
 if(n.url){window.open(n.url,'_blank','noopener,noreferrer');return;}
@@ -1672,9 +998,12 @@ el.style.width=Math.round(n.customWidth*k)+'px';
 el.style.height=Math.round(n.customHeight*k)+'px';
 }
 if(parents.has(n.id)){
-const btn=document.createElement('span');
-btn.className='collapse-btn';
-btn.textContent=n.collapsed?'[+]':'[-]';
+const btn=document.createElement('button');
+btn.type='button';
+btn.className='collapse-btn'+(n.collapsed?' is-collapsed':'');
+btn.textContent=n.collapsed?'+':'−';
+btn.title=n.collapsed?'Expand connected nodes':'Collapse connected nodes';
+btn.setAttribute('aria-label',btn.title);
 btn.onpointerdown=e=>e.stopPropagation();
 btn.onclick=e=>{e.stopPropagation();if(isLocked)return;n.collapsed=!n.collapsed;saveState();render();};
 el.appendChild(btn);
@@ -1769,7 +1098,9 @@ setTimeout(()=>{input.focus();input.select();},0);
 }else{
 const text=document.createElement('span');
 text.className='node-content'+(n.url?' has-url':'');
-text.textContent=n.text;
+text.textContent=displayNodeText(n.text);
+text.style.whiteSpace=displayParagraph.wordWrap?'pre-wrap':'pre';
+text.style.overflowWrap=displayParagraph.wordWrap?'anywhere':'normal';
 el.appendChild(text);
 if(n.url&&state.showUrls){
 const u=document.createElement('span');
@@ -1908,12 +1239,8 @@ controls.forEach(el=>{
 const k=el.dataset.k,live=el.type==='range'||el.type==='color';
 el.addEventListener(live?'input':'change',()=>{
 if(el.type==='radio'&&!el.checked)return;
-if(isLocked&&k==='maxDistanceLimit')return render();
 let v=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:el.value;
-if(k==='fontMin')v=Math.min(v,state.fontMax);
-if(k==='fontMax')v=Math.max(v,state.fontMin);
 state[k]=v;
-if(k==='draggablePanels')document.body.classList.toggle('draggable-panels-enabled',!!v);
 if(!live)saveState();
 render();
 });
@@ -1926,13 +1253,8 @@ if(el.type==='checkbox')el.checked=!!v;
 else if(el.type==='radio')el.checked=v===el.value;
 else el.value=v;
 });
-$$('[data-out]').forEach(s=>{
-const k=s.dataset.out,v=state[k];
-s.textContent=k==='maxDistanceLimit'&&v>=10?'∞':v+(s.dataset.unit||'');
-});
 document.body.classList.toggle('touch-mode',isTouchActive());
 document.body.classList.toggle('draggable-panels-enabled',!!state.draggablePanels);
-syncAIControls();
 if($('file-dir'))$('file-dir').value=state.fileDir||'';
 }
 const narrow=matchMedia('(max-width: 768px)');
@@ -1941,19 +1263,6 @@ setMenuHidden(narrow.matches);
 narrow.addEventListener('change',e=>setMenuHidden(e.matches));
 $('toolbar-hide-btn').onclick=()=>setMenuHidden(true);
 $('floating-menu-btn').onclick=()=>setMenuHidden(false);
-const helpModal=$('help-modal');
-$('help-btn').onclick=()=>helpModal.classList.add('active');
-$('modal-close-btn').onclick=()=>helpModal.classList.remove('active');
-helpModal.onclick=e=>{if(e.target===helpModal)helpModal.classList.remove('active');};
-$$('.panel-toggle-btn').forEach(btn=>{
-btn.onclick=()=>{
-const targetId=btn.dataset.target;
-const bodyEl=$(targetId);
-if(!bodyEl)return;
-const isHidden=bodyEl.classList.toggle('collapsed');
-btn.textContent=isHidden?'Settings':'Hide';
-};
-});
 function bindCollapse(btnId,wrapId,name){
 const btn=$(btnId),wrap=$(wrapId);
 if(!btn||!wrap)return;
@@ -1973,10 +1282,10 @@ return $$('#toolbar .tool-group').map(el=>el.dataset.panelId).filter(Boolean);
 function applyPanelOrder(){
 if(!state.panelOrder||!state.panelOrder.length)return;
 const map=new Map($$('#toolbar .tool-group').map(el=>[el.dataset.panelId,el]));
-state.panelOrder.forEach(id=>{
-const el=map.get(id);
-if(el)toolbar.appendChild(el);
-});
+const want=state.panelOrder.map(id=>map.get(id)).filter(Boolean);
+const have=[...toolbar.children].filter(c=>want.includes(c));
+if(want.every((el,i)=>el===have[i]))return;
+want.forEach(el=>toolbar.appendChild(el));
 }
 $$('.panel-grip').forEach(grip=>{
 grip.addEventListener('pointerdown',e=>{
@@ -2014,191 +1323,12 @@ window.addEventListener('pointerup',onPointerUp);
 });
 });
 const SETTING_KEYS=Object.keys(DEFAULTS).filter(k=>
-  !['nodes','lines','geminiKey','claudeKey','openaiKey','fileDir'].includes(k)
+  !['nodes','lines','fileDir'].includes(k)
 );
-const SETTING_SECTIONS={
-  panelOrder:'LAYOUT',draggablePanels:'LAYOUT',sidebarWidth:'LAYOUT',
-  inputMode:'INTERFACE',interactionMode:'INTERACTION',dragGraphBall:'INTERACTION',
-  singleTouchExpand:'INTERACTION',editMode:'INTERACTION',linkOpenMode:'LINKS',
-  fontMin:'TEXT',fontMax:'TEXT',autoSizeAll:'NODES',maxLinksBound:'NODES',
-  colorDist1:'LINES',colorDist1Hex:'LINES',colorDist2:'LINES',colorDist2Hex:'LINES',
-  colorDist3:'LINES',colorDist3Hex:'LINES',maxDistanceLimit:'LINES',
-  showTimeline:'VIEW',showUrls:'VIEW',timelinePos:'VIEW',
-  touchDragThreshold:'TOUCH',touchHitPad:'TOUCH',touchHoldMs:'TOUCH',
-  touchIgnoreExtra:'TOUCH',touchAutoClear:'TOUCH',
-  aiProvider:'AI',aiModel:'AI'
-};
-const SETTING_HELP={
-  panelOrder:'Order of sidebar panels; panel IDs separated with |',
-  draggablePanels:'true=allow dragging panels to reorder; false=lock order',
-  sidebarWidth:'Sidebar width in pixels',
-  inputMode:'1=touch, 2=desktop, 3=auto-detect',
-  interactionMode:'1=drag nodes, 2=draw arrows',
-  dragGraphBall:'true=show/use the graph drag ball',
-  singleTouchExpand:'true=single click/touch expands node action balls',
-  editMode:'1=edit spot ball, 2=edit instead of opening link',
-  linkOpenMode:'1=new window, 2=current window, 3=expand in current, 4=rotate/flip, 5=open in empty space',
-  fontMin:'Minimum linkage label font size in pixels',
-  fontMax:'Maximum linkage label font size in pixels',
-  autoSizeAll:'true=automatically size all nodes',
-  maxLinksBound:'Minimum link-bound display threshold (normally maintained automatically)',
-  colorDist1:'true=enable line color for distance 1',
-  colorDist1Hex:'Color for distance-1 lines, as a hex color',
-  colorDist2:'true=enable line color for distance 2',
-  colorDist2Hex:'Color for distance-2 lines, as a hex color',
-  colorDist3:'true=enable line color for distance 3',
-  colorDist3Hex:'Color for distance-3 lines, as a hex color',
-  maxDistanceLimit:'Hide nodes farther than this selected-link distance; 10 means unlimited',
-  showTimeline:'true=show the timeline overlay',
-  showUrls:'true=show URLs on nodes',
-  timelinePos:'Timeline position/width as x,y,width in pixels',
-  touchDragThreshold:'Movement in pixels before a touch drag starts',
-  touchHitPad:'Extra touch target padding in pixels',
-  touchHoldMs:'Touch hold threshold in milliseconds; 0=off',
-  touchIgnoreExtra:'true=ignore extra fingers while dragging',
-  touchAutoClear:'true=automatically clear stuck touch gestures',
-  aiProvider:'1=Gemini, 2=Claude, 3=OpenAI API',
-  aiModel:'Provider model identifier; must be supported by the selected provider'
-};
-const CHOICE_SETTINGS={
-  inputMode:{touch:1,desktop:2,auto:3},
-  aiProvider:{gemini:1,claude:2,openai:3},
-  interactionMode:{drag:1,arrow:2},
-  editMode:{spot:1,editInstead:2},
-  linkOpenMode:{new:1,current:2,expand:3,rotateFlip:4,openEmptySpace:5}
-};
-function encodeSettingValue(key,value){
-  if(CHOICE_SETTINGS[key])return String(CHOICE_SETTINGS[key][value]||value);
-  if(key==='panelOrder')return Array.isArray(value)?value.join('|'):'';
-  if(key==='timelinePos'&&value&&typeof value==='object')return [value.x,value.y,value.width].join(',');
-  if(typeof value==='boolean')return value?'true':'false';
-  return String(value??'');
-}
-function formatSettingsText(source=state){
-  const lines=[
-    '// CONCEPT MAP SETTINGS;FORMAT;1',
-    '// Edit the value between the second semicolon and the inline // comment.',
-    '// Blank lines and lines starting with // are ignored. Settings may be reordered.',
-    '// Do not add API keys here: credentials are intentionally not exported.',
-    '// Lines use SECTION;setting;value // help. Keep one setting per line.',
-    ''
-  ];
-  for(const key of SETTING_KEYS){
-    const section=SETTING_SECTIONS[key]||'GENERAL';
-    lines.push(`${section};${key};${encodeSettingValue(key,source[key])} // ${SETTING_HELP[key]||'See the setting name; use a value of the same type as shown.'}`);
-  }
-  lines.push('','// END SETTINGS');
-  return lines.join('\n');
-}
-function parseChoiceValue(key,value){
-  const choices=CHOICE_SETTINGS[key];
-  if(!choices)return value;
-  const clean=String(value).trim();
-  const matched=Object.entries(choices).find(([name,num])=>name.toLowerCase()===clean.toLowerCase()||String(num)===clean);
-  if(!matched)throw new Error(`Invalid value for ${key}: ${clean}`);
-  return matched[0];
-}
-function parseTextSettings(text){
-  const updates={},unknown=[];
-  const allowed=new Set(SETTING_KEYS);
-  const lines=String(text||'').split(/\r?\n/);
-  for(let i=0;i<lines.length;i++){
-    const original=lines[i],line=original.trim();
-    if(!line||line.startsWith('//')||line.startsWith('#'))continue;
-    const first=line.indexOf(';'),second=first<0?-1:line.indexOf(';',first+1);
-    if(first<1||second<0)throw new Error(`Line ${i+1}: expected SECTION;setting;value`);
-    const key=line.slice(first+1,second).trim();
-    let raw=line.slice(second+1);
-
-    raw=raw.replace(/\s+\/\/.*$/,'').trim();
-    if(!allowed.has(key)){unknown.push(key||`line ${i+1}`);continue;}
-    try{
-      let value=parseChoiceValue(key,raw);
-      if(key==='panelOrder'){
-        value=raw.split('|').map(x=>x.trim()).filter(Boolean);
-        const known=new Set($$('#toolbar .tool-group').map(el=>el.dataset.panelId));
-        value=value.filter(id=>known.has(id));
-        if(!value.length)throw new Error('panelOrder must contain at least one known panel ID');
-      }else if(key==='timelinePos'){
-        const parts=raw.split(',').map(x=>Number(x.trim()));
-        if(parts.length!==3||parts.some(x=>!Number.isFinite(x)))throw new Error('timelinePos must be x,y,width');
-        value={x:parts[0],y:parts[1],width:Math.max(100,parts[2])};
-      }else if(typeof DEFAULTS[key]==='boolean'){
-        const b=String(raw).toLowerCase();
-        if(!['true','false','1','0','yes','no'].includes(b))throw new Error(`${key} must be true/false or 1/0`);
-        value=['true','1','yes'].includes(b);
-      }else if(typeof DEFAULTS[key]==='number'){
-        value=Number(raw);
-        if(!Number.isFinite(value))throw new Error(`${key} must be a number`);
-      }else if(key==='aiModel'){
-        value=raw.trim();
-        if(!value)throw new Error('aiModel cannot be blank');
-      }
-      updates[key]=value;
-    }catch(err){throw new Error(`Line ${i+1} (${key}): ${err.message}`);}
-  }
-  return {updates,unknown};
-}
-function downloadTextFile(filename,content,mime='text/plain;charset=utf-8'){
-  const url=URL.createObjectURL(new Blob([content],{type:mime}));
-  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
 function applyImportedSettings(updates){
-  const privateKeys=['geminiKey','claudeKey','openaiKey','fileDir'];
-  for(const key of SETTING_KEYS){if(updates[key]!==undefined&&!privateKeys.includes(key))state[key]=updates[key];}
-  if(!AI_PROVIDERS[state.aiProvider])state.aiProvider='gemini';
-  const provider=aiProvider();
-  if(!provider.models.some(([id])=>id===state.aiModel))state.aiModel=provider.defaultModel;
+  for(const key of SETTING_KEYS)if(updates[key]!==undefined)state[key]=updates[key];
   applyPanelOrder();saveState();render();
 }
-$('export-settings-btn').onclick=()=>downloadTextFile('concept_map_settings.txt',formatSettingsText());
-$('import-settings-btn').onclick=()=>$('import-settings-file').click();
-$('settings-refresh-text-btn').onclick=()=>{$('settings-text-editor').value=formatSettingsText();};
-$('settings-reset-text-btn').onclick=()=>{
-  $('settings-text-editor').value=formatSettingsText(DEFAULTS);
-  $('settings-text-editor').focus();
-};
-$('settings-apply-text-btn').onclick=()=>{
-  try{
-    const {updates,unknown}=parseTextSettings($('settings-text-editor').value);
-    applyImportedSettings(updates);
-    $('settings-text-editor').value=formatSettingsText();
-    const note=unknown.length?` Unknown settings ignored: ${unknown.slice(0,8).join(', ')}${unknown.length>8?'…':''}.`:'';
-    alert(`Text settings applied.${note}`);
-  }catch(err){alert(`Settings were not applied. ${err.message}`);}
-};
-$('settings-reset-defaults-btn').onclick=()=>{
-  if(!confirm('Reset preferences to built-in defaults? The map nodes/connections and API keys will be preserved.'))return;
-  const keep={nodes:state.nodes,lines:state.lines,fileDir:state.fileDir,geminiKey:state.geminiKey,claudeKey:state.claudeKey,openaiKey:state.openaiKey};
-  state={...structuredClone(DEFAULTS),...keep};
-  applyPanelOrder();saveState();render();
-  $('settings-text-editor').value=formatSettingsText();
-  alert('Preferences reset. Map contents and API keys were preserved.');
-};
-$('import-settings-file').onchange=e=>{
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const contents=String(ev.target.result||'');
-    try{
-      const trimmed=contents.trim();
-      if(trimmed.startsWith('{')){
-        const parsed=JSON.parse(trimmed),updates={};
-        for(const key of SETTING_KEYS)if(parsed[key]!==undefined)updates[key]=parsed[key];
-        applyImportedSettings(updates);
-      }else{
-        const {updates,unknown}=parseTextSettings(contents);
-        applyImportedSettings(updates);
-        if(unknown.length)console.warn('Unknown settings ignored:',unknown);
-      }
-      $('settings-text-editor').value=formatSettingsText();
-      alert('Settings loaded. API keys and the local folder path were not changed.');
-    }catch(err){alert(`Could not import settings. ${err.message}`);}
-    e.target.value='';
-  };
-  reader.readAsText(file);
-};
 function addBoxes(texts){
 texts.forEach(t=>{
 const i=state.nodes.length;
@@ -2212,7 +1342,6 @@ const createBoxes=()=>{const t=$('node-text').value.trim();if(t)addBoxes(t.split
 $('add-btn').onclick=createBox;
 $('add-boxes-btn').onclick=createBoxes;
 $('node-text').onkeydown=e=>{if(e.key==='Enter')createBox();};
-$('settings-text-editor').value=formatSettingsText();
 $('clear-btn').onclick=()=>{
 if(isLocked||!confirm('Clear all nodes and connections?'))return;
 state={...state,nodes:[],lines:[]};
@@ -2435,11 +1564,8 @@ const n=nodeById(id);
 if(n)el.classList.toggle('balls-expanded',!!n.ballsExpanded);
 });
 view.lineDist=bfs([...selected]).lineDist;
-view.chain=($('highlight-chain-chk').checked&&selected.size===1&&!selectedLineId)
+view.chain=(chainOn&&selected.size===1&&!selectedLineId)
 ?{up:bfs([...selected],true).lineDist,down:bfs([...selected]).lineDist}:null;
-$('gemini-expand-btn').disabled=selected.size!==1;
-$('gemini-drill-btn').disabled=selected.size!==1;
-$('gemini-bridge-btn').disabled=selected.size!==2;
 drawLineControls();
 drawLines();
 if(state.maxDistanceLimit<10){
@@ -2655,7 +1781,6 @@ touches.forEach((_,id)=>capture(id));
 viewport.addEventListener('touchmove',e=>{if(!e.target.closest('.node-edit-input'))e.preventDefault();},{passive:false});
 const stuck=()=>touches.size||ignored.size||pinch||(g&&g.touch);
 function resetTouchState(){touches.clear();ignored.clear();pinch=null;cancelGesture();}
-$('tt-reset-btn').onclick=()=>{resetTouchState();render();};
 const sweep=()=>{if(!liveTouches&&stuck()){resetTouchState();render();}};
 ['touchstart','touchend','touchcancel'].forEach(t=>window.addEventListener(t,e=>{
 liveTouches=e.touches.length;
@@ -2684,12 +1809,138 @@ if(ioWin&&!ioWin.closed){ioWin.focus();return postIo(ioPayload());}
 ioWin=window.open('conceptmap_io.html','conceptmap_io','width=640,height=880,resizable=yes,scrollbars=yes');
 if(!ioWin)alert('Allow pop-ups to open the Import/Export tool.');
 };
+/* ===== SIDE PANEL BRIDGE: conceptmap_sidefunctions.html runs in #side-frame and talks to this page by postMessage ===== */
+const sideFrame=$('side-frame');
+let sideTimer=null,sideLast='',aiLast='',aiKeys={};
+const displayParagraphFrame=$('display-paragraph-frame');
+let displayParagraph={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:false,artificialWrapLength:30,abbreviationsEnabled:false,conversions:''};
+function displayNodeText(raw){
+ let words=String(raw??'').match(/\S+/g)||[];
+ if(displayParagraph.longestWord&&words.length){const clean=w=>w.match(/[\p{L}\p{N}]+/gu)?.join('')||w;let best=words.reduce((a,b)=>clean(b).length>clean(a).length?b:a,words[0]);words=[best];}
+ else if(displayParagraph.longerWords)words=words.filter(w=>(w.match(/[\p{L}\p{N}]+/gu)?.join('').length||0)>=Math.max(1,+displayParagraph.minWordLength||1));
+ if(displayParagraph.firstWords)words=words.slice(0,Math.max(1,+displayParagraph.firstCount||200));
+ let out=words.join(' ');
+ if(displayParagraph.abbreviationsEnabled){
+  const pairs=String(displayParagraph.conversions||'').split(/\r?\n/).map(line=>line.trim()).filter(line=>line&&!line.startsWith('#')).map(line=>line.split(/\s+/)).filter(a=>a.length>=2).map(a=>[a[0],a.slice(1).join(' ')]).sort((a,b)=>b[0].length-a[0].length);
+  for(const [from,to] of pairs){const escaped=from.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('\\b'+escaped+'\\b','gi'),m=>m===m.toUpperCase()?to.toUpperCase():m[0]===m[0].toUpperCase()?to[0].toUpperCase()+to.slice(1):to);}
+ }
+ if(displayParagraph.artificialWordWrap){const limit=Math.max(1,+displayParagraph.artificialWrapLength||30);out=out.split('\n').map(line=>{const ws=line.split(/\s+/);let lines=[],cur='';for(const w of ws){if(!w)continue;if(cur&&cur.length+1+w.length>limit){lines.push(cur);cur=w;}else cur+=(cur?' ':'')+w;}if(cur)lines.push(cur);return lines.join('\n');}).join('\n');}
+ return out;
+}
+const displayParagraphPost=m=>{try{displayParagraphFrame.contentWindow.postMessage({ch:'conceptmap-displayparagraph',...m},'*')}catch(err){}};
+async function loadAbbrevFile(){
+ try{
+  if(dirHandle){
+   let permission=await dirHandle.queryPermission({mode:'read'});
+   if(permission==='granted'){
+    const handle=await dirHandle.getFileHandle('abbrev.txt');
+    const file=await handle.getFile();
+    displayParagraphPost({type:'conversions-file',text:await file.text(),name:'abbrev.txt'});
+    return;
+   }
+  }
+  if(location.protocol==='http:'||location.protocol==='https:'){
+   const base=(state.fileDir||'').trim().replace(/\\/g,'/').replace(/\/$/,'');
+   const url=(base?base+'/':'')+'abbrev.txt';
+   const response=await fetch(url,{cache:'no-store'});
+   if(response.ok){displayParagraphPost({type:'conversions-file',text:await response.text(),name:'abbrev.txt'});return;}
+  }
+ }catch(err){if(err?.name!=='NotFoundError')console.debug('Using built-in abbreviation list; abbrev.txt unavailable:',err);}
+ displayParagraphPost({type:'abbrev-file-missing'});
+}
+
+const aiFrame=$('conceptmap-ai-frame');
+const aiPost=m=>{try{aiFrame.contentWindow.postMessage({channel:'conceptmap-ai',...m},'*');}catch(err){}};
+const sidePost=m=>{try{sideFrame.contentWindow.postMessage({ch:'conceptmap-side',...m},'*');}catch(err){}};
+function scheduleSideSync(force){
+if(force)sideLast=aiLast='';
+if(sideTimer)return;
+sideTimer=setTimeout(()=>{
+sideTimer=null;
+const m={type:'state',touch:isTouchActive(),S:Object.fromEntries(SETTING_KEYS.map(k=>[k,state[k]]))},j=JSON.stringify(m);
+if(j!==sideLast){sideLast=j;sidePost(m);}
+const a={type:'conceptmap-ai-state',provider:state.aiProvider,model:state.aiModel,sel:selected.size,keys:aiKeys},k=JSON.stringify(a);
+if(k!==aiLast){aiLast=k;aiPost(a);}
+},60);
+}
+window.addEventListener('message',e=>{
+const d=e.data;
+if(e.source===displayParagraphFrame.contentWindow&&d&&d.ch==='conceptmap-displayparagraph'){
+ if(d.type==='ready'){
+  displayParagraphPost({type:'settings',settings:displayParagraph});
+  displayParagraphPost({type:'load-abbrev'});
+ }
+ if(d.type==='settings'&&d.settings){displayParagraph={...displayParagraph,...d.settings};render();}
+ return;
+}
+if(e.source!==sideFrame.contentWindow||!d||d.ch!=='conceptmap-side')return;
+switch(d.type){
+case 'ready':sidePost({type:'init',D:Object.fromEntries(SETTING_KEYS.map(k=>[k,DEFAULTS[k]])),PANELS:getPanelOrder()});scheduleSideSync(true);break;
+case 'set':{
+if(!SETTING_KEYS.includes(d.k))break;
+let v=d.v;
+if(isLocked&&d.k==='maxDistanceLimit'){render();scheduleSideSync(true);break;}
+if(d.k==='fontMin')v=Math.min(v,state.fontMax);
+if(d.k==='fontMax')v=Math.max(v,state.fontMin);
+state[d.k]=v;
+if(!d.live)saveState();
+render();
+break;}
+case 'commit':saveState();scheduleSideSync(true);break;
+case 'chain':chainOn=!!d.on;render();break;
+case 'dupdrag':dupDrag=!!d.on;break;
+case 'dup':duplicateGroups=Array.isArray(d.comps)?d.comps:[];duplicateNodeIds=new Set(duplicateGroups.flat());render();break;
+case 'get-graph':sidePost({type:'graph',id:d.id,nodes:state.nodes,lines:state.lines});break;
+case 'graph-delete':{
+const ids=new Set(d.ids||[]);
+state.lines=state.lines.filter(l=>!ids.has(l.from)&&!ids.has(l.to));
+state.nodes=state.nodes.filter(n=>!ids.has(n.id));
+ids.forEach(id=>selected.delete(id));
+duplicateNodeIds.clear();duplicateGroups=[];
+saveState();render();
+break;}
+case 'graph-move':
+(d.moves||[]).forEach(([id,x,y])=>{const n=nodeById(id);if(n){n.x=x;n.y=y;}});
+saveState();render();
+break;
+case 'apply-settings':sideLast='';applyImportedSettings(d.updates||{});break;
+case 'reset-defaults':{
+const keep={nodes:state.nodes,lines:state.lines,fileDir:state.fileDir};
+state={...structuredClone(DEFAULTS),...keep};
+sideLast='';applyPanelOrder();saveState();render();
+break;}
+case 'reset-touches':resetTouchState();render();break;
+case 'key':window.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,shiftKey:!!d.shift,ctrlKey:!!d.ctrl,metaKey:!!d.meta,bubbles:true,cancelable:true}));break;
+case 'height':sideFrame.style.height=Math.max(60,Math.min(+d.h||0,6000))+'px';break;
+}
+});
+window.addEventListener('message',e=>{
+const d=e.data;
+if(e.source!==aiFrame.contentWindow||!d||d.channel!=='conceptmap-ai')return;
+switch(d.type){
+case 'ready':scheduleSideSync(true);break;
+case 'provider':if(typeof d.value==='string'){state.aiProvider=d.value;if(d.model)state.aiModel=String(d.model);saveState();}break;
+case 'model':state.aiModel=String(d.value);saveState();break;
+case 'key':if(typeof d.provider==='string'){aiKeys[d.provider]=String(d.value||'');scheduleSideSync();}break;
+case 'get':aiPost({type:'reply',id:d.id,nodes:state.nodes,lines:state.lines,sel:[...selected],tp:state.timelinePos});break;
+case 'apply':
+if(d.timeline)state.showTimeline=true;
+if(d.mode==='append'){state.nodes.push(...d.nodes);state.lines.push(...d.lines);}
+else{state.nodes=d.nodes;state.lines=d.lines;}
+saveState();render();
+break;
+case 'drill':openInCurrent(d.name,{nodes:d.nodes,lines:d.lines},null);break;
+case 'select':selected.clear();(d.ids||[]).forEach(id=>nodeById(id)&&selected.add(id));render();break;
+case 'toast':toast(String(d.text||''));break;
+case 'hotkey':window.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,shiftKey:!!d.shift,ctrlKey:!!d.ctrl,metaKey:!!d.meta,bubbles:true,cancelable:true}));break;
+}
+});
 function afterExternalChange(){
 selected.clear();selectedLineId=null;editingId=null;
 saveState();render();
 }
 function applyImportedJson(src){
-const keepTouch=Object.fromEntries([...TOUCH_KEYS,'fileDir','geminiKey','claudeKey','openaiKey'].map(k=>[k,state[k]]));
+const keepTouch=Object.fromEntries([...TOUCH_KEYS,'fileDir'].map(k=>[k,state[k]]));
 state={...structuredClone(DEFAULTS),...keepTouch,...src,nodes:src.nodes||[],lines:normalizeLines(src.lines||[])};
 applyPanelOrder();
 afterExternalChange();
@@ -2813,6 +2064,7 @@ async function restoreDirectoryHandle(){
     const permission=await dirHandle.queryPermission({mode:'read'});
     $('pick-dir-status').textContent=permission==='granted'?`Restored active folder: ${dirHandle.name}`:`Saved folder: ${dirHandle.name}. If access is denied, select the directory again.`;
     clearFileAvailability();
+    if(typeof loadAbbrevFile==='function')loadAbbrevFile();
   }catch(err){console.warn('Could not restore saved directory handle:',err);}
 }
 function toast(msg){
@@ -2916,37 +2168,59 @@ if(lvl>0&&parent)lines.push({id:uid(),from:parent.id,to:node.id,arrow:'end',widt
 });
 return{nodes,lines};
 }
+
 function parseExtendedLines(text){
-const nodes=[],lines=[];let section='';
-for(const raw of text.split(/\r?\n/)){
-const line=raw.trim();
-if(!line)continue;
-if(line==='--- NODES ---'){section='nodes';continue;}
-if(line==='--- CONNECTIONS ---'){section='lines';continue;}
-if(!section||/^VERSION:|^CREATED:|^NODES:|^LINES:/.test(line))continue;
-if(section==='nodes'){
-const parts=line.split(' | '),id=parts[0]?.trim();
-if(!id)continue;
-const pos=(line.match(/\|\s*x:([+-]?\d+(?:\.\d+)?)\s+y:([+-]?\d+(?:\.\d+)?)/)||[]);
-const textMatch=line.match(/\|\s*text:\s*([\s\S]*?)(?=\s*\|\s*(?:URL:|size:|collapsed:)|$)/);
-const urlMatch=line.match(/\|\s*URL:\s*([^|]*)/);
-const sizeMatch=line.match(/\|\s*size:\s*([^|]*)/);
-const collapsedMatch=line.match(/\|\s*collapsed:\s*(true|false)/i);
-const parsed=parseTextAndUrl(textMatch?textMatch[1].trim():parts.slice(2).join(' | ').replace(/^text:\s*/,''));
-const url=urlMatch?urlMatch[1].trim():(parsed.url||null);
-const node={id,text:parsed.text,url,x:pos[1]?Number(pos[1]):120+nodes.length%8*140,y:pos[2]?Number(pos[2]):140+Math.floor(nodes.length/8)*60,size:sizeMatch?sizeMatch[1].trim():'auto',collapsed:collapsedMatch?collapsedMatch[1].toLowerCase()==='true':false};
-if(url&&node.text===url)node.text=url;
-nodes.push(node);
-}else if(section==='lines'){
-const id=(line.match(/\bid:([^|]+)/)||[])[1]?.trim()||uid();
-const from=(line.match(/\bfrom:([^|]+)/)||[])[1]?.trim();
-const to=(line.match(/\bto:([^|]+)/)||[])[1]?.trim();
-if(!from||!to)continue;
-lines.push({id,from,to,arrow:((line.match(/\barrow:([^|]+)/)||[])[1]||'end').trim(),width:Number(((line.match(/\bwidth:([^|]+)/)||[])[1]||'1').trim()),color:((line.match(/\bcolor:([^|]+)/)||[])[1]||'#00b4d8').trim(),label:((line.match(/\blabel:([\s\S]*)$/)||[])[1]||'').trim()});
+  const nodes = [], lines = [];
+  let section = '';
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line === '--- NODES ---') { section = 'nodes'; continue; }
+    if (line === '--- CONNECTIONS ---') { section = 'lines'; continue; }
+    if (!section || /^VERSION:|^CREATED:|^NODES:|^LINES:/.test(line)) continue;
+    if (section === 'nodes') {
+      const parts = line.split(' | '), id = parts[0]?.trim();
+      if (!id) continue;
+      const pos = (line.match(/\|\s*x:([+-]?\d+(?:\.\d+)?)\s+y:([+-]?\d+(?:\.\d+)?)/) || []);
+      const textMatch = line.match(/\|\s*text:\s*([\s\S]*?)(?=\s*\|\s*(?:URL:|size:|collapsed:)|$)/);
+      const urlMatch = line.match(/\|\s*URL:\s*([^|]*)/);
+      const sizeMatch = line.match(/\|\s*size:\s*([^|]*)/);
+      const collapsedMatch = line.match(/\|\s*collapsed:\s*(true|false)/i);
+      
+      let textContent = textMatch ? textMatch[1].trim() : parts.slice(2).join(' | ').replace(/^text:\s*/, '');
+      textContent = textContent.replace(/\\n/g, '\n');
+      
+      const parsed = parseTextAndUrl(textContent);
+      const url = urlMatch ? urlMatch[1].trim() : (parsed.url || null);
+      const node = {
+        id,
+        text: parsed.text,
+        url,
+        x: pos[1] ? Number(pos[1]) : 120 + (nodes.length % 8) * 140,
+        y: pos[2] ? Number(pos[2]) : 140 + Math.floor(nodes.length / 8) * 60,
+        size: sizeMatch ? sizeMatch[1].trim() : 'auto',
+        collapsed: collapsedMatch ? collapsedMatch[1].toLowerCase() === 'true' : false
+      };
+      nodes.push(node);
+    } else if (section === 'lines') {
+      const id = (line.match(/\bid:([^|]+)/) || [])[1]?.trim() || uid();
+      const from = (line.match(/\bfrom:([^|]+)/) || [])[1]?.trim();
+      const to = (line.match(/\bto:([^|]+)/) || [])[1]?.trim();
+      if (!from || !to) continue;
+      lines.push({
+        id,
+        from,
+        to,
+        arrow: ((line.match(/\barrow:([^|]+)/) || [])[1] || 'end').trim(),
+        width: Number(((line.match(/\bwidth:([^|]+)/) || [])[1] || '1').trim()),
+        color: ((line.match(/\bcolor:([^|]+)/) || [])[1] || '#00b4d8').trim(),
+        label: ((line.match(/\blabel:([\s\S]*)$/) || [])[1] || '').trim()
+      });
+    }
+  }
+  return { nodes, lines };
 }
-}
-return{nodes,lines};
-}
+
 function parseGraphText(text){
 const trimmed=text.trim();
 if(/^<!doctype html|^<html/i.test(trimmed)){
@@ -3116,85 +2390,8 @@ restoreDirectoryHandle();
 if(window.opener&&location.hash==='#child'){
 try{window.opener.postMessage({type:'cm-child-ready'},'*');}catch(err){}
 }
-$('duplicate-node-detect-btn').addEventListener('click',detectDuplicateNodes);
-$('duplicate-node-delete-btn').addEventListener('click',deleteDuplicateInstances);
-$('duplicate-node-clear-btn').addEventListener('click',clearDuplicateNodeHighlights);
-$('duplicate-node-segregate-btn').addEventListener('click',segregateDuplicateInstances);
 </script> 
 
-<script type="application/x-conceptmap-ai-fallback" id="conceptmap-ai-fallback-source">
-PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj48aGVhZD48bWV0YSBjaGFyc2V0PSJVVEYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEsbWF4aW11bS1zY2FsZT0xLHVzZXItc2NhbGFibGU9bm8iPjx0aXRsZT5Db25jZXB0IE1hcCBBSTwvdGl0bGU+CjxzdHlsZT4KKntib3gtc2l6aW5nOmJvcmRlci1ib3h9aHRtbCxib2R5e21hcmdpbjowO21pbi1oZWlnaHQ6MTAwJTtiYWNrZ3JvdW5kOiMxMzA5MjQ7Y29sb3I6I2UwZTZlZDtmb250OjExcHgvMS40NSBtb25vc3BhY2V9Ym9keXtwYWRkaW5nOjhweDt1c2VyLXNlbGVjdDp0ZXh0Oy13ZWJraXQtdXNlci1zZWxlY3Q6dGV4dH0uaGVhZGVye2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47Z2FwOjZweDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjOWQ0ZWRkO3BhZGRpbmc6M3B4IDAgOHB4O21hcmdpbi1ib3R0b206OHB4fS50aXRsZXtmb250LXdlaWdodDpib2xkO2NvbG9yOiNlMGFhZmY7bGV0dGVyLXNwYWNpbmc6LjZweH0uaGludHtjb2xvcjojOWRhZWMyO2ZvbnQtc2l6ZToxMHB4fWJ1dHRvbikgLyoqL3VidHRvbixpbnB1dCxzZWxlY3QsdGV4dGFyZWF7d2lkdGg6MTAwJTtmb250OjExcHggbW9ub3NwYWNlO2NvbG9yOiNmZmY7YmFja2dyb3VuZDojMWIyNjNiO2JvcmRlcjoxcHggc29saWQgIzc3OGRhOTtwYWRkaW5nOjdweDtoYW5kaW5nLXJhZGl1czoycHh9YnV0dG9ue2JhY2tncm91bmQ6IzI0MDA0Njtib3JkZXItY29sb3I6IzlkNGVkZDtjb2xvcjojZTBhYWZmO2ZvbnQtd2VpZ2h0OmJvbGQ7dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2xldHRlci1zcGFjaW5nOi4zcHg7Y3Vyc29yOnBvaW50ZXI7dG91Y2gtYWN0aW9uOm1hbmlwdWxhdGlvbn1idXR0b246aG92ZXJ7YmFja2dyb3VuZDojM2MwOTZjO2NvbG9yOiNmZmYfYnV0dG9uOmRpc2FibGVkfG9wYWNpdHk6LjM1O2N1cnNvcjpub3QtYWxsb3dlZH1sYWJlbHtkeXNwbGF5OmJsb2NrO21hcmdpbjo3cHggMCA0cHg7Y29sb3I6IzkwZTBlZn0ucm93e2Rpc3BsYXk6ZmxleDtnYXA6NnB4fS5yb3c+KntmbGV4OjE7bWluLXdpZHRoOjB9LnNlY3Rpb257Y29sb3I6IzAwZjVkNCNmb250LXNpemU6MTBweDtmb250LXdlaWdodDpib2xkO2xldHRlci1zcGFjaW5nOi41cHg7bWFyZ2luOjEwcHggMCA1cHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgIzM0MjA0ZDtwYWRkaW5nLWJvdHRvbTozcHgsfS5zdGF0dXN7ZGlzcGxheTpibG9jazt3aGl0ZS1zcGFjZTpwcmUtd3JhcDtvdmVyZmxvdy13cmFwOmFueXdoZXJlO2NvbG9yOiM5MGUwZWY7YmFja2dyb3VuZDojMGQxYjJhO2JvcmRlcjoxcCBzb2xpZCAjMzQyMDRkO3BhZGRpbmc6N3B4O21hcmdpbi10b3A6OHB4O21pbi1oZWlnaHQ6MzZweH0uc2V0dGluZ3N7Ym9kZXI6MXB4IHNvbGlkICM1MDM0NmI7cGFkZGluZzo3cHg7bWFyZ2luOjEwcHggMH0uc2V0dGluZ3NbY29sbGFwc2VEXXtkcy1kaXNwbGF5Om5vbmV9
-</script>
-<script>
-(()=>{
- const frame=document.getElementById('conceptmap-ai-frame');
- if(!frame)return;
- const byId=id=>document.getElementById(id);
- let panelHandshakeReceived=false,fallbackStarted=false;
- let fallbackTimer=setTimeout(activateEmbeddedPanel,3200);
- function activateEmbeddedPanel(){
-  if(panelHandshakeReceived||fallbackStarted)return;
-  fallbackStarted=true;
-  try{
-   const encoded=byId('conceptmap-ai-fallback-source')?.textContent.trim();
-   if(!encoded)throw new Error('Embedded AI panel backup is missing.');
-   const bytes=Uint8Array.from(atob(encoded),ch=>ch.charCodeAt(0));
-   const html=new TextDecoder('utf-8').decode(bytes);
-   frame.dataset.panelLoadMode='embedded fallback';
-   frame.srcdoc=html;
-  }catch(err){
-   const wrap=byId('conceptmap-ai-frame-wrap');
-   if(wrap){const note=document.createElement('div');note.style.cssText='padding:10px;color:#ffb4a2;background:#2b1010;border:1px solid #ff6b6b;font:12px monospace';note.textContent='The AI panel could not load. Keep conceptmap.html and conceptmap_ai.html in the same folder, then reload. Details: '+err.message;wrap.appendChild(note);}
-  }
- }
- frame.addEventListener('error',activateEmbeddedPanel);
- const sendState=()=>{
-  try{
-   const provider=byId('ai-provider'),model=byId('ai-model'),key=byId('ai-api-key');
-   frame.contentWindow.postMessage({
-    type:'conceptmap-ai-state',
-    provider:provider?.value||'gemini', model:model?.value||'',
-    models:model?[...model.options].map(o=>({value:o.value,label:o.textContent})):[],
-    key:key?.value||'', keyCaption:byId('ai-key-caption')?.textContent||'API Key:',
-    prompt:byId('gemini-prompt')?.value||'', question:byId('gemini-ask-input')?.value||'',
-    status:byId('gemini-status')?.textContent||'',
-    expandDisabled:!!byId('gemini-expand-btn')?.disabled,
-    drillDisabled:!!byId('gemini-drill-btn')?.disabled,
-    bridgeDisabled:!!byId('gemini-bridge-btn')?.disabled
-   },'*');
-  }catch(e){}
- };
- frame.addEventListener('load',()=>{sendState();});
- window.addEventListener('message',event=>{
-  if(event.source!==frame.contentWindow||!event.data||event.data.channel!=='conceptmap-ai')return;
-  const d=event.data;
-  if(d.type==='ready'){panelHandshakeReceived=true;if(fallbackTimer){clearTimeout(fallbackTimer);fallbackTimer=null;}sendState();return;}
-  if(d.type==='provider'){
-   const el=byId('ai-provider');el.value=d.value;el.dispatchEvent(new Event('change',{bubbles:true}));sendState();return;
-  }
-  if(d.type==='model'){
-   const el=byId('ai-model');el.value=d.value;el.dispatchEvent(new Event('change',{bubbles:true}));sendState();return;
-  }
-  if(d.type==='key'){
-   const el=byId('ai-api-key');el.value=d.value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return;
-  }
-  if(d.type==='prompt'){byId('gemini-prompt').value=d.value;return;}
-  if(d.type==='question'){byId('gemini-ask-input').value=d.value;return;}
-  if(d.type==='action'){
-   const map={generate:'gemini-generate-btn',append:'gemini-append-btn',roadmap:'gemini-roadmap-btn',expand:'gemini-expand-btn',drill:'gemini-drill-btn',bridge:'gemini-bridge-btn',image:'gemini-img-btn',ask:'gemini-ask-btn'};
-   const target=byId(map[d.action]);if(target&&!target.disabled)target.click();sendState();return;
-  }
-  if(d.type==='image'){
-   window.__conceptMapAIImageData={dataUrl:d.dataUrl,name:d.name||'image',type:d.mimeType||'image/png'};
-   const target=byId('gemini-img-btn');if(target)target.click();return;
-  }
- });
- const observeIds=['ai-provider','ai-model','ai-api-key','ai-key-caption','gemini-prompt','gemini-ask-input','gemini-status','gemini-expand-btn','gemini-drill-btn','gemini-bridge-btn'];
- const observe=()=>{for(const id of observeIds){const el=byId(id);if(!el)continue;new MutationObserver(sendState).observe(el,{subtree:true,childList:true,characterData:true,attributes:true});el.addEventListener('input',sendState);el.addEventListener('change',sendState);}}
- observe();
- setInterval(sendState,1200);
-})();
-</script>
 <script>
 (()=>{
  const frame=document.getElementById('conceptmap-code-frame');
