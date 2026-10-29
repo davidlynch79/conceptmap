@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concept Map Image & OCR Panel</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:#0d1b2a;color:#e0e6ed;font:12px monospace}
+h1{font-size:13px;letter-spacing:.5px;color:#90e0ef;margin:0 0 10px}
+.panel{border:1px solid #415a77;background:#1b263b;padding:10px;margin-bottom:9px}
+.label{display:block;color:#90e0ef;font-size:10px;margin-bottom:5px;font-weight:bold}
+input[type=text],select,textarea{width:100%;min-width:0;background:#0d1b2a;color:#fff;border:1px solid #778da9;padding:6px;font:11px monospace;border-radius:3px}
+button{background:#023e8a;border:1px solid #00b4d8;color:#00f5d4;padding:8px;font:11px monospace;font-weight:bold;cursor:pointer;border-radius:3px}
+button:hover{background:#0077b6;color:white}
+button:disabled{background:#1a2536;border-color:#334155;color:#64748b;cursor:not-allowed}
+.row{display:flex;gap:6px;margin-top:7px}
+.row button{flex:1}
+.radio-group{display:flex;gap:12px;align-items:center;background:#0d1b2a;padding:8px;border:1px solid #415a77;border-radius:3px;margin-top:4px}
+.radio-group label{display:flex;align-items:center;gap:4px;cursor:pointer;color:#e0e6ed;font-weight:bold}
+.radio-group input[type=radio]{accent-color:#00b4d8;cursor:pointer}
+.hint{font-size:10px;line-height:1.4;color:#9aabc0;margin-top:6px}
+.sliderrow{display:flex;align-items:center;gap:8px}
+.sliderrow input{width:100%;accent-color:#00b4d8}
+.sliderrow output{min-width:48px;text-align:right;color:#00f5d4}
+#status{padding:7px;background:#0b132b;border:1px solid #415a77;color:#90e0ef;white-space:pre-wrap;line-height:1.4;min-height:34px;border-radius:3px;word-break:break-word}
+#preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;max-height:220px;overflow:auto}
+.thumb{border:1px solid #415a77;padding:4px;min-width:0;background:#0d1b2a;border-radius:3px;position:relative;display:flex;flex-direction:column;justify:space-between}
+.thumb img{width:100%;height:60px;object-fit:contain;display:block;background:#000;border-radius:2px}
+.thumb span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px;color:#90e0ef;margin-top:4px}
+.thumb .ocr-preview{font-size:8px;color:#00f5d4;background:#111d2e;padding:2px 4px;margin-top:3px;max-height:28px;overflow:hidden;border:1px solid #2a3d52;border-radius:2px}
+.progress-bar{height:4px;background:#111d2e;border-radius:2px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:#00f5d4;width:0%;transition:width .2s}
+</style>
+</head>
+<body>
+
+<h1>▧ IMAGE GALLERY & OCR ENGINE → CONCEPT MAP</h1>
+
+<!-- DISPLAY MODE PANEL -->
+<div class="panel">
+  <span class="label">NODE CANVAS DISPLAY MODE</span>
+  <div class="radio-group">
+    <label><input type="radio" name="display-mode" value="photo" checked> Photo Only</label>
+    <label><input type="radio" name="display-mode" value="text"> Text Only</label>
+    <label><input type="radio" name="display-mode" value="both"> Both</label>
+  </div>
+  <div class="hint">Selecting a mode updates all nodes on the concept map in real time.</div>
+</div>
+
+<!-- IMPORT / RELOAD -->
+<div class="panel">
+  <div class="hint" style="margin-top:0;margin-bottom:6px">
+    Import images directly from the folder selected in main concept map panel.
+  </div>
+  <label style="display:flex;gap:6px;align-items:center;cursor:pointer;margin-bottom:2px">
+    <input id="subfolders" type="checkbox" checked style="accent-color:#00b4d8"> <b>Search for photos in subfolders</b>
+  </label>
+  <div class="row">
+    <button id="import">Import Images</button>
+    <button id="reload" disabled>Reload Images</button>
+  </div>
+</div>
+
+<!-- OCR CONFIGURATION & EXECUTION -->
+<div class="panel">
+  <span class="label">OCR EXTRACTION ENGINE</span>
+  <div class="row" style="margin-top:2px">
+    <select id="ocr-engine">
+      <option value="neural">Neural Network (Tesseract.js, loads from CDN)</option>
+      <option value="online">Online API OCR (OCR.space)</option>
+      <option value="offline">Offline (browser TextDetector, Chrome only)</option>
+    </select>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <input id="ocr-key" type="text" placeholder="OCR.space API key (optional; demo key used if empty)">
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button id="run-ocr">Run OCR on All Images</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button id="run-ocr-remaining">Run OCR on Remaining Images</button>
+  </div>
+  <div class="progress-bar"><div id="ocr-progress" class="progress-fill"></div></div>
+  <div class="hint">Extracts textual content from images and links it directly to node labels on the canvas.</div>
+</div>
+
+<!-- NODE DIMENSIONS & SIZING -->
+<div class="panel">
+  <button id="set-photo-dims" style="width:100%">Set Images to Photo Dimensions</button>
+  <div class="hint">Keeps each node's width and sets its height to match its photo's proportions.</div>
+  <div class="row"><button id="square">Reset as Square</button><button id="same-size">Reset All Same Size</button></div>
+</div>
+
+<div class="panel">
+  <span class="label">RESIZE ALL IMAGE NODES</span>
+  <div class="sliderrow">
+    <input id="size" type="range" min="40" max="600" step="10" value="160">
+    <output id="sizeval">160 px</output>
+  </div>
+  <div class="row"><button id="apply-size">Apply Size to All</button><button id="clear">Remove Image Nodes</button></div>
+</div>
+
+<div id="status">Ready. Select display mode or import images…</div>
+<div id="preview"></div>
+
+<script>
+(()=>{
+'use strict';
+
+const $=id=>document.getElementById(id);
+let currentImages=[];
+let currentMode='photo';
+
+function tell(text){ $('status').textContent = text; }
+
+function send(data){
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({ch:'conceptmap-image', ...data}, '*');
+  } else {
+    tell('Standalone mode: Open inside conceptmap.html frame to synchronize canvas.');
+  }
+}
+
+// Send Display Mode Change Immediately
+document.querySelectorAll('input[name="display-mode"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    currentMode = e.target.value;
+    tell('Display Mode updated to: ' + currentMode.toUpperCase());
+    send({
+      type: 'set-display-mode',
+      mode: currentMode
+    });
+  });
+});
+
+$('import').onclick=()=>{
+  tell('Importing images from selected directory…');
+  send({type:'request-import-images', displayMode: currentMode, subfolders: $('subfolders').checked});
+};
+
+$('reload').onclick=()=>{
+  tell('Reloading images…');
+  send({type:'request-reload', displayMode: currentMode, subfolders: $('subfolders').checked});
+};
+
+$('size').oninput=()=>$('sizeval').textContent=$('size').value+' px';
+$('apply-size').onclick=()=>send({type:'resize-all', width:Number($('size').value)});
+$('set-photo-dims').onclick=()=>send({type:'set-photo-dimensions'});
+$('square').onclick=()=>send({type:'reset-square-images'});
+$('same-size').onclick=()=>send({type:'reset-same-size'});
+$('clear').onclick=()=>{
+  if(confirm('Remove all image nodes from canvas?')) send({type:'clear-images'});
+};
+
+// OCR Processing Logic
+const OCR_TIMEOUT_MS = 90000;
+let ocrRunning = false;
+
+function withTimeout(promise, ms) {
+  let t;
+  const timer = new Promise((_, reject) => {
+    t = setTimeout(() => reject(new Error('Timed out after ' + Math.round(ms / 1000) + 's')), ms);
+  });
+  return Promise.race([promise, timer]).finally(() => clearTimeout(t));
+}
+
+function pendingOcr() {
+  return currentImages.filter(it => !it.ocrText && !it.ocrDone);
+}
+
+function updateOcrButtons() {
+  const n = pendingOcr().length;
+  $('run-ocr-remaining').textContent = 'Run OCR on Remaining Images' + (currentImages.length ? ' (' + n + ')' : '');
+  $('run-ocr').disabled = ocrRunning;
+  $('run-ocr-remaining').disabled = ocrRunning;
+}
+
+async function runOcr(onlyMissing) {
+  if (ocrRunning) return;
+  if (!currentImages.length) {
+    tell('No images loaded to process OCR.');
+    return;
+  }
+  const queue = onlyMissing ? pendingOcr() : currentImages.slice();
+  if (!queue.length) {
+    tell('Every image already has OCR text. Use "Run OCR on All Images" to redo them.');
+    return;
+  }
+
+  const engine = $('ocr-engine').value;
+  ocrRunning = true;
+  updateOcrButtons();
+  $('ocr-progress').style.width = '0%';
+  const ocrResults = [];
+  const errors = [];
+  let fatal = '';
+
+  try {
+    for (let i = 0; i < queue.length; i++) {
+      const item = queue[i];
+      tell(`Running ${engine.toUpperCase()} OCR [${i + 1}/${queue.length}]: ${item.name}...`);
+
+      try {
+        if (engine === 'online' && i > 0) await new Promise(r => setTimeout(r, 1000));
+        let job;
+        if (engine === 'neural') job = runNeuralOCR(item.dataUrl);
+        else if (engine === 'online') job = runOnlineOCR(item.dataUrl);
+        else job = runOfflineOCR(item.dataUrl);
+        // The first neural run also downloads the engine, so allow it more time.
+        const limit = (engine === 'neural' && !tessWorker) ? OCR_TIMEOUT_MS * 2 : OCR_TIMEOUT_MS;
+        const text = await withTimeout(job, limit);
+        item.ocrText = text;
+        item.ocrDone = true;
+        ocrResults.push({ name: item.name, path: item.path || item.name, text });
+      } catch (err) {
+        errors.push(item.name + ': ' + (err && err.message || err));
+        if (err && err.fatal) { fatal = err.message; break; }
+        if (engine === 'neural' && tessWorker) {
+          try { tessWorker.terminate(); } catch (e) {}
+          tessWorker = null;
+        }
+      }
+
+      $('ocr-progress').style.width = Math.round(((i + 1) / queue.length) * 100) + '%';
+
+      // Send each result as soon as it is ready so a later timeout loses nothing.
+      if (ocrResults.length && (i === queue.length - 1 || ocrResults.length >= 1)) {
+        send({ type: 'apply-ocr-text', results: ocrResults.splice(0), displayMode: currentMode });
+      }
+    }
+  } finally {
+    ocrRunning = false;
+    renderPreview(currentImages);
+  }
+
+  const left = pendingOcr().length;
+  if (fatal) { tell(`OCR stopped: ${fatal}\n${left} image(s) still without OCR text.`); return; }
+  tell(`OCR finished: ${queue.length - errors.length} of ${queue.length} image(s) read.` +
+    (errors.length ? `\nErrors (${errors.length}), first: ${errors[0]}` : '') +
+    (left ? `\n${left} image(s) still without OCR text. Click "Run OCR on Remaining Images" to continue.` : ''));
+}
+
+$('run-ocr').onclick = () => runOcr(false);
+$('run-ocr-remaining').onclick = () => runOcr(true);
+
+// ---- Real OCR engines ----
+function loadImg(src){
+  return new Promise((resolve,reject)=>{
+    const i=new Image();
+    i.onload=()=>resolve(i);
+    i.onerror=()=>reject(new Error('Could not decode image'));
+    i.src=src;
+  });
+}
+// Re-encode through a canvas (white background) so any browser-decodable format works.
+async function reencode(dataUrl, maxDim, type, quality, maxBytes){
+  const img=await loadImg(dataUrl);
+  let scale=Math.min(1, maxDim/Math.max(img.width,img.height));
+  for(let i=0;i<8;i++){
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*scale));
+    c.height=Math.max(1,Math.round(img.height*scale));
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    const out=c.toDataURL(type,quality);
+    if(!maxBytes||out.length*0.75<=maxBytes)return out;
+    scale*=0.7;
+  }
+  throw new Error('Image is too large to upload');
+}
+
+let tessWorker=null;
+async function loadTesseract(){
+  if(window.Tesseract)return window.Tesseract;
+  await new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=resolve;
+    s.onerror=()=>reject(new Error('Could not load Tesseract.js (internet connection needed the first time)'));
+    document.head.appendChild(s);
+  });
+  return window.Tesseract;
+}
+async function runNeuralOCR(dataUrl){
+  const T=await loadTesseract();
+  if(!tessWorker)tessWorker=await T.createWorker('eng');
+  const png=await reencode(dataUrl,3000,'image/png');
+  const {data}=await tessWorker.recognize(png);
+  return (data.text||'').trim();
+}
+
+async function runOnlineOCR(dataUrl){
+  const key=($('ocr-key').value||'').trim()||'helloworld';
+  const jpg=await reencode(dataUrl,2000,'image/jpeg',0.85,900000);
+  const fd=new FormData();
+  fd.append('apikey',key);
+  fd.append('base64Image',jpg);
+  fd.append('language','eng');
+  fd.append('OCREngine','2');
+  const res=await fetch('https://api.ocr.space/parse/image',{method:'POST',body:fd});
+  if(res.status===429){
+    const hasKey=!!($('ocr-key').value||'').trim();
+    const e=new Error('OCR.space rate limit reached (HTTP 429). '+(hasKey
+      ? 'Wait a while, then click "Run OCR on Remaining Images", or switch to the Neural engine.'
+      : 'The shared demo key is heavily limited. Paste your own free API key (ocr.space/ocrapi/freekey) into the key box, or switch to the Neural engine, which needs no key.'));
+    e.fatal=true;
+    throw e;
+  }
+  if(!res.ok)throw new Error('OCR service returned HTTP '+res.status);
+  const j=await res.json();
+  if(j.IsErroredOnProcessing){
+    const m=Array.isArray(j.ErrorMessage)?j.ErrorMessage.join('; '):(j.ErrorMessage||'OCR service error');
+    throw new Error(m);
+  }
+  return (j.ParsedResults||[]).map(r=>r.ParsedText||'').join('\n').trim();
+}
+
+async function runOfflineOCR(dataUrl){
+  if(!('TextDetector' in window))throw new Error('This browser has no built-in text detector. Use the Neural or Online engine.');
+  const img=await loadImg(dataUrl);
+  const found=await new TextDetector().detect(img);
+  return found.map(f=>f.rawValue).join('\n').trim();
+}
+
+function renderPreview(images) {
+  $('reload').disabled = false;
+  updateOcrButtons();
+  $('preview').replaceChildren();
+
+  for (const item of images) {
+    const card = document.createElement('div');
+    card.className = 'thumb';
+
+    const img = document.createElement('img');
+    img.src = item.dataUrl;
+    img.alt = item.name;
+
+    const label = document.createElement('span');
+    label.textContent = item.path || item.name;
+
+    card.append(img, label);
+
+    if (item.ocrText) {
+      const ocrDiv = document.createElement('div');
+      ocrDiv.className = 'ocr-preview';
+      ocrDiv.textContent = item.ocrText;
+      card.append(ocrDiv);
+    }
+
+    $('preview').append(card);
+  }
+}
+
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || d.ch !== 'conceptmap-image') return;
+
+  if (d.type === 'folder-data') {
+    currentImages = d.images || [];
+    renderPreview(currentImages);
+    tell(`Loaded ${currentImages.length} image(s). Active mode: ${currentMode.toUpperCase()}`);
+  }
+  if (d.type === 'folder-error') tell(d.message || 'Error loading folder.');
+  if (d.type === 'result') tell(`Canvas updated. Total image nodes: ${d.total || 0}`);
+});
+
+})();
+</script>
+</body>
+</html>
