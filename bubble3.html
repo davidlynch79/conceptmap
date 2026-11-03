@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bubble Sort in Scheme (running in the browser)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px;
+           margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { font-size: 1.5rem; border-bottom: 1px solid #ccc; padding-bottom: .5rem; }
+    #output { background: #f4f4f4; border: 1px solid #ddd; border-radius: 6px;
+              padding: 1rem; margin-top: 1rem; font-family: monospace;
+              white-space: pre-wrap; }
+    .note { font-size: .9rem; color: #555; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Bubble Sort — written in Scheme, run in the browser</h1>
+  <p>The list below is sorted by Scheme code embedded in this page.</p>
+
+  <!-- Scheme writes its result here -->
+  <div id="output">Loading Scheme interpreter…</div>
+
+  <!-- Any Scheme errors will appear here (optional but very useful) -->
+  <div id="bs-console" style="color:#c00; font-family:monospace; margin-top:1rem;"></div>
+
+  <p class="note">
+    The entire bubble‑sort algorithm lives in the
+    <code>&lt;script type="text/biwascheme"&gt;</code> tag.
+  </p>
+
+  <!-- 1. Load BiwaScheme 0.8.3 from jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/biwascheme@0.8.3/release/biwascheme-min.js"></script>
+
+  <!-- 2. Scheme code: bubble sort + write result with set-content! -->
+  <script type="text/biwascheme">
+    ;; ---- bubble sort -------------------------------------------------
+    (define (bubble-sort lst)
+      (define (pass lst)
+        (cond ((null? lst) '())
+              ((null? (cdr lst)) lst)
+              (else
+               (let ((a (car lst)) (b (cadr lst)) (rest (cddr lst)))
+                 (if (> a b)
+                     (cons b (pass (cons a rest)))   ; swap
+                     (cons a (pass (cons b rest))))))))
+      (let loop ((l lst))
+        (let ((new (pass l)))
+          (if (equal? l new) l (loop new)))))
+
+    ;; ---- helpers ------------------------------------------------------
+    (define (num->str n) (number->string n))
+
+    (define (list->str lst)
+      (cond ((null? lst) "")
+            ((null? (cdr lst)) (num->str (car lst)))
+            (else (string-append (num->str (car lst))
+                                 " "
+                                 (list->str (cdr lst))))))
+
+    ;; ---- run and display ----------------------------------------------
+    (define unsorted '(5 3 8 1 2 9 4 7 6))
+    (define sorted   (bubble-sort unsorted))
+
+    (set-content! "#output"
+      (string-append "Unsorted: (" (list->str unsorted) ")\n"
+                     "Sorted:   (" (list->str sorted)   ")\n"))
+  </script>
+</body>
+</html>
