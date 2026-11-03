@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Concept Map</title>
+    <script src="https://cdn.jsdelivr.net/npm/biwascheme@0.8.3/release/biwascheme.js"></script>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+      html { overscroll-behavior: none; }
+      body { --sw: 320px; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace; background: #0d1b2a; color: #e0e6ed; position: fixed; inset: 0; overflow: hidden; display: flex; flex-direction: column; touch-action: none; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+      input[type=text],input[type=password],select,textarea { background: #1b263b; border: 1px solid #778da9; color: #fff; padding: 6px; font: 11px monospace; outline: none; width: 100%; }
+      input[type=text]:focus,input[type=password]:focus,select:focus,textarea:focus { border-color: #00b4d8; }
+      button { background: #415a77; border: 1px solid #778da9; color: #e0e6ed; padding: 7px 10px; font: 11px monospace; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; touch-action: manipulation; width: 100%; transition: background 0.15s ease; }
+      button:hover { background: #0077b6; color: #fff; }
+      button:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(0.8); }
+      .action-btn { background: #023e8a; border-color: #00b4d8; color: #00f5d4; font-weight: bold; }
+      .ai-btn { background: #240046; border-color: #9d4edd; color: #e0aaff; font-weight: bold; }
+      .ai-btn:hover { background: #3c096c; color: #fff; }
+      .danger-btn { background: #7209b7; border-color: #f72585; color: #ff4d6d; }
+      .fit-active { background: #00f5d4 !important; color: #0d1b2a !important; }
+      label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; width: 100%; }
+      input[type=checkbox],input[type=radio] { cursor: pointer; accent-color: #00b4d8; width: 16px; height: 16px; min-width: 16px; }
+      input[type=color] { border: none; width: 28px; height: 28px; cursor: pointer; background: transparent; padding: 0; }
+      #toolbar { background: #1b263b; border: 1px solid #415a77; padding: 8px; font-size: 11px; z-index: 150; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.4); overflow-x: hidden; overflow-y: scroll; max-height: 100vh; scrollbar-width: thin; scrollbar-color: #00b4d8 #0d1b2a; position: absolute; top: 0; bottom: 0; width: var(--sw); min-width: 180px; max-width: 85vw; left: 0; border-width: 0 1px 0 0; }
+      #toolbar::-webkit-scrollbar { width: 8px; }
+      #toolbar::-webkit-scrollbar-track { background: #0d1b2a; }
+      #toolbar::-webkit-scrollbar-thumb { background: #00b4d8; border: 2px solid #0d1b2a; border-radius: 4px; }
+      .tool-group { display: flex; flex-direction: column; gap: 6px; padding: 6px; background: #0d1b2a; border: 1px solid #415a77; flex-shrink: 0; position: relative; }
+      .tool-group.ai-accent { border-color: #9d4edd; background: #130924; }
+      .panel-grip { display: none; font: 9px monospace; color: #778da9; background: #1b263b; padding: 2px 4px; text-align: center; cursor: grab; border: 1px dotted #415a77; letter-spacing: 1px; margin-bottom: 2px; }
+      .panel-grip:active { cursor: grabbing; color: #00f5d4; }
+      body.draggable-panels-enabled .tool-group .panel-grip { display: block; }
+      #toolbar .row-inline { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
+      #toolbar .row-inline>* { flex: 1; }
+      .cap { font-size: 9.5px; color: #00f5d4; font-weight: bold; letter-spacing: 0.5px; }
+      .cap-ai { color: #e0aaff; font-weight: bold; }
+      .slider-hint { color: #778da9; font-size: 9px; line-height: 1.3; }
+      .directory-input-row { display: flex; align-items: stretch; gap: 5px; width: 100%; }
+      .directory-input-row input { flex: 1 1 auto; min-width: 0; }
+      .directory-input-row button { width: auto; flex: 0 0 auto; padding: 6px 9px; }
+      .fitrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+      .fitrow button { padding: 6px 4px; font-size: 10px; white-space: nowrap; }
+      .dir-arrow { color: #ff2d3f; font-size: 20px; line-height: 1; animation: dirblink 0.9s steps(2,start) infinite; }
+      @keyframes dirblink { 50% { opacity: 0; } }
+      .q { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid #778da9; color: #90e0ef; font: bold 10px monospace; cursor: help; flex: 0 0 auto; user-select: none; }
+      #toolbar .q { flex: 0 0 16px !important; width: 16px !important; min-width: 16px; max-width: 16px; height: 16px; padding: 0; }
+      .q:hover,.q:focus { background: #023e8a; outline: none; }
+      #qtip { position: fixed; z-index: 100000; display: none; max-width: 260px; background: #0d1b2a; border: 1px solid #00b4d8; color: #e0e6ed; padding: 6px 8px; font: 11px/1.4 monospace; border-radius: 6px; pointer-events: none; white-space: normal; }
+      .linerow { display: flex; flex-direction: row; align-items: center; gap: 4px; flex-wrap: nowrap; }
+      .linerow label { width: auto; gap: 3px; flex: 0 0 auto; }
+      .linerow select { width: auto; min-width: 0; max-width: 78px; padding: 3px 2px; }
+      .linerow input[type=text] { flex: 1 1 40px; min-width: 40px; width: auto; }
+      .linerow input[type=color] { flex: 0 0 26px; width: 26px; height: 24px; padding: 0; }
+      .region-mode-row { display: flex; align-items: center; gap: 5px; width: 100%; }
+      .region-mode-row>label { flex: 1 1 auto; width: auto; min-width: 0; gap: 4px; white-space: nowrap; }
+      .region-mode-row label:last-of-type { flex: 1.25 1 auto; }
+      .fake-checkbox:disabled { opacity: 1; filter: none; cursor: default; accent-color: #00b4d8; }
+      #sidebar-resizer { display: block; position: absolute; top: 0; bottom: 0; width: 10px; background: #415a77; cursor: col-resize; z-index: 151; transition: background .2s; left: calc(var(--sw) - 3px); }
+      #sidebar-resizer:hover,#sidebar-resizer.resizing { background: #00b4d8; }
+      #top-bar-controls { display: none; position: absolute; top: 8px; left: 8px; z-index: 350; }
+      #viewport { flex: 1; position: relative; overflow: auto; background: #0b132b; scrollbar-color: #415a77 #0d1b2a; touch-action: none; overscroll-behavior: none; margin-left: var(--sw); }
+      #viewport::-webkit-scrollbar { width: 12px; height: 12px; }
+      #viewport::-webkit-scrollbar-track { background: #0d1b2a; }
+      #viewport::-webkit-scrollbar-thumb { background: #415a77; border: 2px solid #0d1b2a; }
+      #viewport::-webkit-scrollbar-thumb:hover { background: #00b4d8; }
+      #world { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; background-image: linear-gradient(to right,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.05) 1px,transparent 1px); background-size: 20px 20px; }
+      #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 2000; background: #1b263b; border: 1px solid #00b4d8; color: #00f5d4; font: 12px monospace; padding: 8px 16px; display: none; pointer-events: none; max-width: 80vw; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+      .view-btn { text-align: left; text-transform: none; padding: 5px 8px; }
+      .view-btn.active { background: #023e8a; border-color: #00f5d4; color: #00f5d4; font-weight: bold; }
+      #selection-box { position: absolute; display: none; pointer-events: none; z-index: 50; border: 1px dashed #00f5d4; background: rgba(0,245,212,.15); }
+      body.menu-hidden #toolbar,body.menu-hidden #sidebar-resizer { display: none; }
+      body.menu-hidden #viewport { margin: 0; }
+      body.menu-hidden #top-bar-controls { display: flex; }
+      @media (max-width:768px) {
+      #viewport { margin: 0; }
+      #sidebar-resizer { display: none; }
+      #toolbar { width: 300px; z-index: 300; }
+      }
+      #svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+      #svg-layer path { pointer-events: stroke; cursor: pointer; }
+      .line-selected { stroke-dasharray: 4,4; animation: dash 1s linear infinite; }
+      .line-label-text { font: 10px monospace; fill: #e0e6ed; pointer-events: all; cursor: pointer; }
+      .node { position: absolute; z-index: 10; display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; background: #1c2541; border: 1px solid #48cae4; color: #fff; font: 11px monospace; white-space: pre-wrap; word-break: break-word; box-shadow: 2px 2px 6px rgba(0,0,0,.6); cursor: move; touch-action: none; }
+      .node.fixed-size { display: block; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; padding-bottom: 14px; }
+      .node.selected { border-color: #00f5d4; box-shadow: 0 0 0 2px rgba(0,245,212,.5); }
+      .node.target { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,.7); }
+      .node.duplicate-node { border: 3px solid #ff2d55 !important; background: #5a1024 !important; box-shadow: 0 0 0 4px rgba(255,45,85,.35), 0 0 18px rgba(255,45,85,.9) !important; }
+      .node-image { display:block; object-fit:contain; max-width:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+      .node.image-node { padding:4px; display:flex; flex-direction:column; align-items:center; gap:2px; }
+      .node-image-label { font-size:9px; color:#90e0ef; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .node-content { line-height: 1.3; white-space: pre-wrap; }
+      .node-content.has-url { color: #90e0ef; text-decoration: underline; }
+      .node-url-text { font-size: 9px; color: #778da9; margin-left: 4px; word-break: break-all; }
+      .collapse-btn { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:1px solid #061a40; border-radius:50%; background:#168aad; color:#fff; font:bold 16px/1 monospace; cursor:pointer; z-index:28; user-select:none; box-shadow:0 1px 4px rgba(0,0,0,.55); padding:0; }
+      .collapse-btn:hover { filter:brightness(1.2); transform:translateX(-50%) scale(1.08); }
+      .collapse-btn.is-collapsed { background:#e63946; border-color:#7f1d1d; }
+      .node.balls-expanded .collapse-btn { width:30px; height:30px; bottom:-15px; font-size:18px; }
+      .node-resize-handle { display: none; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; z-index: 20; cursor: se-resize; color: #00f5d4; font-size: 12px; line-height: 14px; text-align: right; }
+      .node.selected .node-resize-handle { display: block; }
+      .node-edit-input { width: 100%; height: 100%; min-width: 80px; min-height: 24px; padding: 4px; resize: both; overflow: auto; background: #0d1b2a; border-color: #00f5d4; color: #00f5d4; user-select: text; }
+      .node-edit-ball { position: absolute; top: -5px; left: -5px; width: 12px; height: 12px; background: #ffb703; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-processing-ball,.node-hover-translate-ball { position:absolute; top:-7px; width:16px; height:16px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid #334155; color:#102a43; font:bold 11px/1 sans-serif; cursor:pointer; z-index:31; box-shadow:0 1px 3px #0008; padding:0; transform:translateX(-50%); }
+      .node-processing-ball { left:calc(50% - 36px); background:#80ed99; }
+      .node-hover-translate-ball { left:calc(50% - 60px); background:#cdb4db; }
+      .node-processing-ball:hover,.node-hover-translate-ball:hover { filter:brightness(1.15); transform:translateX(-50%) scale(1.15); }
+      .node-translate-ball { top:-7px; left:calc(50% - 12px); transform:translateX(-50%); width:16px; height:16px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#ffb703; border:1px solid #5c4300; color:#1b263b; font:bold 10px/1 sans-serif; cursor:pointer; z-index:30; box-shadow:0 1px 3px #0008; padding:0; }
+      .node-translate-ball:hover { background:#fff075; transform:translateX(-50%) scale(1.15); }
+      .node-speak-ball { position:absolute; top:-7px; left:calc(50% + 12px); transform:translateX(-50%); width:16px; height:16px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#48cae4; border:1px solid #075985; color:#102a43; font:bold 10px/1 sans-serif; cursor:pointer; z-index:30; box-shadow:0 1px 3px #0008; padding:0; }
+      .node-speak-ball:hover { background:#b9f2ff; transform:translateX(-50%) scale(1.15); }
+      .node-speak-ball:disabled { opacity:.65; cursor:wait; }
+      .node-translate-ball:disabled { opacity:.65; cursor:wait; }
+      .node-edit-ball:hover { background: #ffea75; transform: scale(1.2); }
+      .node-expand-file-ball { position: absolute; bottom: -7px; left: -7px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; background: #00b4d8; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; font: bold 13px/1 monospace; color: #001219; user-select: none; }
+      .node-expand-file-ball:hover { background: #90e0ef; transform: scale(1.12); }
+      .node-drag-ball { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; background: #00f5d4; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-drag-ball:hover { background: #70ffef; transform: scale(1.2); }
+      .node-arrow-ball { position: absolute; bottom: -5px; right: -5px; width: 12px; height: 12px; background: #9d4edd; border: 1px solid #000; border-radius: 50%; cursor: pointer; z-index: 25; }
+      .node-arrow-ball:hover { background: #c77dff; transform: scale(1.2); }
+      .node.balls-expanded { border-color: #00f5d4; box-shadow: 0 0 0 3px rgba(0,245,212,0.4); }
+      .node.balls-expanded .node-edit-ball { width: 28px; height: 28px; top: -14px; left: -14px; background: #ffea75; box-shadow: 0 0 8px rgba(255,183,3,0.8); }
+      .node.balls-expanded .node-expand-file-ball { width: 32px; height: 32px; bottom: -16px; left: -16px; font-size: 16px; background: #90e0ef; box-shadow: 0 0 8px rgba(0,180,216,0.8); }
+      .node.balls-expanded .node-drag-ball { width: 28px; height: 28px; top: -14px; right: -14px; background: #70ffef; box-shadow: 0 0 8px rgba(0,245,212,0.8); }
+      .node.balls-expanded .node-arrow-ball { width: 28px; height: 28px; bottom: -14px; right: -14px; background: #c77dff; box-shadow: 0 0 8px rgba(157,78,221,0.8); }
+      #zoom-controls { display: none; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom,0px)); z-index: 120; flex-direction: column; gap: 6px; }
+      body.touch-mode #zoom-controls { display: flex; }
+      #zoom-controls button { width: 48px; height: 48px; padding: 0; font-size: 22px; line-height: 1; background: rgba(27,38,59,.92); border-color: #00b4d8; color: #00f5d4; border-radius: 6px; }
+      #zoom-controls #zoom-reset-btn { font-size: 11px; }
+      body.touch-mode input[type=text],body.touch-mode input[type=password],body.touch-mode select,body.touch-mode textarea { font-size: 16px; }
+    
+      /* Top-edge circles: one shared, centred row (hover-translate, processed-text, translate, speak) */
+      .node .node-hover-translate-ball,.node .node-processing-ball,.node .node-translate-ball,.node .node-speak-ball { position: absolute; top: -9px; bottom: auto; right: auto; width: 18px; height: 18px; min-width: 0; margin: 0; padding: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #334155; font: bold 10px/1 sans-serif; letter-spacing: 0; text-transform: none; transform: translateX(-50%); z-index: 31; box-shadow: 0 1px 3px #0008; }
+      .node .node-hover-translate-ball { left: calc(50% - 33px); background: #cdb4db; color: #102a43; }
+      .node .node-processing-ball { left: calc(50% - 11px); background: #80ed99; color: #102a43; }
+      .node .node-translate-ball { left: calc(50% + 11px); background: #ffb703; border-color: #5c4300; color: #1b263b; }
+      .node .node-speak-ball { left: calc(50% + 33px); background: #48cae4; border-color: #075985; color: #102a43; }
+      .node .node-hover-translate-ball:hover,.node .node-processing-ball:hover,.node .node-translate-ball:hover,.node .node-speak-ball:hover { transform: translateX(-50%) scale(1.15); filter: brightness(1.15); }
+      .node .node-hover-translate-ball:hover { background: #cdb4db; color: #102a43; }
+      .node .node-processing-ball:hover { background: #80ed99; color: #102a43; }
+      .node .node-translate-ball:hover { background: #ffb703; color: #1b263b; }
+      .node .node-speak-ball:hover { background: #48cae4; color: #102a43; }
+    
+      .node.balls-expanded .node-hover-translate-ball,.node.balls-expanded .node-processing-ball,.node.balls-expanded .node-translate-ball,.node.balls-expanded .node-speak-ball { width: 30px; height: 30px; top: -15px; font-size: 15px; }
+      .node.balls-expanded .node-hover-translate-ball { left: calc(50% - 54px); }
+      .node.balls-expanded .node-processing-ball { left: calc(50% - 18px); }
+      .node.balls-expanded .node-translate-ball { left: calc(50% + 18px); }
+      .node.balls-expanded .node-speak-ball { left: calc(50% + 54px); }
+    
+      /* Ball size lever (--ball-scale, set from the Display panel); at 100% these equal the standard sizes */
+      .node .node-edit-ball { width: calc(12px * var(--ball-scale,1)); height: calc(12px * var(--ball-scale,1)); top: calc(-5px * var(--ball-scale,1)); left: calc(-5px * var(--ball-scale,1)); }
+      .node .node-drag-ball { width: calc(12px * var(--ball-scale,1)); height: calc(12px * var(--ball-scale,1)); top: calc(-5px * var(--ball-scale,1)); right: calc(-5px * var(--ball-scale,1)); }
+      .node .node-arrow-ball { width: calc(12px * var(--ball-scale,1)); height: calc(12px * var(--ball-scale,1)); bottom: calc(-5px * var(--ball-scale,1)); right: calc(-5px * var(--ball-scale,1)); }
+      .node .node-expand-file-ball { width: calc(18px * var(--ball-scale,1)); height: calc(18px * var(--ball-scale,1)); bottom: calc(-7px * var(--ball-scale,1)); left: calc(-7px * var(--ball-scale,1)); font-size: calc(13px * var(--ball-scale,1)); }
+      .node .collapse-btn { width: calc(24px * var(--ball-scale,1)); height: calc(24px * var(--ball-scale,1)); bottom: calc(-12px * var(--ball-scale,1)); font-size: calc(16px * var(--ball-scale,1)); line-height: 1; }
+      .node .node-hover-translate-ball,.node .node-processing-ball,.node .node-translate-ball,.node .node-speak-ball { width: calc(18px * var(--ball-scale,1)); height: calc(18px * var(--ball-scale,1)); top: calc(-9px * var(--ball-scale,1)); font-size: calc(10px * var(--ball-scale,1)); }
+      .node .node-hover-translate-ball { left: calc(50% - calc(33px * var(--ball-scale,1))); }
+      .node .node-processing-ball { left: calc(50% - calc(11px * var(--ball-scale,1))); }
+      .node .node-translate-ball { left: calc(50% + calc(11px * var(--ball-scale,1))); }
+      .node .node-speak-ball { left: calc(50% + calc(33px * var(--ball-scale,1))); }
+      .node.balls-expanded .node-edit-ball { width: calc(28px * var(--touch-ball-scale,1)); height: calc(28px * var(--touch-ball-scale,1)); top: calc(-14px * var(--touch-ball-scale,1)); left: calc(-14px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .node-drag-ball { width: calc(28px * var(--touch-ball-scale,1)); height: calc(28px * var(--touch-ball-scale,1)); top: calc(-14px * var(--touch-ball-scale,1)); right: calc(-14px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .node-arrow-ball { width: calc(28px * var(--touch-ball-scale,1)); height: calc(28px * var(--touch-ball-scale,1)); bottom: calc(-14px * var(--touch-ball-scale,1)); right: calc(-14px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .node-expand-file-ball { width: calc(32px * var(--touch-ball-scale,1)); height: calc(32px * var(--touch-ball-scale,1)); bottom: calc(-16px * var(--touch-ball-scale,1)); left: calc(-16px * var(--touch-ball-scale,1)); font-size: calc(16px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .collapse-btn { width: calc(30px * var(--touch-ball-scale,1)); height: calc(30px * var(--touch-ball-scale,1)); bottom: calc(-15px * var(--touch-ball-scale,1)); font-size: calc(18px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .node-hover-translate-ball,.node.balls-expanded .node-processing-ball,.node.balls-expanded .node-translate-ball,.node.balls-expanded .node-speak-ball { width: calc(30px * var(--touch-ball-scale,1)); height: calc(30px * var(--touch-ball-scale,1)); top: calc(-15px * var(--touch-ball-scale,1)); font-size: calc(15px * var(--touch-ball-scale,1)); }
+      .node.balls-expanded .node-hover-translate-ball { left: calc(50% - calc(54px * var(--touch-ball-scale,1))); }
+      .node.balls-expanded .node-processing-ball { left: calc(50% - calc(18px * var(--touch-ball-scale,1))); }
+      .node.balls-expanded .node-translate-ball { left: calc(50% + calc(18px * var(--touch-ball-scale,1))); }
+      .node.balls-expanded .node-speak-ball { left: calc(50% + calc(54px * var(--touch-ball-scale,1))); }
+    
+      /* TreeSheets: the original stylesheet, scoped to a tree on the canvas (no window) */
+      .ts-tree { position: absolute; z-index: 12; display: inline-block; color: var(--text); font: 14px/1.45 "Segoe UI", sans-serif; outline: none;
+        --surface: #1a1a1e; --surface-raised: #25252b; --border: #383842; --text: #e4e4e7; --muted: #a1a1aa; --accent: #3b82f6; --accent-soft: rgba(59,130,246,.22); --cell-background: #111113; }
+      .ts-tree[data-theme="light"] { --surface: #fff; --surface-raised: #eef1f5; --border: #d7dbe1; --text: #1f2328; --muted: #626b76; --cell-background: #fff; --accent-soft: rgba(59,130,246,.18); }
+      .ts-tree[data-theme="black"] { --surface: #050505; --surface-raised: #111; --border: #292929; --text: #f5f5f5; --muted: #a3a3a3; --cell-background: #000; }
+      .ts-tree *, .ts-tree *::before, .ts-tree *::after { box-sizing: border-box; }
+      .node.tree-node { flex-direction: column; align-items: stretch; white-space: normal; cursor: move; padding: 8px 10px 10px; border-color: #80ed99; background: rgba(13,27,42,.88); width: max-content; }
+      .node.tree-node > .ts-tree { position: static; z-index: auto; cursor: default; }
+      .node.tree-node > .collapse-btn { z-index: 12; }
+      .ts-tree .ts-scale { display: inline-block; transform-origin: top left; }
+      .ts-tree .grid { display: grid; align-items: stretch; width: max-content; gap: var(--gap-v) var(--gap-h); }
+      .ts-tree .grid.child-grid { max-width: 100%; overflow: auto; padding: 3px; border: 1px solid var(--border); border-radius: 4px; background: color-mix(in srgb, var(--surface) 90%, transparent); box-shadow: inset 0 1px 5px #0002; }
+      .ts-tree .cell { position: relative; display: flex; flex-direction: column; min-width: 1px; overflow: auto; background: var(--cell-background); border: 1px solid var(--border); border-radius: 3px; padding: var(--cell-pad-v) var(--cell-pad-h); white-space: pre-wrap; overflow-wrap: anywhere; cursor: default; outline: none; color: var(--text); }
+      .ts-tree .cell.no-grid-lines { border-color: transparent; }
+      .ts-tree .cell.active { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+      .ts-tree .cell.selected { background: var(--accent-soft); border-color: #3b82f699; }
+      .ts-tree .cell.drag-target { background: #1e3a5f; }
+      .ts-tree .cell.drag-target.cut { background: #4a1717; }
+      .ts-tree .cell.drag-target.copy { background: #123e2b; }
+      .ts-tree .cell-text { max-width: var(--textbox-max-width, none); min-width: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; padding: 0 2px; }
+      .ts-tree .cell textarea { box-sizing: border-box; width: 100%; max-width: var(--textbox-max-width, none); min-width: 0; min-height: 38px; overflow: auto; resize: vertical; padding: 5px; border: 1px solid #10b981; border-radius: 3px; background: var(--surface); color: inherit; font: inherit; outline: none; line-height: 1.5; overflow-wrap: anywhere; }
+      .ts-tree .hidden-marker { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+      .ts-tree .gap { grid-column: 1 / -1; height: 6px; margin: 1px 0; border-radius: 5px; background: transparent; cursor: pointer; }
+      .ts-tree .gap:hover, .ts-tree .gap.active { background: #3b82f680; }
+      .ts-tree .drop-edge { position: absolute; z-index: 5; background: var(--accent); pointer-events: none; }
+      .ts-tree .drop-edge.row-before, .ts-tree .drop-edge.row-after { left: 0; right: 0; height: 4px; }
+      .ts-tree .drop-edge.row-before { top: -2px; }
+      .ts-tree .drop-edge.row-after { bottom: -2px; }
+      .ts-tree .drop-edge.col-before, .ts-tree .drop-edge.col-after { top: 0; bottom: 0; width: 4px; }
+      .ts-tree .drop-edge.col-before { left: -2px; }
+      .ts-tree .drop-edge.col-after { right: -2px; }
+    </style>
+  </head>
+  <body>
+    <div id="top-bar-controls"><button id="floating-menu-btn" class="action-btn">☰ Menu</button></div>
+    <div id="toolbar">
+      <div class="tool-group row-inline" data-panel-id="panel-header">
+        <span class="cap" style="text-align:center">☰ MENU</span>
+        <button id="toolbar-hide-btn" class="danger-btn" style="width:auto; padding:4px 8px;">Hide</button>
+      </div>
+      <div class="tool-group" id="active-file-panel" data-panel-id="panel-active-file" style="border-color:#00f5d4;padding:5px 8px" title="Ctrl+S saves to this file, in this format">
+        <div style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;min-width:0"><span class="cap">FILE (Ctrl+S)</span><span id="active-file-name" style="color:#00f5d4;font-weight:bold;font-size:11px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;user-select:text;-webkit-user-select:text">(no file linked)</span><span id="active-file-format" style="color:#90e0ef;font-size:10px;flex:0 0 auto">TXT Extended Lines</span></div>
+        <span class="slider-hint" id="active-file-note" style="display:none"></span>
+      </div>
+      <div class="tool-group" data-panel-id="panel-history">
+        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+        <div class="row-inline">
+          <button id="undo-btn" title="Undo (Ctrl+Z)" disabled>Undo (Ctrl+Z)</button>
+          <button id="redo-btn" title="Redo (Ctrl+Y, or Ctrl+Shift+Z)" disabled>Redo (Ctrl+Y)</button>
+        </div>
+      </div>
+      <div class="tool-group ai-accent" id="conceptmap_ai" data-panel-id="panel-gemini" style="padding:6px;overflow:hidden;min-height:0">
+        <div class="panel-grip">≡ AI PANEL</div>
+        <div class="row-inline" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="cap-ai">✨ AI ASSISTANT</span>
+          <button type="button" id="conceptmap-ai-collapse" class="ai-btn" aria-expanded="false" aria-controls="conceptmap-ai-frame-wrap" style="width:auto;padding:4px 8px">Expand ▼</button>
+        </div>
+        <div id="conceptmap-ai-frame-wrap" style="display:none;min-width:0">
+          <iframe id="conceptmap-ai-frame" title="Concept Map AI panel" src="conceptmap_ai.html" style="display:block;width:100%;height:560px;min-height:420px;border:0;background:#130924" loading="eager" allow="clipboard-read; clipboard-write"></iframe>
+        </div>
+      </div>
+      <div class="tool-group" id="conceptmap-image-panel" data-panel-id="panel-image" style="border-color:#90e0ef">
+        <div class="panel-grip">≡ IMAGE PANEL</div>
+        <div class="row-inline"><span class="cap">▧ IMAGE GALLERY</span><button type="button" id="conceptmap-image-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="false">Expand ▼</button></div>
+        <div id="conceptmap-image-frame-wrap" style="display:none;min-width:0"><iframe id="conceptmap-image-frame" title="Concept Map Image panel" src="conceptmap_image.html" style="display:block;width:100%;height:430px;min-height:300px;border:0;background:#0d1b2a" loading="eager" allow="clipboard-read; clipboard-write"></iframe></div>
+      </div>
+    <div class="tool-group" data-panel-id="panel-io">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <button id="io-btn" class="action-btn" title="Open the dedicated import, export, and save manager">Import / Export &amp; Save Options &#8599;</button>
+      <div class="row-inline" style="gap:4px"><label style="border:1px solid #80ed99;padding:4px"><input type="checkbox" data-k="treeSheetsIfPossible" id="treesheets-chk"> Open file as TreeSheets if possible</label><span class="q" tabindex="0" data-tip="When a file you open is a tree (no loops; arrow directions ignored) it is drawn as a TreeSheets tree on the canvas. Anything else opens as a concept map. Either way the saved data is the same nodes and links.">?</span></div>
+      <div class="row-inline" style="margin-top:4px;justify-content:flex-start;gap:6px"><span class="cap">SAVE FORMAT (Ctrl+S)</span><span class="q" tabindex="0" data-tip="The save format switches to the format of a file when it is imported; you can change it any time. Import, export, filename, save-as, connected-graph, bulk-copy and mobile save tools are grouped in the separate manager.">?</span></div>
+      <label><input type="radio" name="savefmt" value="lines" checked> TXT Extended Lines (default)</label>
+      <label><input type="radio" name="savefmt" value="txt-simple"> TXT Simple</label>
+      <label><input type="radio" name="savefmt" value="txt-indent"> TXT Indent</label>
+      <label><input type="radio" name="savefmt" value="json"> JSON</label>
+      <label><input type="radio" name="savefmt" value="html"> Full HTML</label>
+    <span class="cap" style="margin-top:6px">FILE DIRECTORY</span>
+    <div class="directory-input-row">
+      <input type="text" data-k="fileDir" id="file-dir" placeholder="Paste folder path here">
+      <button type="button" id="copy-dir-btn" title="Copy the folder path so you can paste it into the folder chooser">Copy</button>
+    </div>
+    <div class="row-inline" style="gap:6px;justify-content:flex-start"><button id="pick-dir-btn" style="flex:1 1 auto">Select Directory</button><span id="dir-arrow" class="dir-arrow" title="No folder selected yet">◀</span><button type="button" id="dir-stop-blink" style="width:auto;padding:4px 6px;font-size:9px;flex:0 0 auto">Stop blinking</button></div>
+    <span class="slider-hint" id="pick-dir-status">Choose a folder with Select Directory. If you see “Cross origin subframes are not allowed,” download this HTML and open the .html file directly in a browser tab or window—not in an embedded preview. Browser security blocks folder pickers inside cross-origin frames.</span>
+      <div id="io-command-proxies" style="display:none!important" aria-hidden="true">
+        <button id="save-btn" type="button">Save as existing name (Ctrl+S)</button>
+        <label for="filename-input">Filename</label><input type="text" id="filename-input" spellcheck="false" autocomplete="off">
+        <button id="save-node-new-file-btn" type="button">Save canvas as new name</button>
+        <button id="save-connected-new-file-btn" type="button">Save connected graph only as new file</button>
+        <details id="bulk-save-options"><summary>Bulk Save Options</summary><button id="resave-all-file-nodes-btn" type="button">Resave all file nodes</button></details>
+        <button id="iphone-save-btn" type="button">Save on iPhone</button>
+        <button id="iphone-load-btn" type="button">Load on iPhone</button>
+        <input id="iphone-load-input" type="file" accept=".txt,.json,.html,.htm,text/plain,application/json,text/html" hidden>
+        <span id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
+      </div>
+    </div>
+  <div class="tool-group" data-panel-id="panel-add">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <input type="text" id="node-text" placeholder="Box text or URL...">
+    <div class="row-inline">
+      <button id="add-btn">Add Box</button>
+      <button id="add-boxes-btn">Add Boxes</button>
+
+    </div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-views">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">VIEW HISTORY (nested views)</span>
+    <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
+    <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
+  </div>
+    <div class="tool-group" id="display-paragraph-panel" data-panel-id="panel-display-paragraph" style="padding:0;overflow:hidden;min-height:0;border-color:#90e0ef">
+      <div class="panel-grip">≡ DISPLAY PARAGRAPH</div>
+      <div class="row-inline" style="padding:6px"><span class="cap">TEXT NODE DISPLAY</span><button type="button" id="display-paragraph-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="false">Expand ▼</button></div>
+      <label style="padding:0 6px 6px" title="Touch mode: larger hit areas, zoom buttons, and tapping a node first enlarges its circles. Opens the size sliders below."><input type="checkbox" id="touchscreen-chk"> Touchscreen?</label>
+      <div id="display-paragraph-frame-wrap" style="min-width:0;display:none"><iframe id="display-paragraph-frame" title="Concept Map Display Paragraph" src="conceptmap_displayparagraph.html" style="display:block;width:100%;height:490px;border:0;background:#1b263b" loading="eager"></iframe></div>
+    </div>
+  <div class="tool-group" id="treesheets-panel" data-panel-id="panel-treesheets" style="padding:0;overflow:hidden;min-height:0;border-color:#80ed99">
+    <div class="panel-grip">≡ TREESHEETS</div>
+    <div class="row-inline" style="padding:6px"><span class="cap">TREESHEETS</span><button type="button" id="treesheets-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="true">Collapse ▲</button></div>
+    <div id="treesheets-frame-wrap" style="min-width:0"><iframe id="treesheets-frame" title="Concept Map TreeSheets controls" src="conceptmap_treesheets.html" style="display:block;width:100%;height:520px;border:0;background:#1b263b"></iframe></div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-interaction">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">INTERACTION MODE</span>
+    <label><input type="radio" name="im" data-k="interactionMode" value="drag"> Drag Node/s</label>
+    <label><input type="radio" name="im" data-k="interactionMode" value="arrow"> Draw Arrows</label>
+    <span class="cap" style="margin-top:6px">DOUBLE-CLICK / LINK ACTION</span>
+    <span class="slider-hint">URL links always open in a new window. These settings control linked files.</span>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="new"> Open file in new window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="current"> Open file in current window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="expand"> Expand file in current window</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="rotateFlip"> Expand file with rotate and or flip</label>
+    <label><input type="radio" name="lom" data-k="linkOpenMode" value="openEmptySpace"> Expand file in empty space</label>
+    <span class="cap" style="margin-top:6px">EDIT MODE</span>
+    <label><input type="radio" name="em" data-k="editMode" value="editInstead"> Edit instead of goto link</label>
+    <label><input type="radio" name="em" data-k="editMode" value="spot"> Edit click spot (ball)</label>
+    <span class="cap" style="margin-top:6px">SELECTION & DRAG OPTIONS</span>
+    <label><input type="checkbox" data-k="dragGraphBall" id="drag-graph-ball-chk" checked> Drag Graph (Ball)</label>
+
+  </div>
+  <div class="tool-group" data-panel-id="panel-lock">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline" style="gap:4px"><button id="lock-btn" class="action-btn">Lock View</button><button id="unlock-btn" class="danger-btn" disabled>Unlock</button><button id="clear-btn" class="danger-btn">Clear Map</button><span class="q" tabindex="0" data-tip="Lock View freezes which nodes are shown, your selection and the distance limit, and pauses changes that would alter them (collapsing, clearing, distance changes). Unlock restores the earlier selection.">?</span></div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-fit">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="region-mode-row" aria-label="Region selection options">
+      <label><input type="checkbox" id="select-region-chk"> Select Region</label>
+      <label title="Hold Ctrl and drag on empty canvas to select a region."><input type="checkbox" id="ctrl-region-indicator" class="fake-checkbox" checked disabled aria-label="Ctrl plus Select Region indicator"> Ctrl+ Select Region</label>
+    </div>
+    <div class="fitrow"><button id="min-cycles-btn">Hide minimum cycles</button><span class="q" tabindex="0" data-tip="Hides the fewest links needed so no cycles remain (directions ignored). Hidden links stay saved, show as red dashed lines and are ignored when drawing a tree. Links you already hid by hand are kept hidden first.">?</span></div>
+    <div class="fitrow"><button id="unhide-cycles-btn">Unhide cycles</button><span class="q" tabindex="0" data-tip="Makes every hidden cycle link a normal link again.">?</span></div>
+    <div class="fitrow"><button id="suggest-root-btn">Suggest root for hubs</button><span class="q" tabindex="0" data-tip="Finds the most connected nodes and tests whether giving them one new parent called root would reduce how many links must be hidden.">?</span></div>
+    <div class="fitrow"><button id="treeify-btn">Treeify clumps</button><span class="q" tabindex="0" data-tip="Each group of touching boxes gets a new parent node; all those parents then get one new node called root.">?</span></div>
+    <div class="fitrow"><button id="fit-screen-btn" class="action-btn">Gridify</button><span class="q" tabindex="0" data-tip="Space out nodes to grid on screen.">?</span></div>
+    <div class="fitrow"><button id="fit-box-btn" class="action-btn">Gridify in region</button><span class="q" tabindex="0" data-tip="Space out nodes to grid in the region you selected.">?</span></div>
+    <div class="fitrow"><button id="fit-seq-btn" class="action-btn">Sequence in region</button><span class="q" tabindex="0" data-tip="Align nodes in a diagonal sequence within the selected region.">?</span></div>
+  </div>
+      <div class="tool-group" data-panel-id="panel-line-style">
+        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+        <div class="sl-row"><span class="slider-hint" style="font-size:10px">Linkage Font Range: <b id="font-out">12–14</b></span>
+          <div class="linerow"><input type="range" data-k="fontMin" min="6" max="36" step="1" title="Smallest link label font"><input type="range" data-k="fontMax" min="6" max="36" step="1" title="Largest link label font"></div></div>
+        <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
+        <div class="linerow">
+          <label title="Line type">Type <select id="arrow-style"><option value="end">-&gt;</option><option value="none">--</option></select></label>
+          <label title="Line width">Width <select id="line-width"><option value="1" selected>1px</option><option value="2">2px</option><option value="4">4px</option><option value="6">6px</option></select></label>
+          <input type="color" id="line-color" value="#00b4d8" title="Line color">
+          <input type="text" id="selected-line-label" placeholder="Label (select a line)" disabled title="Label of the selected line">
+        </div>
+        <div class="linerow" title="Color lines by how many links away they are from the selected node">
+          <span class="cap">DISTANCE COLOR</span>
+          <label title="Lines 1 link away"><input type="checkbox" data-k="colorDist1"> 1</label><input type="color" data-k="colorDist1Hex" title="Color for lines 1 away">
+          <label title="Lines 2 links away"><input type="checkbox" data-k="colorDist2"> 2</label><input type="color" data-k="colorDist2Hex" title="Color for lines 2 away">
+          <label title="Lines 3 links away"><input type="checkbox" data-k="colorDist3"> 3</label><input type="color" data-k="colorDist3Hex" title="Color for lines 3 away">
+        </div>
+        <label><input type="checkbox" id="chain-chk" checked> Highlight Chain <span style="color:#ffb703">&#9644;up</span> <span style="color:#ff5d8f">&#9644;down</span></label>
+        <div class="sl-row"><div class="row-inline" style="justify-content:flex-start;gap:6px"><span class="slider-hint" style="font-size:10px">Hide nodes &gt; line distance away: <b id="dist-out">∞</b></span><span class="q" tabindex="0" data-tip="Hides nodes that are more than this many links away from the selected node. 10 means no limit. The value is frozen while the view is locked.">?</span></div><input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1"></div>
+      </div>
+    <div class="tool-group" id="line-controls-group" data-panel-id="panel-selected-line" style="display:none;border-color:#00f5d4">
+      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+      <button id="hide-line-btn" type="button" title="Hide this link so it is ignored when converting to a tree (still saved)">Hide link (cycle)</button>
+      <button id="delete-line-btn" class="danger-btn">Delete Line</button>
+    </div>
+<div class="tool-group" id="side-panel" data-panel-id="panel-side" style="padding:0;overflow:hidden;min-height:0">
+      <div class="panel-grip">≡ SIDE FUNCTIONS</div>
+      <iframe id="side-frame" title="Concept Map side functions" src="conceptmap_sidefunctions.html" style="display:block;width:100%;height:300px;border:0;background:#1b263b"></iframe>
+    </div>
+  </div>
+  <div id="sidebar-resizer"></div>
+  <div id="viewport">
+    <div id="world">
+      <div id="selection-box"></div>
+      <svg id="svg-layer">
+        <defs></defs>
+        <g id="lines-group"></g>
+        <g id="labels-group"></g>
+        <line id="live-drag-arrow" x1="0" y1="0" x2="0" y2="0" stroke="#00f5d4" stroke-width="2" stroke-dasharray="3,3" style="display:none"/>
+      </svg>
+      <div id="output"></div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="zoom-controls">
+    <button id="zoom-in-btn" aria-label="Zoom in">+</button>
+    <button id="zoom-reset-btn" aria-label="Reset zoom">100%</button>
+    <button id="zoom-out-btn" aria-label="Zoom out">&minus;</button>
+  </div>
+  <div id="bs-console" style="color:#c00;font-family:monospace"></div>
+<script type="biwascheme">
+;; ===========================================================================
+;; CONCEPT MAP — all application logic (data, state, rendering, events).
+;;
+;; DATA MODEL
+;;   nodes     : list of vectors #(id text x y)
+;;               id   = string such as "id_3"
+;;               text = the box label
+;;               x,y  = position in world coordinates (px inside #world)
+;;   lines     : list of vectors #(from-id to-id)  — directed links
+;;   sel-id    : id string of the selected node, or #f
+;;   next-n    : integer counter used to mint unique ids
+;;   drag-id   : id of the node currently being dragged, or #f
+;;   drag-dx   : pointer grab offset inside the dragged node (x)
+;;   drag-dy   : pointer grab offset inside the dragged node (y)
+;;   arrow-from: id of the node a link is being dragged from, or #f
+;;   arrow-x   : live link preview end point (x)
+;;   arrow-y   : live link preview end point (y)
+;;
+;; RENDER FUNCTION
+;;   (render) reads the state above and rebuilds the screen from scratch:
+;;     #output      <- one <div class="node"> per node in `nodes`
+;;     #lines-group <- <defs> arrow marker + one <line> per link in `lines`
+;;                     (+ the dashed preview line while a link is dragged)
+;;   No other code writes to the DOM; every event handler ends with (render).
+;; ===========================================================================
+
+;; --- utilities -------------------------------------------------------------
+
+(define (num->str n) (number->string n))
+
+(define (cat . parts)
+  (let loop ((p parts) (acc ""))
+    (if (null? p)
+        acc
+        (loop (cdr p)
+              (string-append acc
+                (let ((x (car p)))
+                  (cond ((string? x) x)
+                        ((number? x) (number->string x))
+                        (else ""))))))))
+
+(define (html-escape s)
+  (let loop ((chars (string->list s)) (acc ""))
+    (if (null? chars)
+        acc
+        (let ((c (car chars)))
+          (loop (cdr chars)
+                (string-append acc
+                  (cond ((char=? c #\&) "&amp;")
+                        ((char=? c #\<) "&lt;")
+                        ((char=? c #\>) "&gt;")
+                        ((char=? c #\") "&quot;")
+                        (else (string c)))))))))
+
+(define (ws-char? c)
+  (or (char=? c #\space)
+      (char=? c #\tab)
+      (char=? c #\newline)
+      (char=? c #\return)))
+
+(define (drop-while pred lst)
+  (cond ((null? lst) '())
+        ((pred (car lst)) (drop-while pred (cdr lst)))
+        (else lst)))
+
+(define (trim-str s)
+  (let ((chars (string->list s)))
+    (list->string
+      (reverse
+        (drop-while ws-char?
+          (reverse
+            (drop-while ws-char? chars)))))))
+
+(define (split-ws s)
+  (let loop ((chars (string->list s)) (cur '()) (out '()))
+    (cond ((null? chars)
+           (reverse (if (null? cur) out (cons (list->string (reverse cur)) out))))
+          ((ws-char? (car chars))
+           (loop (cdr chars) '()
+                 (if (null? cur) out (cons (list->string (reverse cur)) out))))
+          (else
+           (loop (cdr chars) (cons (car chars) cur) out)))))
+
+(define (js-nothing? x) (or (null? x) (eq? x #f)))
+
+;; --- bubble sort (recursion reference) -------------------------------------
+
+(define (bubble-pass l less?)
+  ;; returns (list sorted-list swapped?)
+  (if (or (null? l) (null? (cdr l)))
+      (list l #f)
+      (let ((rest (bubble-pass (cdr l) less?)))
+        (if (less? (cadr l) (car l))
+            (list (cons (cadr l) (cons (car l) (car rest))) #t)
+            (list (cons (car l) (car rest)) (cadr rest))))))
+
+(define (bubble-sort lst less?)
+  (let loop ((l lst))
+    (let ((r (bubble-pass l less?)))
+      (if (cadr r) (loop (car r)) (car r)))))
+
+;; --- state ----------------------------------------------------------------
+
+(define nodes '())
+(define lines '())
+(define sel-id #f)
+(define next-n 0)
+(define drag-id #f)
+(define drag-dx 0)
+(define drag-dy 0)
+(define arrow-from #f)
+(define arrow-x 0)
+(define arrow-y 0)
+
+;; --- node accessors -------------------------------------------------------
+
+(define (node-id n) (vector-ref n 0))
+(define (node-text n) (vector-ref n 1))
+(define (node-x n) (vector-ref n 2))
+(define (node-y n) (vector-ref n 3))
+(define (set-node-x! n v) (vector-set! n 2 v))
+(define (set-node-y! n v) (vector-set! n 3 v))
+
+(define (find-node id)
+  (let loop ((ns nodes))
+    (cond ((null? ns) #f)
+          ((equal? (node-id (car ns)) id) (car ns))
+          (else (loop (cdr ns))))))
+
+(define (node-w n) (+ 22 (* 7 (string-length (node-text n)))))
+(define (node-cx n) (+ (node-x n) (quotient (node-w n) 2)))
+(define (node-cy n) (+ (node-y n) 15))
+
+;; --- render helpers -------------------------------------------------------
+
+(define (node-html n)
+  (cat "<div class=\"node"
+       (if (and sel-id (equal? sel-id (node-id n))) " selected" "")
+       "\" data-id=\"" (node-id n)
+       "\" style=\"left:" (node-x n) "px;top:" (node-y n) "px;\">"
+       "<span class=\"node-content\">" (html-escape (node-text n)) "</span>"
+       "<div class=\"node-drag-ball\"></div>"
+       "<div class=\"node-arrow-ball\"></div>"
+       "</div>"))
+
+(define (nodes-html ns)
+  (if (null? ns)
+      ""
+      (string-append (node-html (car ns)) (nodes-html (cdr ns)))))
+
+(define (line-html l)
+  (let ((a (find-node (vector-ref l 0)))
+        (b (find-node (vector-ref l 1))))
+    (if (and a b)
+        (cat "<line x1=\"" (node-cx a) "\" y1=\"" (node-cy a)
+             "\" x2=\"" (node-cx b) "\" y2=\"" (node-cy b)
+             "\" stroke=\"#00b4d8\" stroke-width=\"2\""
+             " marker-end=\"url(#cm-arrow)\"></line>")
+        "")))
+
+(define (lines-html ls)
+  (if (null? ls)
+      ""
+      (string-append (line-html (car ls)) (lines-html (cdr ls)))))
+
+(define (preview-html)
+  (if arrow-from
+      (let ((a (find-node arrow-from)))
+        (if a
+            (cat "<line x1=\"" (node-cx a) "\" y1=\"" (node-cy a)
+                 "\" x2=\"" arrow-x "\" y2=\"" arrow-y
+                 "\" stroke=\"#00f5d4\" stroke-width=\"2\""
+                 " stroke-dasharray=\"4,4\"></line>")
+            ""))
+      ""))
+
+(define (render)
+  (set-content! "#output" (nodes-html nodes))
+  (set-content! "#lines-group"
+    (string-append
+      "<defs><marker id=\"cm-arrow\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\""
+      " markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">"
+      "<path d=\"M 0 1 L 10 5 L 0 9 z\" fill=\"#00b4d8\"></path></marker></defs>"
+      (lines-html lines)
+      (preview-html))))
+
+;; --- adding nodes ---------------------------------------------------------
+
+(define (add-node! text)
+  (let ((id (cat "id_" (num->str next-n))))
+    (set! next-n (+ next-n 1))
+    (set! nodes
+      (append nodes
+        (list (vector id text
+                      (+ 120 (* 24 (modulo next-n 8)))
+                      (+ 140 (* 24 (modulo next-n 8)))))))
+    id))
+
+(define (node-text-value)
+  (js-ref (js-eval "document.getElementById('node-text')") "value"))
+
+(define (clear-node-text!)
+  (js-set! (js-eval "document.getElementById('node-text')") "value" ""))
+
+;; --- pointer helpers ------------------------------------------------------
+
+(define (world-point e)
+  (let ((l (js-eval "document.getElementById('world').getBoundingClientRect().left"))
+        (t (js-eval "document.getElementById('world').getBoundingClientRect().top")))
+    (cons (- (js-ref e "clientX") l)
+          (- (js-ref e "clientY") t))))
+
+;; --- event wiring ---------------------------------------------------------
+
+(add-handler! "#add-btn" "click"
+  (lambda (e)
+    (let ((t (trim-str (node-text-value))))
+      (if (> (string-length t) 0)
+          (begin (add-node! t) (clear-node-text!) (render))
+          #f))))
+
+(add-handler! "#add-boxes-btn" "click"
+  (lambda (e)
+    (let ((t (trim-str (node-text-value))))
+      (if (> (string-length t) 0)
+          (begin
+            (for-each (lambda (w) (add-node! w)) (split-ws t))
+            (clear-node-text!)
+            (render))
+          #f))))
+
+(add-handler! "#clear-btn" "click"
+  (lambda (e)
+    (set! nodes '())
+    (set! lines '())
+    (set! sel-id #f)
+    (render)))
+
+(add-handler! "#output" "pointerdown"
+  (lambda (e)
+    (let* ((t (js-ref e "target"))
+           (node-el (js-call t "closest" ".node")))
+      (if (js-nothing? node-el)
+          (begin (set! sel-id #f) (render))
+          (let* ((id (js-call node-el "getAttribute" "data-id"))
+                 (n (find-node id))
+                 (p (world-point e)))
+            (if n
+                (begin
+                  (set! sel-id id)
+                  (if (js-nothing? (js-call t "closest" ".node-arrow-ball"))
+                      (begin
+                        (set! drag-id id)
+                        (set! drag-dx (- (car p) (node-x n)))
+                        (set! drag-dy (- (cdr p) (node-y n))))
+                      (begin
+                        (set! arrow-from id)
+                        (set! arrow-x (car p))
+                        (set! arrow-y (cdr p))))
+                  (render))
+                #f))))))
+
+(add-handler! "body" "pointermove"
+  (lambda (e)
+    (let ((p (world-point e)))
+      (cond (drag-id
+             (let ((n (find-node drag-id)))
+               (if n
+                   (begin
+                     (set-node-x! n (max 0 (- (car p) drag-dx)))
+                     (set-node-y! n (max 0 (- (cdr p) drag-dy)))
+                     (render))
+                   #f)))
+            (arrow-from
+             (set! arrow-x (car p))
+             (set! arrow-y (cdr p))
+             (render))
+            (else #f)))))
+
+(add-handler! "body" "pointerup"
+  (lambda (e)
+    (if arrow-from
+        (let* ((el (js-call (js-eval "document") "elementFromPoint"
+                            (js-ref e "clientX") (js-ref e "clientY")))
+               (target (if (js-nothing? el) #f (js-call el "closest" ".node"))))
+          (if (and target (not (js-nothing? target)))
+              (let ((id (js-call target "getAttribute" "data-id")))
+                (if (not (equal? id arrow-from))
+                    (set! lines (append lines (list (vector arrow-from id))))
+                    #f))
+              #f))
+        #f)
+    (set! drag-id #f)
+    (set! arrow-from #f)
+    (render)))
+
+(add-handler! "body" "keydown"
+  (lambda (e)
+    (let ((tag (js-ref (js-ref e "target") "tagName"))
+          (key (js-ref e "key")))
+      (if (and (not (equal? tag "INPUT"))
+               (not (equal? tag "TEXTAREA"))
+               (or (equal? key "Delete") (equal? key "Backspace")))
+          (begin
+            (if sel-id
+                (begin
+                  (set! nodes (filter (lambda (n) (not (equal? (node-id n) sel-id))) nodes))
+                  (set! lines
+                    (filter (lambda (l)
+                              (and (not (equal? (vector-ref l 0) sel-id))
+                                   (not (equal? (vector-ref l 1) sel-id))))
+                            lines))
+                  (set! sel-id #f))
+                #f)
+            (render))
+          #f))))
+
+;; --- first paint ----------------------------------------------------------
+
+(render)
+</script>
+</body>
+</html>
