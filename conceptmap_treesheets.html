@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Concept Map TreeSheets controls</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:11px monospace;background:#1b263b;color:#e0e6ed;padding:6px}
+.sec{display:grid;gap:5px;padding:7px 0;border-top:1px solid #415a77}
+.fold>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:6px}.fold>summary>span{flex:1}.foldbtn{width:auto;padding:2px 7px;font-size:9px}.fold>summary::before{content:"▸ ";color:#778da9}.fold[open]>summary::before{content:"▾ "}.foldbody{display:grid;gap:5px;padding-top:5px}
+.sec:first-child{border-top:0;padding-top:0}
+.t{color:#80ed99;font-size:9.5px;font-weight:bold;letter-spacing:.5px;text-transform:uppercase}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.row.three{grid-template-columns:repeat(3,1fr)}
+button{background:#415a77;border:1px solid #778da9;color:#e0e6ed;padding:5px 6px;font:10px monospace;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;width:100%}
+button:hover:not(:disabled){background:#0077b6;color:#fff}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.primary{background:#023e8a;border-color:#00b4d8;color:#00f5d4;font-weight:bold}
+button.on{background:#023e8a;border-color:#00f5d4;color:#00f5d4;font-weight:bold}
+button.on.cut{background:#4a1717;border-color:#f87171;color:#f87171}
+button.on.copy{background:#123e2b;border-color:#34d399;color:#34d399}
+.hint{color:#778da9;font-size:9.5px;line-height:1.4}
+#status{color:#90e0ef;font-size:10px;line-height:1.4;word-break:break-word}
+.slider{display:grid;gap:2px;padding:4px;border:1px solid #415a77;background:#0d1b2a}
+.slider .l{display:flex;justify-content:space-between;align-items:center;color:#90e0ef;gap:6px}
+.slider .l .row{width:120px}
+input[type=range]{width:100%;accent-color:#00b4d8}
+input[type=checkbox]{accent-color:#00b4d8;width:14px;height:14px}
+.checks{display:grid;gap:5px;padding:5px;border:1px solid #415a77;background:#0d1b2a}
+.checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
+select{width:100%;background:#1b263b;border:1px solid #778da9;color:#fff;padding:4px;font:11px monospace}
+details{border:1px solid #415a77;background:#0d1b2a}
+summary{cursor:pointer;padding:5px;color:#80ed99;font-weight:bold;font-size:10px;text-transform:uppercase}
+.help{padding:6px;color:#90a4bd;font-size:10px;line-height:1.5}
+.help h3{color:#e0e6ed;font-size:10.5px;margin:6px 0 2px}
+.help ul{padding-left:14px}
+.mode{padding:2px 6px;border:1px solid #415a77;font-weight:bold;text-transform:uppercase;font-size:9.5px;justify-self:start}
+.mode.move{color:#60a5fa}.mode.cut{color:#f87171}.mode.copy{color:#34d399}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(() => {
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  const root = document.getElementById("root");
+  const post = m => { try { parent.postMessage({ ch: "conceptmap-treesheets", ...m }, "*"); } catch (err) { } };
+  const gates = [], updaters = [];
+  let S = { settings: {} };
+  let nid = 0;
+
+  const section = (title, ...kids) => {
+    if (title === "Tree") { const d = el("div", "sec"); d.append(el("div", "t", title), ...kids); root.append(d); return; }
+    const d = el("details", "sec fold"); const sm = el("summary", "t"); const body = el("div", "foldbody"); body.append(...kids);
+    const name = el("span", "", title); const tog = el("button", "foldbtn", "Expand \u25BC"); tog.type = "button";
+    tog.onclick = e => { e.preventDefault(); e.stopPropagation(); d.open = !d.open; };
+    d.addEventListener("toggle", () => { tog.textContent = d.open ? "Collapse \u25B2" : "Expand \u25BC"; });
+    sm.append(name, tog); d.append(sm, body); root.append(d);
+  };
+  const row = (cls, ...kids) => { const d = el("div", "row" + (cls ? " " + cls : "")); d.append(...kids); return d; };
+
+  function button(label, cmd, gate, o = {}) {
+    const b = el("button", o.cls || "", label);
+    b.type = "button"; b.id = "b-" + cmd + (o.arg !== undefined ? "-" + o.arg : "");
+    if (o.title) b.title = o.title;
+    b.onclick = () => post({ type: "cmd", cmd, arg: o.arg });
+    gates.push([b, gate]);
+    if (o.dynamic) updaters.push(s => { b.textContent = o.dynamic(s); });
+    return b;
+  }
+  function modeButton(label, mode) {
+    const b = el("button", "", label); b.type = "button"; b.id = "mode-" + mode;
+    b.onclick = () => post({ type: "set", k: "dragMode", v: mode });
+    updaters.push(s => { b.className = s.settings.dragMode === mode ? "on " + mode : ""; });
+    return b;
+  }
+  function check(label, getter, onChange, id) {
+    const l = el("label"), i = el("input"); i.type = "checkbox"; if (id) i.id = id;
+    i.onchange = () => onChange(i.checked);
+    updaters.push(s => { i.checked = !!getter(s); });
+    l.append(i, document.createTextNode(label));
+    return l;
+  }
+  const settingCheck = (label, key) => check(label, s => s.settings[key], v => post({ type: "set", k: key, v }), "c-" + key);
+
+  function slider(label, id, unit, min, max, step, getter, onInput) {
+    const w = el("label", "slider"), line = el("span", "l"), out = el("strong", "");
+    line.append(el("span", "", label), out);
+    const r = el("input"); r.type = "range"; r.min = min; r.max = max; r.step = step; r.id = id;
+    r.oninput = () => { out.textContent = r.value + unit; onInput(Number(r.value)); };
+    updaters.push(s => { const v = getter(s); if (document.activeElement !== r) r.value = v; out.textContent = (document.activeElement === r ? r.value : v) + unit; });
+    w.append(line, r);
+    return w;
+  }
+  const settingSlider = (label, key, unit, min, max, step) =>
+    slider(label, "s-" + key, unit, min, max, step, s => s.settings[key], v => post({ type: "set", k: key, v }));
+
+  function fontControl() {
+    const w = el("div", "slider"), line = el("span", "l"), out = el("strong", "");
+    const minus = el("button", "", "−"), plus = el("button", "", "+");
+    minus.type = plus.type = "button"; minus.id = "font-minus"; plus.id = "font-plus";
+    minus.onclick = () => post({ type: "set", k: "fontSize", v: Math.max(8, S.settings.fontSize - 1) });
+    plus.onclick = () => post({ type: "set", k: "fontSize", v: Math.min(32, S.settings.fontSize + 1) });
+    line.append(el("span", "", "Font size"), row("three", minus, out, plus));
+    updaters.push(s => { out.textContent = s.settings.fontSize + "px"; out.style.textAlign = "center"; });
+    w.append(line);
+    return w;
+  }
+  function themeSelect() {
+    const w = el("label", "slider"); w.append(el("span", "l", "Theme"));
+    const s = el("select"); s.id = "sel-theme";
+    [["dark", "Dark"], ["light", "Light"], ["black", "Black"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; s.append(o); });
+    s.onchange = () => post({ type: "set", k: "theme", v: s.value });
+    updaters.push(st => { s.value = st.settings.theme; });
+    w.append(s);
+    return w;
+  }
+
+  const status = el("div"); status.id = "status";
+  const modeLabel = el("span", "mode"); modeLabel.id = "mode-label";
+  updaters.push(s => {
+    const m = s.settings.dragMode || "move";
+    modeLabel.className = "mode " + m;
+    modeLabel.textContent = m === "cut" ? "Mode: Cut & Drop" : m === "copy" ? "Mode: Copy & Drop" : "Mode: Move";
+  });
+
+  section("Tree",
+    button("Display subtree as tree", "subtree", "one", { cls: "primary", title: "Select one node on the canvas: it becomes the top of the tree" }),
+    button("Display as concept map", "toConceptMap", "tree", { title: "Turn the active tree back into ordinary nodes" }),
+    status,
+    Object.assign(el("div", "hint"), { textContent: "Same nodes and links, different view. Arrow directions are ignored when the tree is built (the selected node is the top) but every link keeps its direction in the saved data. A map with a loop cannot be shown as a tree. Drag the top cell (or Alt+drag any cell) to move a whole tree around the canvas." }));
+
+  section("History", row("", button("Undo", "undo", "undo"), button("Redo", "redo", "redo")));
+
+  section("Drag action", row("three", modeButton("Move", "move"), modeButton("Cut (X)", "cut"), modeButton("Copy (C)", "copy")), modeLabel);
+
+  section("Structure",
+    row("", button("Add row", "addRow", "active"), button("Add column", "addColumn", "active"),
+      button("Delete row", "deleteRow", "active"), button("Delete column", "deleteColumn", "active")),
+    button("Transpose child grid (T)", "transpose", "active"),
+    button("Add parent to table (Ctrl+P)", "addParent", "active"),
+    button("Add parent to cell (P)", "addParentToCell", "active"),
+    button("Hide / show children (H)", "toggleChildren", "active"),
+    button("", "toggleNest", "active", { dynamic: s => s.hasSubgrid ? "Remove sub-grid (I)" : "Add sub-grid (I)" }),
+    button("Clear / delete", "clearCell", "active"),
+    button("Prune current grid", "pruneGrid", "active"),
+    button("Prune entire tree", "pruneTree", "active"));
+
+  section("Size and zoom",
+    fontControl(),
+    settingSlider("Tree scale", "treeScale", "%", 50, 200, 5),
+    settingSlider("Cell padding", "globalPadding", "", 0, 10, 1),
+    check("Fixed active column width", s => s.columnFixed, v => post({ type: "cmd", cmd: "fixedColumn", arg: { on: v, width: S.columnWidth || 180 } }), "fixed-column-width-toggle"),
+    slider("Active column width", "s-activeColumnWidth", "px", 60, 480, 10, s => s.columnWidth, v => post({ type: "cmd", cmd: "activeColumnWidth", arg: v })),
+    slider("Max textbox width", "s-maxTextWidth", "px", 60, 1200, 20, s => s.maxTextWidth, v => post({ type: "cmd", cmd: "maxTextboxWidth", arg: v })),
+    check("Entire tree", s => s.settings.maxTextboxWidthEntireTree, v => post({ type: "cmd", cmd: "maxEntire", arg: v }), "c-maxEntire"));
+
+  section("Appearance and workflow",
+    el("div", "checks"),
+    themeSelect());
+  const checks = root.querySelector(".checks");
+  [["Show photos", "showPhotos"], ["Enter moves to next cell", "enterNextCell"], ["Enter at end adds a row", "enterAddCellAtEnd"], ["Enter adds sibling row", "enterAddSibling"],
+   ["Arrow keys select gaps", "navigateFutureEdgeCells"], ["Grid lines", "showGridLines"], ["Shrink cells to text", "shrinkToText"], ["Condensed gaps", "compactGaps"]]
+    .forEach(([l, k]) => {
+      const item = settingCheck(l, k);
+      if (k === "showPhotos") {
+        const line = el("div"); line.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px";
+        const rb = el("button", "", "↻ Refresh"); rb.type = "button"; rb.id = "b-refreshPhotos";
+        rb.title = "Find photo filenames (like cat.png) in the tree or map and load them from the selected image folder";
+        rb.style.cssText = "width:auto;padding:3px 8px";
+        rb.onclick = () => post({ type: "cmd", cmd: "refreshPhotos" });
+        line.append(item, rb); checks.append(line);
+      } else checks.append(item);
+      if (k === "showPhotos") {
+        const sub = settingCheck("Show photo filename", "showPhotoFilename");
+        sub.style.marginLeft = "20px";
+        const box = sub.querySelector("input");
+        updaters.push(s => { const on = !!s.settings.showPhotos; box.disabled = !on; sub.style.opacity = on ? "1" : ".4"; sub.style.cursor = on ? "pointer" : "not-allowed"; });
+        checks.append(sub);
+      }
+    });
+
+  const help = el("details");
+  help.append(el("summary", "", "⌘ Commands help"));
+  const hb = el("div", "help");
+  hb.innerHTML = `
+    <h3>Navigation &amp; edit</h3><ul><li><b>Arrow keys</b>: move focus (also onto the gaps between rows)</li><li><b>Ctrl+↓ / Ctrl+↑</b>: into the children / back to the parent</li><li><b>Enter / double-click</b>: edit a cell</li><li><b>Enter / Shift+Enter</b> while editing: next / previous cell (or add a sibling row, see Workflow)</li><li><b>Shift+click</b>: select a range</li><li><b>Esc</b>: leave edit mode</li></ul>
+    <h3>Hierarchy &amp; structure</h3><ul><li><b>H</b> hide or show children</li><li><b>I</b> add or remove a sub-grid</li><li><b>T</b> transpose the child grid</li><li><b>P</b> add a parent cell, <b>Ctrl+P</b> add a parent to the table</li><li><b>Delete</b>: clear a cell, then remove it</li><li>Select a gap and press <b>Enter</b> to insert a row or column there</li></ul>
+    <h3>Clipboard &amp; drag</h3><ul><li><b>Drag</b> moves cells; <b>X</b> / <b>C</b> switch to cut / copy mode</li><li>Drop in the middle of a cell to make a child; on an edge to place before/after it</li><li><b>Ctrl+C / Ctrl+V</b> copy and paste</li><li><b>Ctrl+Z / Ctrl+Y</b> undo / redo</li></ul>
+    <h3>On the canvas</h3><ul><li>Drag the top cell, or Alt+drag any cell, to move the whole tree</li><li>Every edit is written back to the nodes and links, so saving, exporting and the concept-map view stay in step</li></ul>`;
+  help.append(hb);
+  root.append(help);
+
+  function apply() {
+    const open = { active: S.hasActive, tree: S.hasTree, one: S.selCount === 1, undo: S.canUndo, redo: S.canRedo };
+    gates.forEach(([b, g]) => { b.disabled = !open[g]; });
+    updaters.forEach(u => u(S));
+    status.textContent = S.hasActive ? "Active cell: " + (S.activeLabel || "(empty)")
+      : S.hasTree ? "Click a cell in a tree to work on it."
+      : S.selCount === 1 ? "Ready: press Display subtree as tree."
+      : "Select one node on the canvas, then press Display subtree as tree.";
+  }
+
+  window.addEventListener("message", e => {
+    if (e.source !== parent) return;
+    const d = e.data;
+    if (!d || d.ch !== "conceptmap-treesheets-host" || d.type !== "state") return;
+    S = d; apply();
+  });
+  apply();
+  new ResizeObserver(() => post({ type: "height", h: document.body.offsetHeight + 12 })).observe(document.body);
+  post({ type: "ready" });
+})();
+</script>
+</body>
+</html>

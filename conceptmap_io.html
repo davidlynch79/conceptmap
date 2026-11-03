@@ -44,6 +44,7 @@
   <details class="dropdown" id="export-options">
     <summary>Export Options</summary>
     <div class="dropdown-body">
+      <label title="Off: photos are saved as filenames only and reloaded from the image folder. On: the picture data is stored inside the JSON/HTML file (much larger)."><input type="checkbox" id="embed-photos-chk"> Embed photos in JSON export</label>
       <div class="format-grid">
         <button id="export-json-btn" class="action-btn" disabled>Export JSON</button>
         <button id="export-lines-btn" class="action-btn" disabled>Export Lines (Extended)</button>
@@ -113,19 +114,6 @@ function slug(value){return(String(value||'concept_map').trim().replace(/[^a-z0-
 function prefix(){if(mapState&&mapState.nodes&&mapState.nodes.length){const first=[...mapState.nodes].sort((a,b)=>(a.y-b.y)||(a.x-b.x))[0];if(first&&String(first.text||'').trim())return slug(first.text);}return 'concept_map';}
 function dateStamp(){return new Date().toISOString().slice(0,10);}
 
-function formatLines(state){
-  const out=['VERSION: 2.0_METADATA',`CREATED: ${new Date().toISOString()}`,`NODES: ${state.nodes.length}`,`LINES: ${state.lines.length}`,'--- NODES ---'];
-  state.nodes.forEach(n=>{
-    const escapedText = (n.text || 'Node').replace(/\r?\n/g, '\\n');
-    out.push(`${n.id} | x:${Math.round(n.x||0)} y:${Math.round(n.y||0)} | text: ${escapedText}${n.url?` | URL: ${n.url}`:''}${n.size?` | size: ${n.size}`:''}${n.collapsed?' | collapsed: true':''}`);
-  });
-  out.push('--- CONNECTIONS ---');
-  state.lines.forEach(l=>out.push(`LINE | id:${l.id||''} | from:${l.from} | to:${l.to} | arrow:${l.arrow||'end'} | width:${l.width||1} | color:${l.color||'#00b4d8'} | label:${l.label||''}`));
-  return out.join('\n');
-}
-
-function formatSimple(state){const out=[];state.nodes.forEach(n=>out.push(`${n.id} ${n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x||0)} ${Math.round(n.y||0)}`));state.lines.forEach(l=>{const rev=l.arrow==='start';out.push(`${l.arrow==='none'?'-2':'-1'} ${rev?l.to:l.from} ${rev?l.from:l.to}`);});return out.join('\n');}
-function formatIndent(state){const kids=new Map(),parents=new Map();state.nodes.forEach(n=>{kids.set(n.id,[]);parents.set(n.id,0);});state.lines.forEach(l=>{const p=l.arrow==='start'?l.to:l.from,c=l.arrow==='start'?l.from:l.to;if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parents.set(c,parents.get(c)+1);}});let roots=state.nodes.filter(n=>parents.get(n.id)===0);if(!roots.length)roots=[...state.nodes];roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));const seen=new Set(),out=[];function walk(id,depth){if(seen.has(id))return;seen.add(id);const n=state.nodes.find(x=>x.id===id);if(!n)return;out.push('    '.repeat(depth)+(n.url?`${n.text.replace(/\r?\n/g, ' ')} ${n.url}`:n.text.replace(/\r?\n/g, ' ')));(kids.get(id)||[]).forEach(id2=>walk(id2,depth+1));}roots.forEach(n=>walk(n.id,0));state.nodes.forEach(n=>walk(n.id,0));return out.join('\n');}
 function setTargetUI(target){
  const previous=saveTarget;
  if(target){const keepHandle=previous&&previous.name===target.name?previous.handle:null;saveTarget={...target,handle:target.handle||keepHandle||null};}
@@ -137,41 +125,9 @@ function setTargetUI(target){
  $('target-label').textContent=saveTarget?`Main map saves to: ${saveTarget.name} (${saveTarget.format||'lines'})`:'No file linked yet. Save will ask where to save.';
 }
 function renderHistory(){const box=$('history-list');box.innerHTML='';if(!historyStates.length){box.innerHTML='<div class="hint">No history states recorded.</div>';$('clear-history-btn').disabled=true;return;}historyStates.forEach((item,i)=>{const index=typeof item==='number'?item:(item.index??i);const row=document.createElement('div');row.className='history-item'+(index===historyIdx?' active':'');const label=document.createElement('span');label.textContent=`State #${index+1} (${item.nodes??0} nodes, ${item.lines??0} lines)`;const actions=document.createElement('div');actions.style.cssText='display:flex;gap:4px';const jump=document.createElement('button');jump.className='action-btn';jump.textContent='Jump';jump.onclick=()=>{post({type:'cm-history-action',action:'jump',index});log(`Requested history state #${index+1}.`);};const del=document.createElement('button');del.className='danger-btn';del.textContent='Delete';del.onclick=()=>{post({type:'cm-history-action',action:'delete',index});log(`Requested deletion of history state #${index+1}.`);};actions.append(jump,del);row.append(label,actions);box.appendChild(row);});$('clear-history-btn').disabled=false;}
-function receiveState(d){if(d.saveFormat&&FORMAT_LABELS[d.saveFormat]){saveFormat=d.saveFormat;updateFormatNote();}if(d.state&&Array.isArray(d.state.nodes)&&Array.isArray(d.state.lines))mapState=d.state;if(d.defaults)defaults=d.defaults;if(Array.isArray(d.history))historyStates=d.history;if(Number.isInteger(d.historyIdx))historyIdx=d.historyIdx;if(Object.prototype.hasOwnProperty.call(d,'saveTarget'))setTargetUI(d.saveTarget);setConnected(true);if(mapState)statusText.textContent=`Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;renderHistory();}
+function receiveState(d){if(d.state&&typeof d.state.embedPhotos==='boolean'&&$('embed-photos-chk'))$('embed-photos-chk').checked=d.state.embedPhotos;if(d.saveFormat&&FORMAT_LABELS[d.saveFormat]){saveFormat=d.saveFormat;updateFormatNote();}if(d.state&&Array.isArray(d.state.nodes)&&Array.isArray(d.state.lines))mapState=d.state;if(d.defaults)defaults=d.defaults;if(Array.isArray(d.history))historyStates=d.history;if(Number.isInteger(d.historyIdx))historyIdx=d.historyIdx;if(Object.prototype.hasOwnProperty.call(d,'saveTarget'))setTargetUI(d.saveTarget);setConnected(true);if(mapState)statusText.textContent=`Connected: ${mapState.nodes.length} nodes, ${mapState.lines.length} lines`;renderHistory();}
 function parseTextAndUrl(input){const match=String(input).match(/https?:\/\/[^\s]+/i);if(match){const url=match[0];return{text:String(input).replace(url,'').trim()||url,url};}return{text:String(input).trim()||'Node',url:null};}
 function newId(){return 'id_'+Math.random().toString(36).slice(2,11);}
-
-function parseExtended(text){
-  const newNodes=[],newLines=[];let mode=null;
-  text.split(/\r?\n/).forEach(line=>{
-    const trimmed=line.trim();
-    if(trimmed==='--- NODES ---'){mode='nodes';return;}
-    if(trimmed==='--- CONNECTIONS ---'){mode='lines';return;}
-    if(mode==='nodes'){
-      const parts=trimmed.split('|').map(x=>x.trim());
-      if(parts.length<2)return;
-      const id=parts[0],coords=parts[1];
-      const xm=coords.match(/x:\s*(-?\d+(?:\.\d+)?)/),ym=coords.match(/y:\s*(-?\d+(?:\.\d+)?)/);
-      let textRaw='',url=null,size='auto',collapsed=false;
-      for(const part of parts.slice(2)){
-        if(part.startsWith('text:'))textRaw=part.slice(5).trim().replace(/\\n/g, '\n');
-        else if(part.startsWith('URL:'))url=part.slice(4).trim();
-        else if(part.startsWith('size:'))size=part.slice(5).trim();
-        else if(part.startsWith('collapsed:'))collapsed=part.slice(10).trim()==='true';
-      }
-      newNodes.push({id,text:textRaw||'Node',url,x:xm?+xm[1]:100,y:ym?+ym[1]:100,size,collapsed});
-    }else if(mode==='lines'&&trimmed.startsWith('LINE')){
-      const parts=trimmed.split('|').map(x=>x.trim());
-      const take=(prefix,fallback='')=>{const p=parts.find(x=>x.startsWith(prefix));return p?p.slice(prefix.length).trim():fallback;};
-      const from=take('from:'),to=take('to:');
-      if(from&&to)newLines.push({id:take('id:',newId()),from,to,arrow:take('arrow:','end'),width:parseFloat(take('width:','1'))||1,color:take('color:','#00b4d8'),label:take('label:','')});
-    }
-  });
-  return{nodes:newNodes,lines:newLines};
-}
-
-function parseSimple(text){const lines=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],connections=[],map=new Map();lines.forEach(line=>{const t=line.trim().split(/\s+/);if(t.length<3)return;const first=t[0];if(first==='-1'||first==='-2'){connections.push({id:newId(),from:map.get(t[1])||t[1],to:map.get(t[2])||t[2],arrow:first==='-2'?'none':'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});return;}let x=80+(nodes.length%8)*140,y=140+Math.floor(nodes.length/8)*60,content=t.slice(1),py=Number(t[t.length-1]),px=Number(t[t.length-2]);if(Number.isFinite(px)&&Number.isFinite(py)){x=px;y=py;content=t.slice(1,-2);}const parsed=parseTextAndUrl(content.join(' '));const id=newId();map.set(first,id);nodes.push({id,text:parsed.text,url:parsed.url,x,y,size:'auto',collapsed:false});});return{nodes,lines:connections};}
-function parseIndent(text){const source=text.split(/\r?\n/).filter(x=>x.trim()),nodes=[],lines=[],stack=[];let y=140;source.forEach(line=>{let level=0,i=0;while(i<line.length){if(line[i]==='\t'){level++;i++;}else if(line.slice(i,i+4)==='    '){level++;i+=4;}else if(line.slice(i,i+2)==='  '){level++;i+=2;}else break;}const p=parseTextAndUrl(line.trim()),node={id:newId(),text:p.text,url:p.url,x:80+level*180,y,size:'auto',collapsed:false};y+=50;nodes.push(node);stack[level]=node;stack.length=level+1;if(level>0){const parent=stack[level-1];if(parent)lines.push({id:newId(),from:parent.id,to:node.id,arrow:'end',width:defaults.width||1,color:defaults.color||'#00b4d8',label:''});}});return{nodes,lines};}
 
 function parseParagraphs(text){
   const rawParagraphs=text.split(/\r?\n\s*\r?\n/).map(p=>p.trim()).filter(Boolean);
@@ -192,16 +148,10 @@ function parseParagraphs(text){
 }
 
 function announceTarget(handle,name,format){currentFileHandle=handle||null;currentFileName=name;currentFormatType=format;post({type:'cm-save-target',name,format});if(handle&&!post({type:'cm-save-handle',handle,name}))log('The selected file handle could not be shared with the main map; overwrite remains available from this panel.','err');}
-function importJson(text,name,handle=null){const data=JSON.parse(text);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('JSON must contain arrays named nodes and lines.');post({type:'cm-import-json',data});announceTarget(handle,name,'json');log(`Sent JSON "${name}" to the map.`);}
-function importGraph(text,name,format,handle=null){let parsed;if(format==='lines'){parsed=parseExtended(text);if(!parsed.nodes.length)throw new Error('No extended-lines nodes were found.');}else if(format==='simple')parsed=parseSimple(text);else parsed=parseIndent(text);if(!parsed.nodes.length&&!parsed.lines.length)throw new Error('No map records were found.');const fmt=format==='lines'?'lines':format==='simple'?'txt-simple':'txt-indent';post({type:'cm-import-graph',nodes:parsed.nodes,lines:parsed.lines,replace:replaceChk.checked,name,format:fmt});if(replaceChk.checked)announceTarget(handle,name,fmt);log(`Sent ${format} "${name}" (${parsed.nodes.length} nodes, ${parsed.lines.length} lines) to the map.`);}
-function importHtml(text,name,handle=null){const match=text.match(/const mapData = (\{[\s\S]*?\});/);if(!match)throw new Error('No embedded mapData JSON found in this HTML file.');const data=JSON.parse(match[1]);if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('HTML does not contain valid map data.');post({type:'cm-import-json',data});announceTarget(handle,name,'html');log(`Imported map data from HTML "${name}".`);}
-function autoDetectAndImport(text,name,handle=null){
-  const trimmed=text.trim();
-  if(/^<!doctype html|^<html/i.test(trimmed)){importHtml(text,name,handle);return;}
-  if(trimmed.startsWith('{')||trimmed.startsWith('[')){importJson(text,name,handle);return;}
-  if(/^VERSION:\s*2\.0_METADATA/m.test(text)||/--- NODES ---/.test(text)){importGraph(text,name,'lines',handle);return;}
-  if(/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)){importGraph(text,name,'simple',handle);return;}
-  importGraph(text,name,'indent',handle);
+let pendingImport=null;
+function importText(text,name,format,handle=null){
+  pendingImport={name,handle};
+  if(!post({type:'cm-import-text',text,name,format,replace:replaceChk.checked}))pendingImport=null;
 }
 function readFile(file,handler,handle=null){const reader=new FileReader();reader.onload=()=>{try{handler(String(reader.result||''),file.name,handle);}catch(err){log(`${file.name}: ${err.message||err}`,'err');}};reader.onerror=()=>log(`Could not read ${file.name}.`,'err');reader.readAsText(file);}
 async function chooseFile(inputId,format){
@@ -209,15 +159,30 @@ async function chooseFile(inputId,format){
  if(window.showOpenFilePicker&&config){try{const [handle]=await window.showOpenFilePicker({multiple:false,types:[config]});const file=await handle.getFile();handleImport(file,format,handle);return;}catch(err){if(err&&err.name==='AbortError')return;log('Advanced file picker unavailable: '+(err.message||err)+'. Using the standard chooser.','err');}}
  $(inputId).onchange=e=>{const file=e.target.files&&e.target.files[0];if(file)handleImport(file,format,null);e.target.value='';};$(inputId).click();
 }
-function handleImport(file,format,handle=null){if(!file)return;readFile(file,(text,name,fh)=>{try{if(format==='json')importJson(text,name,fh);else if(format==='html'||/^\s*<!doctype html|^\s*<html/i.test(text))importHtml(text,name,fh);else if(format==='auto')autoDetectAndImport(text,name,fh);else importGraph(text,name,format,fh);}catch(err){log(`${name}: ${err.message||err}`,'err');}},handle);}
-function serializeFor(fmt){if(!mapState)throw new Error('Map data is not available yet.');if(fmt==='lines')return formatLines(mapState);if(fmt==='txt-simple')return formatSimple(mapState);if(fmt==='txt-indent')return formatIndent(mapState);if(fmt==='html')return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p><script>const mapData = ${JSON.stringify(mapState,null,2)};<\/script></body></html>`;return JSON.stringify(mapState,null,2);}
+function handleImport(file,format,handle=null){if(!file)return;readFile(file,(text,name,fh)=>{try{const f=format==='html'||/^\s*<!doctype html|^\s*<html/i.test(text)?'html':format;importText(text,name,f,fh);}catch(err){log(`${name}: ${err.message||err}`,'err');}},handle);}
+const pendingSerialize=new Map();let serializeSeq=0;
+function serializeFor(fmt){
+  if(!mapState)return Promise.reject(new Error('Map data is not available yet.'));
+  return new Promise((resolve,reject)=>{
+    const id='ser'+(++serializeSeq);
+    pendingSerialize.set(id,{resolve,reject});
+    if(!post({type:'cm-serialize',id,format:fmt})){pendingSerialize.delete(id);reject(new Error('Main map window is unreachable.'));return;}
+    setTimeout(()=>{if(pendingSerialize.has(id)){pendingSerialize.delete(id);reject(new Error('The main map did not answer.'));}},5000);
+  });
+}
+async function exportAs(fmt,suffix,mime,label,needNodes){
+  if(!mapState)return;
+  if(needNodes&&!mapState.nodes.length)return alert('No nodes to export.');
+  try{const exportName=`${prefix()}_${suffix}_${dateStamp()}.${fmt==='json'?'json':fmt==='html'?'html':'txt'}`;download(exportName,await serializeFor(fmt),mime);log('Exported '+label+' as '+exportName+'.');}
+  catch(err){log('Export failed: '+(err.message||err),'err');}
+}
 const saveTypes={json:{description:'Concept map JSON',accept:{'application/json':['.json']}},html:{description:'Concept map HTML',accept:{'text/html':['.html','.htm']}} ,lines:{description:'Extended lines TXT',accept:{'text/plain':['.txt']}},'txt-simple':{description:'TXT Simple',accept:{'text/plain':['.txt']}},'txt-indent':{description:'TXT Indent',accept:{'text/plain':['.txt']}}};
 async function saveCurrentFromPanel(){
  if(!mapState){log('No map data received yet.','err');return;}
  const fmt=FORMAT_LABELS[saveFormat]?saveFormat:'lines';
  const fallbackName=currentFileName||saveTarget?.name||`${prefix()}_diagram.txt`;
  let content;
- try{content=serializeFor(fmt);}catch(err){log('Could not serialize map: '+err.message,'err');return;}
+ try{content=await serializeFor(fmt);}catch(err){log('Could not serialize map: '+err.message,'err');return;}
  if(currentFileHandle){
   try{let permission=await currentFileHandle.queryPermission({mode:'readwrite'});if(permission!=='granted')permission=await currentFileHandle.requestPermission({mode:'readwrite'});if(permission!=='granted')throw new Error('Write permission was not granted.');const writable=await currentFileHandle.createWritable();await writable.write(content);await writable.close();log(`Successfully overwrote ${currentFileName||fallbackName}.`,'ok');post({type:'cm-save-target',name:currentFileName||fallbackName,format:fmt});post({type:'cm-save-handle',handle:currentFileHandle,name:currentFileName||fallbackName});return;}catch(err){log('Direct overwrite failed: '+(err.message||err)+'. Trying the main map save handler.','err');}
  }
@@ -229,11 +194,12 @@ async function saveCurrentFromPanel(){
 $('save-btn').onclick=saveCurrentFromPanel;$('save-canvas-new-btn').onclick=()=>command('save-canvas-new');$('save-connected-new-btn').onclick=()=>command('save-connected-new');$('resave-all-btn').onclick=()=>command('resave-all');$('iphone-save-btn').onclick=()=>command('iphone-save');$('iphone-load-btn').onclick=()=>$('mobile-file-input').click();
 $('mobile-file-input').onchange=e=>{const file=e.target.files&&e.target.files[0];if(file)handleImport(file,'auto',null);e.target.value='';};
 $('set-filename-btn').onclick=()=>{const name=$('filename-input').value.trim();if(!name){log('Enter a filename before applying it.','err');return;}command('set-filename',{name});};$('filename-input').addEventListener('keydown',e=>{if(e.key==='Enter')$('set-filename-btn').click();});
-$('export-json-btn').onclick=()=>{if(!mapState)return;const exportName=`${prefix()}_diagram_${dateStamp()}.json`;download(exportName,JSON.stringify(mapState,null,2),'application/json');log('Exported JSON as '+exportName+'.');};
-$('export-lines-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_lines_${dateStamp()}.txt`;download(exportName,formatLines(mapState),'text/plain;charset=utf-8');log('Exported Extended Lines as '+exportName+'.');};
-$('export-simple-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_simple_${dateStamp()}.txt`;download(exportName,formatSimple(mapState),'text/plain;charset=utf-8');log('Exported TXT Simple as '+exportName+'.');};
-$('export-indent-btn').onclick=()=>{if(!mapState||!mapState.nodes.length)return alert('No nodes to export.');const exportName=`${prefix()}_indented_${dateStamp()}.txt`;download(exportName,formatIndent(mapState),'text/plain;charset=utf-8');log('Exported TXT Indent as '+exportName+'.');};
-$('export-html-btn').onclick=()=>{if(!mapState)return;const exportName=`${prefix()}_view_${dateStamp()}.html`;const content=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${mapState.nodes.length} | Lines: ${mapState.lines.length}</p><script>const mapData = ${JSON.stringify(mapState,null,2)};<\/script></body></html>`;download(exportName,content,'text/html;charset=utf-8');log('Exported Full HTML view as '+exportName+'.');};
+$('embed-photos-chk').onchange=e=>post({type:'cm-set-embed',value:e.target.checked});
+$('export-json-btn').onclick=()=>exportAs('json','diagram','application/json','JSON',false);
+$('export-lines-btn').onclick=()=>exportAs('lines','lines','text/plain;charset=utf-8','Extended Lines',true);
+$('export-simple-btn').onclick=()=>exportAs('txt-simple','simple','text/plain;charset=utf-8','TXT Simple',true);
+$('export-indent-btn').onclick=()=>exportAs('txt-indent','indented','text/plain;charset=utf-8','TXT Indent',true);
+$('export-html-btn').onclick=()=>exportAs('html','view','text/html;charset=utf-8','Full HTML view',false);
 $('import-json-btn').onclick=()=>chooseFile('import-json-file','json');$('import-lines-btn').onclick=()=>chooseFile('import-lines-file','lines');$('import-simple-btn').onclick=()=>chooseFile('import-simple-file','simple');$('import-indent-btn').onclick=()=>chooseFile('import-indent-file','indent');$('import-html-btn').onclick=()=>chooseFile('import-html-file','html');
 
 $('example-paragraph-btn').onclick=(e)=>{
@@ -260,7 +226,7 @@ $('import-paragraphs-btn').onclick=()=>{
 $('clear-history-btn').onclick=()=>{post({type:'cm-history-action',action:'clear'});log('Requested clearing all history states.');};
 $('refresh-btn').onclick=requestState;
 ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('over');}));['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('over');}));dropzone.addEventListener('drop',async e=>{const file=e.dataTransfer.files&&e.dataTransfer.files[0];if(!file)return;let handle=null;try{const item=e.dataTransfer.items&&e.dataTransfer.items[0];if(item&&item.getAsFileSystemHandle){const picked=await item.getAsFileSystemHandle();if(picked&&picked.kind==='file')handle=picked;}}catch(err){}handleImport(file,'auto',handle);});document.body.addEventListener('dragover',e=>e.preventDefault());document.body.addEventListener('drop',e=>e.preventDefault());
-window.addEventListener('message',e=>{if(e.source!==opener_||!e.data||typeof e.data!=='object')return;const d=e.data;if(d.type==='cm-state')receiveState(d);else if(d.type==='cm-ack'){log(d.message||'Main map responded.',d.ok===false?'err':'ok');}else if(d.type==='cm-save-target'){setTargetUI(d.name?{name:d.name,format:d.format||'lines'}:null);}else if(d.type==='cm-save-handle'&&d.handle&&(!saveTarget||!d.name||d.name===saveTarget.name)){currentFileHandle=d.handle;currentFileName=d.name||currentFileName;if(saveTarget)saveTarget={...saveTarget,handle:d.handle};}});
+window.addEventListener('message',e=>{if(e.source!==opener_||!e.data||typeof e.data!=='object')return;const d=e.data;if(d.type==='cm-state')receiveState(d);else if(d.type==='cm-ack'){log(d.message||'Main map responded.',d.ok===false?'err':'ok');if(d.imported&&pendingImport){const pi=pendingImport;pendingImport=null;if(d.imported.announce)announceTarget(pi.handle,pi.name,d.imported.fmt);}else if(d.ok===false)pendingImport=null;}else if(d.type==='cm-serialized'){const w=pendingSerialize.get(d.id);if(w){pendingSerialize.delete(d.id);d.error?w.reject(new Error(d.error)):w.resolve(d.text);}}else if(d.type==='cm-save-target'){setTargetUI(d.name?{name:d.name,format:d.format||'lines'}:null);}else if(d.type==='cm-save-handle'&&d.handle&&(!saveTarget||!d.name||d.name===saveTarget.name)){currentFileHandle=d.handle;currentFileName=d.name||currentFileName;if(saveTarget)saveTarget={...saveTarget,handle:d.handle};}});
 window.addEventListener('load',()=>{if(!opener_){statusText.textContent='Open this page using Import / Export & Save Options in conceptmap.html.';log('No main map opener. Open conceptmap.html directly, then open this manager from its button.','err');setConnected(false);return;}post({type:'cm-io-ready'});setTimeout(()=>{if(!mapState){log('No response yet from main map. Try Refresh.','err');}},1200);});
 })();
 </script>

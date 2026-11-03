@@ -38,6 +38,17 @@
       .directory-input-row { display: flex; align-items: stretch; gap: 5px; width: 100%; }
       .directory-input-row input { flex: 1 1 auto; min-width: 0; }
       .directory-input-row button { width: auto; flex: 0 0 auto; padding: 6px 9px; }
+      .fitrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+      .fitrow button { padding: 6px 4px; font-size: 10px; white-space: nowrap; }
+      .q { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid #778da9; color: #90e0ef; font: bold 10px monospace; cursor: help; flex: 0 0 auto; user-select: none; }
+      #toolbar .q { flex: 0 0 16px !important; width: 16px !important; min-width: 16px; max-width: 16px; height: 16px; padding: 0; }
+      .q:hover,.q:focus { background: #023e8a; outline: none; }
+      #qtip { position: fixed; z-index: 100000; display: none; max-width: 260px; background: #0d1b2a; border: 1px solid #00b4d8; color: #e0e6ed; padding: 6px 8px; font: 11px/1.4 monospace; border-radius: 6px; pointer-events: none; white-space: normal; }
+      .linerow { display: flex; flex-direction: row; align-items: center; gap: 4px; flex-wrap: nowrap; }
+      .linerow label { width: auto; gap: 3px; flex: 0 0 auto; }
+      .linerow select { width: auto; min-width: 0; max-width: 78px; padding: 3px 2px; }
+      .linerow input[type=text] { flex: 1 1 40px; min-width: 40px; width: auto; }
+      .linerow input[type=color] { flex: 0 0 26px; width: 26px; height: 24px; padding: 0; }
       .region-mode-row { display: flex; align-items: center; gap: 5px; width: 100%; }
       .region-mode-row>label { flex: 1 1 auto; width: auto; min-width: 0; gap: 4px; white-space: nowrap; }
       .region-mode-row label:last-of-type { flex: 1.25 1 auto; }
@@ -160,6 +171,38 @@
       .node.balls-expanded .node-processing-ball { left: calc(50% - calc(18px * var(--touch-ball-scale,1))); }
       .node.balls-expanded .node-translate-ball { left: calc(50% + calc(18px * var(--touch-ball-scale,1))); }
       .node.balls-expanded .node-speak-ball { left: calc(50% + calc(54px * var(--touch-ball-scale,1))); }
+    
+      /* TreeSheets: the original stylesheet, scoped to a tree on the canvas (no window) */
+      .ts-tree { position: absolute; z-index: 12; display: inline-block; color: var(--text); font: 14px/1.45 "Segoe UI", sans-serif; outline: none;
+        --surface: #1a1a1e; --surface-raised: #25252b; --border: #383842; --text: #e4e4e7; --muted: #a1a1aa; --accent: #3b82f6; --accent-soft: rgba(59,130,246,.22); --cell-background: #111113; }
+      .ts-tree[data-theme="light"] { --surface: #fff; --surface-raised: #eef1f5; --border: #d7dbe1; --text: #1f2328; --muted: #626b76; --cell-background: #fff; --accent-soft: rgba(59,130,246,.18); }
+      .ts-tree[data-theme="black"] { --surface: #050505; --surface-raised: #111; --border: #292929; --text: #f5f5f5; --muted: #a3a3a3; --cell-background: #000; }
+      .ts-tree *, .ts-tree *::before, .ts-tree *::after { box-sizing: border-box; }
+      .node.tree-node { flex-direction: column; align-items: stretch; white-space: normal; cursor: move; padding: 8px 10px 10px; border-color: #80ed99; background: rgba(13,27,42,.88); width: max-content; }
+      .node.tree-node > .ts-tree { position: static; z-index: auto; cursor: default; }
+      .node.tree-node > .collapse-btn { z-index: 12; }
+      .ts-tree .ts-scale { display: inline-block; transform-origin: top left; }
+      .ts-tree .grid { display: grid; align-items: stretch; width: max-content; gap: var(--gap-v) var(--gap-h); }
+      .ts-tree .grid.child-grid { max-width: 100%; overflow: auto; padding: 3px; border: 1px solid var(--border); border-radius: 4px; background: color-mix(in srgb, var(--surface) 90%, transparent); box-shadow: inset 0 1px 5px #0002; }
+      .ts-tree .cell { position: relative; display: flex; flex-direction: column; min-width: 1px; overflow: auto; background: var(--cell-background); border: 1px solid var(--border); border-radius: 3px; padding: var(--cell-pad-v) var(--cell-pad-h); white-space: pre-wrap; overflow-wrap: anywhere; cursor: default; outline: none; color: var(--text); }
+      .ts-tree .cell.no-grid-lines { border-color: transparent; }
+      .ts-tree .cell.active { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+      .ts-tree .cell.selected { background: var(--accent-soft); border-color: #3b82f699; }
+      .ts-tree .cell.drag-target { background: #1e3a5f; }
+      .ts-tree .cell.drag-target.cut { background: #4a1717; }
+      .ts-tree .cell.drag-target.copy { background: #123e2b; }
+      .ts-tree .cell-text { max-width: var(--textbox-max-width, none); min-width: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; padding: 0 2px; }
+      .ts-tree .cell textarea { box-sizing: border-box; width: 100%; max-width: var(--textbox-max-width, none); min-width: 0; min-height: 38px; overflow: auto; resize: vertical; padding: 5px; border: 1px solid #10b981; border-radius: 3px; background: var(--surface); color: inherit; font: inherit; outline: none; line-height: 1.5; overflow-wrap: anywhere; }
+      .ts-tree .hidden-marker { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+      .ts-tree .gap { grid-column: 1 / -1; height: 6px; margin: 1px 0; border-radius: 5px; background: transparent; cursor: pointer; }
+      .ts-tree .gap:hover, .ts-tree .gap.active { background: #3b82f680; }
+      .ts-tree .drop-edge { position: absolute; z-index: 5; background: var(--accent); pointer-events: none; }
+      .ts-tree .drop-edge.row-before, .ts-tree .drop-edge.row-after { left: 0; right: 0; height: 4px; }
+      .ts-tree .drop-edge.row-before { top: -2px; }
+      .ts-tree .drop-edge.row-after { bottom: -2px; }
+      .ts-tree .drop-edge.col-before, .ts-tree .drop-edge.col-after { top: 0; bottom: 0; width: 4px; }
+      .ts-tree .drop-edge.col-before { left: -2px; }
+      .ts-tree .drop-edge.col-after { right: -2px; }
     </style>
   </head>
   <body>
@@ -169,11 +212,16 @@
         <span class="cap" style="text-align:center">☰ MENU</span>
         <button id="toolbar-hide-btn" class="danger-btn" style="width:auto; padding:4px 8px;">Hide</button>
       </div>
-      <div class="tool-group" id="active-file-panel" data-panel-id="panel-active-file" style="border-color:#00f5d4">
-        <span class="cap">ACTIVE FILE (Ctrl+S saves to)</span>
-        <div id="active-file-name" style="color:#00f5d4;font-weight:bold;font-size:12px;word-break:break-all;user-select:text;-webkit-user-select:text">(no file linked)</div>
-        <div id="active-file-format" style="color:#90e0ef;font-size:11px">Type: TXT Extended Lines</div>
-        <span class="slider-hint" id="active-file-note">Ctrl+S will ask where to save, using this format.</span>
+      <div class="tool-group" id="active-file-panel" data-panel-id="panel-active-file" style="border-color:#00f5d4;padding:5px 8px" title="Ctrl+S saves to this file, in this format">
+        <div style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;min-width:0"><span class="cap">FILE (Ctrl+S)</span><span id="active-file-name" style="color:#00f5d4;font-weight:bold;font-size:11px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;user-select:text;-webkit-user-select:text">(no file linked)</span><span id="active-file-format" style="color:#90e0ef;font-size:10px;flex:0 0 auto">TXT Extended Lines</span></div>
+        <span class="slider-hint" id="active-file-note" style="display:none"></span>
+      </div>
+      <div class="tool-group" data-panel-id="panel-history">
+        <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+        <div class="row-inline">
+          <button id="undo-btn" title="Undo (Ctrl+Z)" disabled>Undo (Ctrl+Z)</button>
+          <button id="redo-btn" title="Redo (Ctrl+Y, or Ctrl+Shift+Z)" disabled>Redo (Ctrl+Y)</button>
+        </div>
       </div>
       <div class="tool-group ai-accent" id="conceptmap_ai" data-panel-id="panel-gemini" style="padding:6px;overflow:hidden;min-height:0">
         <div class="panel-grip">≡ AI PANEL</div>
@@ -193,14 +241,13 @@
     <div class="tool-group" data-panel-id="panel-io">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
       <button id="io-btn" class="action-btn" title="Open the dedicated import, export, and save manager">Import / Export &amp; Save Options &#8599;</button>
-      <span class="cap" style="margin-top:4px">SAVE FORMAT (Ctrl+S)</span>
+      <div class="row-inline" style="gap:4px"><label style="border:1px solid #80ed99;padding:4px"><input type="checkbox" data-k="treeSheetsIfPossible" id="treesheets-chk"> Open file as TreeSheets if possible</label><span class="q" tabindex="0" data-tip="When a file you open is a tree (no loops; arrow directions ignored) it is drawn as a TreeSheets tree on the canvas. Anything else opens as a concept map. Either way the saved data is the same nodes and links.">?</span></div>
+      <div class="row-inline" style="margin-top:4px;justify-content:flex-start;gap:6px"><span class="cap">SAVE FORMAT (Ctrl+S)</span><span class="q" tabindex="0" data-tip="The save format switches to the format of a file when it is imported; you can change it any time. Import, export, filename, save-as, connected-graph, bulk-copy and mobile save tools are grouped in the separate manager.">?</span></div>
       <label><input type="radio" name="savefmt" value="lines" checked> TXT Extended Lines (default)</label>
       <label><input type="radio" name="savefmt" value="txt-simple"> TXT Simple</label>
       <label><input type="radio" name="savefmt" value="txt-indent"> TXT Indent</label>
       <label><input type="radio" name="savefmt" value="json"> JSON</label>
       <label><input type="radio" name="savefmt" value="html"> Full HTML</label>
-      <span class="slider-hint">Switches to the format of a file when it is imported; you can change it any time.</span>
-      <span class="slider-hint">Import, export, filename, save-as, connected-graph, bulk-copy, and mobile save tools are grouped in the separate manager.</span>
     <span class="cap" style="margin-top:6px">FILE DIRECTORY</span>
     <div class="directory-input-row">
       <input type="text" data-k="fileDir" id="file-dir" placeholder="Paste folder path here">
@@ -220,11 +267,6 @@
         <span id="save-target-label">No file linked yet. Ctrl+S will ask where to save.</span>
       </div>
     </div>
-    <div class="tool-group" id="display-paragraph-panel" data-panel-id="panel-display-paragraph" style="padding:0;overflow:hidden;min-height:0;border-color:#90e0ef">
-      <div class="panel-grip">≡ DISPLAY PARAGRAPH</div>
-      <div class="row-inline" style="padding:6px"><span class="cap">TEXT NODE DISPLAY</span><button type="button" id="display-paragraph-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="true">Collapse ▲</button></div>
-      <div id="display-paragraph-frame-wrap" style="min-width:0"><iframe id="display-paragraph-frame" title="Concept Map Display Paragraph" src="conceptmap_displayparagraph.html" style="display:block;width:100%;height:490px;border:0;background:#1b263b" loading="eager"></iframe></div>
-    </div>
   <div class="tool-group" data-panel-id="panel-add">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <input type="text" id="node-text" placeholder="Box text or URL...">
@@ -233,6 +275,24 @@
       <button id="add-boxes-btn">Add Boxes</button>
 
     </div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-views">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <span class="cap">VIEW HISTORY (nested views)</span>
+    <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
+    <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
+  </div>
+    <div class="tool-group" id="display-paragraph-panel" data-panel-id="panel-display-paragraph" style="padding:0;overflow:hidden;min-height:0;border-color:#90e0ef">
+      <div class="panel-grip">≡ DISPLAY PARAGRAPH</div>
+      <div class="row-inline" style="padding:6px"><span class="cap">TEXT NODE DISPLAY</span><button type="button" id="display-paragraph-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="false">Expand ▼</button></div>
+      <label style="padding:0 6px 6px" title="Touch mode: larger hit areas, zoom buttons, and tapping a node first enlarges its circles. Opens the size sliders below."><input type="checkbox" id="touchscreen-chk"> Touchscreen?</label>
+      <label style="padding:0 6px 6px"><input type="checkbox" data-k="showUrls"> Show URLs</label>
+      <div id="display-paragraph-frame-wrap" style="min-width:0;display:none"><iframe id="display-paragraph-frame" title="Concept Map Display Paragraph" src="conceptmap_displayparagraph.html" style="display:block;width:100%;height:490px;border:0;background:#1b263b" loading="eager"></iframe></div>
+    </div>
+  <div class="tool-group" id="treesheets-panel" data-panel-id="panel-treesheets" style="padding:0;overflow:hidden;min-height:0;border-color:#80ed99">
+    <div class="panel-grip">≡ TREESHEETS</div>
+    <div class="row-inline" style="padding:6px"><span class="cap">TREESHEETS</span><button type="button" id="treesheets-collapse" class="action-btn" style="width:auto;padding:4px 8px" aria-expanded="true">Collapse ▲</button></div>
+    <div id="treesheets-frame-wrap" style="min-width:0"><iframe id="treesheets-frame" title="Concept Map TreeSheets controls" src="conceptmap_treesheets.html" style="display:block;width:100%;height:520px;border:0;background:#1b263b"></iframe></div>
   </div>
   <div class="tool-group" data-panel-id="panel-interaction">
     <div class="panel-grip">≡ DRAG SUB-PANEL</div>
@@ -251,55 +311,49 @@
     <label><input type="radio" name="em" data-k="editMode" value="spot"> Edit click spot (ball)</label>
     <span class="cap" style="margin-top:6px">SELECTION & DRAG OPTIONS</span>
     <label><input type="checkbox" data-k="dragGraphBall" id="drag-graph-ball-chk" checked> Drag Graph (Ball)</label>
+
+  </div>
+  <div class="tool-group" data-panel-id="panel-lock">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
+    <div class="row-inline" style="gap:4px"><button id="lock-btn" class="action-btn">Lock View</button><button id="unlock-btn" class="danger-btn" disabled>Unlock</button><button id="clear-btn" class="danger-btn">Clear Map</button><span class="q" tabindex="0" data-tip="Lock View freezes which nodes are shown, your selection and the distance limit, and pauses changes that would alter them (collapsing, clearing, distance changes). Unlock restores the earlier selection.">?</span></div>
+  </div>
+  <div class="tool-group" data-panel-id="panel-fit">
+    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
     <div class="region-mode-row" aria-label="Region selection options">
       <label><input type="checkbox" id="select-region-chk"> Select Region</label>
       <label title="Hold Ctrl and drag on empty canvas to select a region."><input type="checkbox" id="ctrl-region-indicator" class="fake-checkbox" checked disabled aria-label="Ctrl plus Select Region indicator"> Ctrl+ Select Region</label>
     </div>
-
-  </div>
-  <div class="tool-group" data-panel-id="panel-views">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <span class="cap">VIEW HISTORY (nested views)</span>
-    <button id="view-parent-btn" disabled>&uarr; Back to parent view</button>
-    <div id="views-list" style="display:flex;flex-direction:column;gap:3px"></div>
-  </div>
-  <div class="tool-group row-inline" data-panel-id="panel-lock">
-    <div class="panel-grip" style="width:100%">≡ DRAG SUB-PANEL</div>
-    <button id="lock-btn" class="action-btn">Lock View</button>
-    <button id="unlock-btn" class="danger-btn" disabled>Unlock</button>
-  </div>
-  <div class="tool-group" data-panel-id="panel-fit">
-    <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-    <button id="fit-screen-btn" class="action-btn">Fit Screen</button>
-    <button id="fit-box-btn" class="action-btn">Fit Grid in Box</button>
-    <button id="fit-seq-btn" class="action-btn">Fit Sequence in Region</button>
+    <div class="fitrow"><button id="min-cycles-btn">Hide minimum cycles</button><span class="q" tabindex="0" data-tip="Hides the fewest links needed so no cycles remain (directions ignored). Hidden links stay saved, show as red dashed lines and are ignored when drawing a tree. Links you already hid by hand are kept hidden first.">?</span></div>
+    <div class="fitrow"><button id="unhide-cycles-btn">Unhide cycles</button><span class="q" tabindex="0" data-tip="Makes every hidden cycle link a normal link again.">?</span></div>
+    <div class="fitrow"><button id="suggest-root-btn">Suggest root for hubs</button><span class="q" tabindex="0" data-tip="Finds the most connected nodes and tests whether giving them one new parent called root would reduce how many links must be hidden.">?</span></div>
+    <div class="fitrow"><button id="treeify-btn">Treeify clumps</button><span class="q" tabindex="0" data-tip="Each group of touching boxes gets a new parent node; all those parents then get one new node called root.">?</span></div>
+    <div class="fitrow"><button id="fit-screen-btn" class="action-btn">Gridify</button><span class="q" tabindex="0" data-tip="Space out nodes to grid on screen.">?</span></div>
+    <div class="fitrow"><button id="fit-box-btn" class="action-btn">Gridify in region</button><span class="q" tabindex="0" data-tip="Space out nodes to grid in the region you selected.">?</span></div>
+    <div class="fitrow"><button id="fit-seq-btn" class="action-btn">Sequence in region</button><span class="q" tabindex="0" data-tip="Align nodes in a diagonal sequence within the selected region.">?</span></div>
   </div>
       <div class="tool-group" data-panel-id="panel-line-style">
         <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-        <label>Type: <select id="arrow-style"><option value="end">Arrow (-&gt;)</option><option value="none">Line (--)</option></select>
-        </label>
-        <label>Width: <select id="line-width">
-          <option value="1" selected>Thin (1px)</option><option value="2">Medium (2px)</option>
-          <option value="4">Thick (4px)</option><option value="6">Extra Thick (6px)</option>
-        </select>
-      </label>
-      <div class="row-inline"><label>Color:</label><input type="color" id="line-color" value="#00b4d8"></div>
-    </div>
+        <div class="sl-row"><span class="slider-hint" style="font-size:10px">Linkage Font Range: <b id="font-out">12–14</b></span>
+          <div class="linerow"><input type="range" data-k="fontMin" min="6" max="36" step="1" title="Smallest link label font"><input type="range" data-k="fontMax" min="6" max="36" step="1" title="Largest link label font"></div></div>
+        <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
+        <div class="linerow">
+          <label title="Line type">Type <select id="arrow-style"><option value="end">-&gt;</option><option value="none">--</option></select></label>
+          <label title="Line width">Width <select id="line-width"><option value="1" selected>1px</option><option value="2">2px</option><option value="4">4px</option><option value="6">6px</option></select></label>
+          <input type="color" id="line-color" value="#00b4d8" title="Line color">
+          <input type="text" id="selected-line-label" placeholder="Label (select a line)" disabled title="Label of the selected line">
+        </div>
+        <div class="linerow" title="Color lines by how many links away they are from the selected node">
+          <span class="cap">DISTANCE COLOR</span>
+          <label title="Lines 1 link away"><input type="checkbox" data-k="colorDist1"> 1</label><input type="color" data-k="colorDist1Hex" title="Color for lines 1 away">
+          <label title="Lines 2 links away"><input type="checkbox" data-k="colorDist2"> 2</label><input type="color" data-k="colorDist2Hex" title="Color for lines 2 away">
+          <label title="Lines 3 links away"><input type="checkbox" data-k="colorDist3"> 3</label><input type="color" data-k="colorDist3Hex" title="Color for lines 3 away">
+        </div>
+        <label><input type="checkbox" id="chain-chk" checked> Highlight Chain <span style="color:#ffb703">&#9644;up</span> <span style="color:#ff5d8f">&#9644;down</span></label>
+      </div>
     <div class="tool-group" id="line-controls-group" data-panel-id="panel-selected-line" style="display:none;border-color:#00f5d4">
       <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <label>Line Label: <input type="text" id="selected-line-label" placeholder="Enter label..."></label>
+      <button id="hide-line-btn" type="button" title="Hide this link so it is ignored when converting to a tree (still saved)">Hide link (cycle)</button>
       <button id="delete-line-btn" class="danger-btn">Delete Line</button>
-    </div>
-    <div class="tool-group" data-panel-id="panel-history">
-      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <div class="row-inline">
-        <button id="undo-btn" disabled>Undo</button>
-        <button id="redo-btn" disabled>Redo</button>
-      </div>
-    </div>
-    <div class="tool-group" data-panel-id="panel-clear">
-      <div class="panel-grip">≡ DRAG SUB-PANEL</div>
-      <button id="clear-btn" class="danger-btn">Clear Map</button>
     </div>
 <div class="tool-group" id="side-panel" data-panel-id="panel-side" style="padding:0;overflow:hidden;min-height:0">
       <div class="panel-grip">≡ SIDE FUNCTIONS</div>
@@ -338,39 +392,66 @@ let fitImageNodeToPhoto=false;
 let imageDisplayMode='photo';
 let imageRestoreBusy=false,imageRestoreDenied=false,imageSubfolders=true;
 const imageRestoreTried=new Set();
+async function loadPhotosFor(nodes,opt){
+ opt=opt||{};
+ const names=n=>{const t=String(n.text||'').trim().replace(/\s+/g,' ');const out=[];if(n.imagePath)out.push(String(n.imagePath));out.push(t);const base=t.split(/[\\/]/).pop();if(base&&base!==t)out.push(base);return out.filter(x=>x&&(opt.needExt?imageExt.test(x):true));};
+ let perm=await dirHandle.queryPermission({mode:'read'});
+ if(perm!=='granted'){try{perm=await dirHandle.requestPermission({mode:'read'});}catch(e){}}
+ if(perm!=='granted')return{denied:true,loaded:0,missing:0,images:[]};
+ const found=[];await collectImageEntries(dirHandle,'',imageSubfolders,found,0);
+ const byPath=new Map(found.map(f=>[f.path.toLowerCase().replace(/\\/g,'/'),f])),byName=new Map();
+ found.forEach(f=>{const k=f.name.toLowerCase();if(!byName.has(k))byName.set(k,f);});
+ const images=[];let missing=0;
+ for(const n of nodes){
+  let f=null;
+  for(const nm of names(n)){const k=nm.toLowerCase().replace(/\\/g,'/');f=byPath.get(k)||byName.get(k.split('/').pop());if(f)break;}
+  if(!f){missing++;imageRestoreTried.add(n.id);continue;}
+  try{
+   const file=await f.entry.getFile();
+   const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(r.error);r.readAsDataURL(file);});
+   const dim=await imageDimensions(dataUrl);
+   n.imageData=dataUrl;n.photoWidth=dim.width;n.photoHeight=dim.height;
+   if(opt.flagAsImage){
+    n.isImage=true;n.imagePath=f.path;
+    if(!n.customWidth){n.customWidth=160;n.imageWidth=160;}
+    if(!n.customHeight){n.customHeight=Math.max(30,Math.round(160*dim.height/Math.max(1,dim.width)));n.imageHeight=n.customHeight;}
+   }else if(!n.imagePath)n.imagePath=f.path;
+   imageRestoreTried.delete(n.id);
+   images.push({name:f.name,path:f.path,dataUrl,...dim,ocrText:n.ocrText||''});
+  }catch(err){missing++;imageRestoreTried.add(n.id);}
+ }
+ return{denied:false,loaded:images.length,missing,images};
+}
 async function restoreImagesFromDirectory(){
  if(imageRestoreBusy||imageRestoreDenied||typeof dirHandle==='undefined'||!dirHandle)return;
  const need=state.nodes.filter(n=>n.isImage&&!n.imageData&&!imageRestoreTried.has(n.id));
  if(!need.length)return;
  imageRestoreBusy=true;
  try{
-  let perm=await dirHandle.queryPermission({mode:'read'});
-  if(perm!=='granted'){try{perm=await dirHandle.requestPermission({mode:'read'});}catch(e){}}
-  if(perm!=='granted'){imageRestoreDenied=true;toast('Photos not loaded yet: click Select Directory and choose the image folder to grant access.');return;}
-  const found=[];await collectImageEntries(dirHandle,'',imageSubfolders,found,0);
-  const byPath=new Map(found.map(f=>[f.path.toLowerCase(),f])),byName=new Map();
-  found.forEach(f=>{const k=f.name.toLowerCase();if(!byName.has(k))byName.set(k,f);});
-  const images=[];
-  for(const n of need){
-   const f=byPath.get(String(n.imagePath||'').toLowerCase())||byPath.get(String(n.text||'').toLowerCase())||byName.get(String(n.text||'').toLowerCase());
-   if(!f){imageRestoreTried.add(n.id);continue;}
-   try{
-    const file=await f.entry.getFile();
-    const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(r.error);r.readAsDataURL(file);});
-    const dim=await imageDimensions(dataUrl);
-    n.imageData=dataUrl;n.photoWidth=dim.width;n.photoHeight=dim.height;if(!n.imagePath)n.imagePath=f.path;
-    images.push({name:f.name,path:f.path,dataUrl,...dim,ocrText:n.ocrText||''});
-   }catch(err){imageRestoreTried.add(n.id);}
-  }
-  if(images.length){
+  const r=await loadPhotosFor(need);
+  if(r.denied){imageRestoreDenied=true;toast('Photos not loaded yet: click Select Directory and choose the image folder to grant access.');return;}
+  if(r.loaded){
    render();
-   try{imageFrame.contentWindow.postMessage({ch:'conceptmap-image',type:'folder-data',images,total:state.nodes.filter(n=>n.isImage).length},'*');}catch(e){}
-   toast('Loaded '+images.length+' photo(s) from the folder');
+   try{imageFrame.contentWindow.postMessage({ch:'conceptmap-image',type:'folder-data',images:r.images,total:state.nodes.filter(n=>n.isImage).length},'*');}catch(e){}
+   toast('Loaded '+r.loaded+' photo(s) from the folder');
   }
  }catch(err){console.warn('Image restore failed:',err);}
  finally{imageRestoreBusy=false;}
 }
 async function collectImageEntries(dir,prefix,recursive,out,depth){for await(const [name,entry] of dir.entries()){if(entry.kind==='file'){if(imageExt.test(name))out.push({name,path:prefix+name,entry});}else if(entry.kind==='directory'&&recursive&&depth<12){try{await collectImageEntries(entry,prefix+name+'/',recursive,out,depth+1);}catch(err){console.warn('Subfolder read failed:',name,err);}}}}
+async function refreshTreePhotos(){
+ if(typeof dirHandle==='undefined'||!dirHandle){toast('Choose the image folder first: click Select Directory, then press Refresh again.');return;}
+ const inTrees=treeHiddenSet();
+ const scope=inTrees.size?state.nodes.filter(n=>inTrees.has(n.id)):state.nodes;
+ const targets=scope.filter(n=>{const t=String(n.text||'').trim();return imageExt.test(t)||imageExt.test(String(n.imagePath||''))||imageExt.test(t.split(/[\\/]/).pop());});
+ if(!targets.length){toast('No photo filenames (like cat.png) found '+(inTrees.size?'in the tree.':'on the map.'));return;}
+ try{
+  const r=await loadPhotosFor(targets,{flagAsImage:true,needExt:true});
+  if(r.denied){toast('Photos not loaded: the image folder needs read access. Click Select Directory and choose it again.');return;}
+  if(r.loaded){saveState();render();}
+  toast(r.loaded?('Refreshed '+r.loaded+' photo'+(r.loaded===1?'':'s')+(r.missing?' ('+r.missing+' filename'+(r.missing===1?'':'s')+' not found in the folder)':'')):('None of the '+targets.length+' filename'+(targets.length===1?'':'s')+' were found in the selected folder.'));
+ }catch(err){toast('Photo refresh failed: '+(err.message||err));}
+}
 function imageDimensions(dataUrl){return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve({width:im.naturalWidth||160,height:im.naturalHeight||120});im.onerror=()=>resolve({width:160,height:120});im.src=dataUrl;});}
 async function loadImageDirectory(handle,recursive=true){try{const images=[];const found=[];await collectImageEntries(handle,'',recursive,found,0);for(const {name,path,entry} of found){try{const file=await entry.getFile();const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error||new Error('Could not read '+name));reader.readAsDataURL(file);});const dimensions=await imageDimensions(dataUrl);images.push({name,path,dataUrl,...dimensions});}catch(err){console.warn('Image read failed:',name,err);}}images.sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true,sensitivity:'base'}));
 // Add/update image nodes here in the main page, where the graph state is owned.
@@ -394,23 +475,26 @@ nodes:[],lines:[],
 panelOrder:[
 "panel-header",
 "panel-active-file",
+"panel-history",
 "panel-gemini",
 "panel-image",
 "panel-io",
-"panel-display-paragraph",
 "panel-add",
-"panel-interaction",
 "panel-views",
+"panel-display-paragraph",
+"panel-treesheets",
+"panel-interaction",
 "panel-lock",
 "panel-fit",
 "panel-line-style",
 "panel-selected-line",
-"panel-history",
-"panel-clear",
 "panel-side"
 ],
 draggablePanels:false,
-panelOrderVersion:2,
+panelOrderVersion:4,
+treeSheetsIfPossible:false,
+treeViews:[],
+treeSettings:{},
 dragGraphBall:true,
 singleTouchExpand:false,
 showTimeline:false,
@@ -428,6 +512,7 @@ colorDist3:false,
 colorDist3Hex:"#ff006e",
 maxDistanceLimit:10,
 inputMode:"desktop",
+embedPhotos:false,
 autoSizeAll:true,
 interactionMode:"drag",
 linkOpenMode:"current", 
@@ -496,7 +581,7 @@ box.textContent=saveTarget?saveTarget.name:'(no file linked)';
 box.title=saveTarget?saveTarget.name:'';
 }
 const fmtBox=$('active-file-format');
-if(fmtBox)fmtBox.textContent='Type: '+label;
+if(fmtBox)fmtBox.textContent=label;
 const note=$('active-file-note');
 if(note)note.textContent=saveTarget?'Ctrl+S overwrites this file in this format.':'Ctrl+S will ask where to save, using this format.';
 $$('input[name="savefmt"]').forEach(r=>{r.checked=r.value===saveFormat;});
@@ -525,48 +610,6 @@ const old=saveTarget||{};
 setSaveTarget({...old,name:value},false);
 });
 
-function serializeLines(s){
-  const out = ['VERSION: 2.0_METADATA', `CREATED: ${new Date().toISOString()}`, `NODES: ${s.nodes.length}`, `LINES: ${s.lines.length}`, '--- NODES ---'];
-  s.nodes.forEach(n => {
-    const escapedText = (n.text || '').replace(/\r?\n/g, '\\n');
-    out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${escapedText}${n.url ? ` | URL: ${n.url}` : ''}${n.size ? ` | size: ${n.size}` : ''}${n.collapsed ? ' | collapsed: true' : ''}${n.isImage ? ' | IMAGE: true' : ''}${n.isImage && n.customWidth ? ` | imageWidth: ${n.customWidth}` : ''}${n.isImage && n.customHeight ? ` | imageHeight: ${n.customHeight}` : ''}${n.isImage && n.imagePath ? ` | imagePath: ${n.imagePath}` : ''}${n.isImage && n.ocrText ? ` | ocr: ${String(n.ocrText).replace(/\r?\n/g,'\\n')}` : ''}`);
-  });
-  out.push('--- CONNECTIONS ---');
-  s.lines.forEach(l => out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width || 1} | color:${l.color || '#00b4d8'} | label:${l.label || ''}`));
-  return out.join('\n');
-}
-
-function serializeSimple(s){
-const out=s.nodes.map(n=>`${n.id} ${n.url ? `${n.text.replace(/\r?\n/g,' ')} ${n.url}` : n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x)} ${Math.round(n.y)}`);
-s.lines.forEach(l=>{
-const rev=l.arrow==='start';
-out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
-});
-return out.join('\n');
-}
-function serializeIndent(s){
-const kids=new Map(),parentCount=new Map();
-s.nodes.forEach(n=>{kids.set(n.id,[]);parentCount.set(n.id,0);});
-s.lines.forEach(l=>{
-const[p,c]=l.arrow==='start'?[l.to,l.from]:[l.from,l.to];
-if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parentCount.set(c,parentCount.get(c)+1);}
-});
-let roots=s.nodes.filter(n=>parentCount.get(n.id)===0);
-if(!roots.length)roots=[...s.nodes];
-roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));
-const seen=new Set(),out=[];
-const walk=(id,lvl)=>{
-if(seen.has(id))return;
-seen.add(id);
-const n=s.nodes.find(x=>x.id===id);
-if(!n)return;
-out.push('    '.repeat(lvl)+(n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')));
-(kids.get(id)||[]).forEach(c=>walk(c,lvl+1));
-};
-roots.forEach(r=>walk(r.id,0));
-s.nodes.forEach(n=>walk(n.id,0));
-return out.join('\n');
-}
 function getActiveSaveFormat(){return FORMAT_LABELS[saveFormat]?saveFormat:'lines';}
 $$('input[name="savefmt"]').forEach(r=>r.addEventListener('change',()=>{
 if(!r.checked)return;
@@ -574,17 +617,37 @@ saveFormat=r.value;
 if(saveTarget)setSaveTarget({...saveTarget,format:saveFormat},false);
 else{updateActiveFileUI();scheduleIoSync();}
 }));
-function serializeFor(fmt,src=state){
-if(fmt==='lines')return serializeLines(src);
-if(fmt==='txt-simple')return serializeSimple(src);
-if(fmt==='txt-indent')return serializeIndent(src);
-if(fmt==='html')return`<!DOCTYPE html><html><head><title>Concept Map Export</title></head><body><script>const mapData = ${JSON.stringify(src, null, 2)};<\/script></body></html>`;
-return JSON.stringify(src,null,2);
+const fFrame=$('side-frame'),fPending=new Map();let fSeq=0,fIsReady=false,fReadyRes;
+const fReady=new Promise(r=>{fReadyRes=r;});
+window.addEventListener('message',e=>{
+const d=e.data;
+if(!d||d.ch!=='conceptmap-f'||!fFrame||e.source!==fFrame.contentWindow)return;
+if(d.type==='ready'){fIsReady=true;fReadyRes();}
+else if(d.type==='result'){const w=fPending.get(d.id);if(w){fPending.delete(d.id);d.error?w.rej(new Error(d.error)):w.res(d.value);}}
+});
+if(fFrame)fFrame.addEventListener('load',()=>{try{fFrame.contentWindow.postMessage({ch:'conceptmap-f',type:'hello'},'*');}catch(e){}});
+async function F(fn,...args){
+if(!fFrame)throw new Error('The functions panel (f.html) is missing.');
+if(!fIsReady)await Promise.race([fReady,new Promise((_,rej)=>setTimeout(()=>rej(new Error('f.html did not load. Keep f.html in the same folder as this page.')),6000))]);
+return new Promise((res,rej)=>{
+const id=++fSeq;fPending.set(id,{res,rej});
+fFrame.contentWindow.postMessage({ch:'conceptmap-f',type:'call',id,fn,args},'*');
+setTimeout(()=>{if(fPending.has(id)){fPending.delete(id);rej(new Error('f.html did not answer.'));}},10000);
+});
+}
+const mapForF=src=>({nodes:src.nodes.map(({imageData,fileExpansion,...n})=>n),lines:src.lines});
+async function serializeFor(fmt,src=state){
+if(fmt==='lines')return F('serializeLines',mapForF(src));
+if(fmt==='txt-simple')return F('serializeSimple',mapForF(src));
+if(fmt==='txt-indent')return F('serializeIndent',mapForF(src));
+const out=state.embedPhotos?src:{...src,nodes:src.nodes.map(({imageData,...n})=>n)};
+if(fmt==='html')return`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Concept Map Export</title></head><body><h1>Concept Map Export</h1><p>Nodes: ${src.nodes.length} | Lines: ${src.lines.length}</p><script>const mapData = ${JSON.stringify(out, null, 2)};<\/script></body></html>`;
+return JSON.stringify(out,null,2);
 }
 function graphFormat(text){
 if(/^\s*<!doctype html|^\s*<html/i.test(text.trim()))return'html';
 if(text.trim().startsWith('{')||text.trim().startsWith('['))return'json';
-if(/^VERSION:\s*2\.0_METADATA\s*$/m.test(text)||/--- NODES ---/.test(text))return'lines';
+if(/^VERSION:\s*2\.0_METADATA\s*$/m.test(text)||/--- NODES ---/.test(text)||/^LINE\s*\|\s*id:/m.test(text)||/^\S+ \| x:-?\d/m.test(text))return'lines';
 return/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)?'txt-simple':'txt-indent';
 }
 const SAVE_TYPES={
@@ -609,7 +672,7 @@ if(saving)return;
 saving=true;
 try{
 const fmt=getActiveSaveFormat();
-const t=saveTarget,content=serializeFor(fmt);
+const t=saveTarget,content=await serializeFor(fmt);
 if(t&&t.handle){
 await writeHandle(t.handle,content);
 toast('Saved '+t.name);
@@ -658,7 +721,7 @@ while(existingNames.has(filename.toLowerCase())||await inDirectory(filename)){nu
 node.text=candidate;
 const graph=connectedOnly?connectedGraphFrom(node.id):state;
 const handle=await dirHandle.getFileHandle(filename,{create:true});
-await writeHandle(handle,serializeFor(fmt,graph));
+await writeHandle(handle,await serializeFor(fmt,graph));
 }else if(window.showSaveFilePicker){
 while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
 const picked=await window.showSaveFilePicker({suggestedName:filename,types:[SAVE_TYPES[fmt]||SAVE_TYPES.lines],excludeAcceptAllOption:false});
@@ -666,12 +729,12 @@ const pickedName=picked.name||filename;
 const pickedBase=pickedName.replace(/\.txt$/i,'');
 node.text=pickedBase;
 const graph=connectedOnly?connectedGraphFrom(node.id):state;
-await writeHandle(picked,serializeFor(fmt,graph));
+await writeHandle(picked,await serializeFor(fmt,graph));
 }else{
 while(existingNames.has(filename.toLowerCase())){number++;candidate=original+number;filename=fileNameFor(candidate);}
 node.text=candidate;
 const graph=connectedOnly?connectedGraphFrom(node.id):state;
-const content=serializeFor(fmt,graph),file=new File([content],filename,{type:'text/plain'});
+const content=await serializeFor(fmt,graph),file=new File([content],filename,{type:'text/plain'});
 if(!navigator.share||navigator.canShare&&!navigator.canShare({files:[file]}))throw new Error('This browser cannot create a shareable TXT file. Use Save on iPhone or a browser that supports file saving.');
 await navigator.share({files:[file],title:filename});
 toast('Prepared '+filename+'. iOS does not let the page check whether that name already exists in Files.');
@@ -732,7 +795,7 @@ if(saving)return;
 saving=true;
 try{
 const fmt=getActiveSaveFormat();
-const t=saveTarget,content=serializeFor(fmt);
+const t=saveTarget,content=await serializeFor(fmt);
 const name=t?.name||'concept_map.txt';
 const mime=fmt==='json'?'application/json':fmt==='html'?'text/html':'text/plain';
 const file=new File([content],name,{type:mime});
@@ -749,7 +812,7 @@ finally{saving=false;}
 function loadOnIphone(){ $('iphone-load-input').click(); }
 $('iphone-save-btn').onclick=saveOnIphone;
 $('iphone-load-btn').onclick=loadOnIphone;
-function loadMapText(raw,name,mobile){
+async function loadMapText(raw,name,mobile){
 const t=raw.trim();
 if(!t)throw new Error('The selected file is empty.');
 let fmt;
@@ -764,7 +827,7 @@ const data=JSON.parse(t);
 if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error((mobile?'JSON file':'JSON')+' does not contain a concept map with nodes and lines.');
 applyImportedJson(data);fmt='json';
 }else{
-const parsed=parseGraphText(raw);
+const parsed=await parseGraphText(raw);
 if(!parsed.nodes.length)throw new Error(mobile?'No map nodes were found. Make sure this is an extended-lines, simple TXT, or indented TXT map.':'No map nodes were found in this TXT file.');
 state.nodes=parsed.nodes;state.lines=normalizeLines(parsed.lines||[]);afterExternalChange();fmt=graphFormat(raw);
 }
@@ -773,7 +836,7 @@ render();renderViews();
 }
 $('iphone-load-input').addEventListener('change',async e=>{
 const file=e.target.files?.[0];if(!file)return;
-try{loadMapText(await file.text(),file.name,true);toast('Loaded '+file.name);}
+try{await loadMapText(await file.text(),file.name,true);toast('Loaded '+file.name);}
 catch(err){alert('Could not load this map: '+(err.message||err));}
 finally{e.target.value='';}
 });
@@ -832,13 +895,19 @@ function componentOf(start){
 const seen=new Set([start]),queue=[start];
 while(queue.length){
 const cur=queue.shift();
-state.lines.forEach(l=>[[l.from,l.to],[l.to,l.from]].forEach(([a,b])=>{
+state.lines.forEach(l=>!l.cycleHidden&&[[l.from,l.to],[l.to,l.from]].forEach(([a,b])=>{
 if(a===cur&&!seen.has(b)){seen.add(b);queue.push(b);}
 }));
 }
 return seen;
 }
 function hiddenIds(){
+const base=hiddenIdsBase(),t=treeHiddenCanvas();
+if(!t.size)return base;
+const merged=new Set(base);t.forEach(id=>merged.add(id));
+return merged;
+}
+function hiddenIdsBase(){
 if(isLocked&&lock)return lock.hidden;
 const hide=new Set(),kids=new Map(),parents=new Map(),all=new Set(state.nodes.map(n=>n.id));
 state.lines.forEach(l=>{const[p,c]=dir(l);if(!all.has(p)||!all.has(c))return;kids.set(p,[...(kids.get(p)||[]),c]);parents.set(c,[...(parents.get(c)||[]),p]);});
@@ -1028,6 +1097,7 @@ const ids=duplicateGroups.find(g=>g.includes(id));
 return ids?{ids}:null;
 }
 function render(){
+pruneTreeViews();
 view.links=new Map(state.nodes.map(n=>[n.id,0]));
 state.lines.forEach(l=>[l.from,l.to].forEach(id=>view.links.has(id)&&view.links.set(id,view.links.get(id)+1)));
 state.maxLinksBound=Math.max(1,state.maxLinksBound||0,...view.links.values());
@@ -1042,28 +1112,1236 @@ document.body.style.setProperty('--ball-scale',String(Math.max(0.25,Math.min(1,(
 document.body.style.setProperty('--touch-ball-scale',String(Math.max(0.25,Math.min(1,(Number(displayParagraph.touchBallSize)||100)/100))));
 drawTimeline();
 drawLineControls();
-els.forEach(el=>el.remove());
+const treeHadFocus=[...treeRuntime.values()].find(i=>i.el.contains(document.activeElement)||document.activeElement===i.el);
+syncTreeWindows();
+const keepEls=new Map();
+treeRuntime.forEach(inst=>{const a=inst.anchorId();if(inst.S.editing&&inst.el.parentElement&&inst.el.parentElement.classList.contains('tree-node'))keepEls.set(a,inst.el.parentElement);});
+els.forEach((el,id)=>{if(!keepEls.has(id))el.remove();});
 els.clear();
 const parents=new Set(state.lines.map(l=>dir(l)[0]));
 state.nodes.forEach(n=>{
 if(view.hidden.has(n.id))return;
+if(keepEls.has(n.id)){els.set(n.id,keepEls.get(n.id));return;}
 if(!n.fileExpansion)ensureFileAvailability(n);
 const el=makeNode(n,parents);
 world.appendChild(el);
 els.set(n.id,el);
+const owner=treeOfAnchor(n.id);
+if(owner)decorateTreeNode(el,n,owner);
 });
+if(treeHadFocus&&!treeHadFocus.S.editing&&!document.activeElement.closest?.('.ts-tree'))treeHadFocus.el.focus({preventScroll:true});
 drawLines();
 updateExtent();
 scheduleIoSync();scheduleSideSync();
 if(state.nodes.some(n=>n.isImage&&!n.imageData))restoreImagesFromDirectory();
 }
+/* ===== TREESHEETS: the original TreeSheets engine, one instance per tree, drawn on the canvas.
+   Every edit is written back to the real nodes and links (arrow directions are kept). ===== */
+const hostRender=()=>render(),hostSaveState=()=>saveState(),hostUndo=()=>restore(histIdx-1),hostRedo=()=>restore(histIdx+1);
+const treeRuntime=new Map();
+let activeTreeId=null,tsClipboard=null,treePanelSig='',treePanelReady=false,treePanelRaf=0;
+const treeFrame=$('treesheets-frame');
+const TS_SETTINGS={
+ showPhotos:[true,Boolean],showPhotoFilename:[false,Boolean],shrinkToText:[true,Boolean],showGridLines:[true,Boolean],enterNextCell:[true,Boolean],enterAddCellAtEnd:[true,Boolean],enterAddSibling:[true,Boolean],navigateFutureEdgeCells:[true,Boolean],compactGaps:[true,Boolean],maxTextboxWidthEntireTree:[false,Boolean],
+ globalPadding:[3,v=>clamp(Math.round(+v)||0,0,10)],maxTextboxWidth:[480,v=>clamp(Math.round(+v)||480,60,1200)],treeScale:[100,v=>clamp(Math.round(+v)||100,50,200)],fontSize:[12,v=>clamp(Math.round(+v)||12,8,32)],
+ theme:['dark',v=>['dark','light','black'].includes(v)?v:'dark'],dragMode:['move',v=>['move','cut','copy'].includes(v)?v:'move']
+};
+const TS_DEFAULTS=Object.fromEntries(Object.entries(TS_SETTINGS).map(([k,v])=>[k,v[0]]));
+function tsSettings(){
+ if(!state.treeSettings||typeof state.treeSettings!=='object')state.treeSettings={};
+ for(const k in TS_DEFAULTS)if(state.treeSettings[k]===undefined)state.treeSettings[k]=TS_DEFAULTS[k];
+ return state.treeSettings;
+}
+const newCellId=()=>'c_'+Math.random().toString(36).slice(2,11);
+function tsEnsureIds(grid,seen=new Set()){
+ grid.rows.forEach(row=>row.cells.forEach(cell=>{
+  if(!cell.id||seen.has(cell.id))cell.id=newCellId();
+  seen.add(cell.id);
+  if(cell.subgrid)tsEnsureIds(cell.subgrid,seen);
+ }));
+}
+function cloneFresh(cell){
+ const copy=JSON.parse(JSON.stringify(cell));
+ (function walk(c){c.id=newCellId();if(c.subgrid)c.subgrid.rows.forEach(r=>r.cells.forEach(walk));})(copy);
+ return copy;
+}
+const getTreeView=id=>(state.treeViews||[]).find(v=>v.id===id);
+const treeOrder=(a,b)=>{const A=nodeById(a),B=nodeById(b);return(A.y-B.y)||(A.x-B.x);};
+
+/* ---- graph -> tree (the node you picked becomes the top; arrow directions are ignored) ---- */
+function treeInfo(rootId){
+ if(!nodeById(rootId))return null;
+ const adj=new Map(),add=(a,b,l)=>{if(!adj.has(a))adj.set(a,[]);adj.get(a).push([b,l]);};
+ for(const l of state.lines){
+  if(l.cycleHidden||!nodeById(l.from)||!nodeById(l.to))continue;
+  if(l.from===l.to)return{ok:false,reason:'a node is linked to itself'};
+  add(l.from,l.to,l);add(l.to,l.from,l);
+ }
+ const ids=new Set([rootId]),kids=new Map([[rootId,[]]]),used=new Set(),queue=[rootId];
+ while(queue.length){
+  const cur=queue.shift();
+  for(const[nb,l]of adj.get(cur)||[]){
+   if(used.has(l))continue;
+   used.add(l);
+   if(ids.has(nb))return{ok:false,reason:'the links form a loop'};
+   ids.add(nb);kids.set(nb,[]);kids.get(cur).push(nb);queue.push(nb);
+  }
+ }
+ kids.forEach(a=>a.sort(treeOrder));
+ return{ok:true,rootId,ids,kids};
+}
+function treeModelFromGraph(info){
+ const cell=id=>{
+  const n=nodeById(id),k=info.kids.get(id)||[];
+  return{id,text:n.url?(n.text+' '+n.url):(n.text||''),subgrid:k.length?{rows:k.map(c=>({cells:[cell(c)]}))}:null,childrenHidden:!!n.collapsed&&k.length>0};
+ };
+ return{rows:[{cells:[cell(info.rootId)]}]};
+}
+function addTreeViewFor(rootId){
+ const info=treeInfo(rootId),rn=nodeById(rootId);
+ const v={id:'tv_'+uid().slice(3),x:rn.x,y:rn.y,ax:rn.x,ay:rn.y,anchorId:rootId,
+  root:treeModelFromGraph(info),nodeIds:[...info.ids],fixedColumnWidths:{},columnMaxTextboxWidths:{},dirty:false};
+ state.treeViews=[...(state.treeViews||[]),v];
+ return v;
+}
+function treeAnchorId(v){
+ let found=null;
+ const walk=grid=>{for(const row of grid.rows)for(const c of row.cells){if(found)return;if(c.id&&nodeById(c.id)&&(v.nodeIds||[]).includes(c.id)){found=c.id;return;}}};
+ walk(v.root);
+ return found||(v.nodeIds||[])[0]||null;
+}
+function treeOfAnchor(id){return(state.treeViews||[]).find(v=>treeAnchorId(v)===id)||null;}
+function treeHiddenCanvas(){
+ const set=treeHiddenSet();
+ (state.treeViews||[]).forEach(v=>{const a=treeAnchorId(v);if(a)set.delete(a);});
+ return set;
+}
+function treeHiddenSet(){
+ const set=new Set();
+ (state.treeViews||[]).forEach(v=>(v.nodeIds||[]).forEach(id=>set.add(id)));
+ return set;
+}
+function pruneTreeViews(){
+ if(!Array.isArray(state.treeViews)){state.treeViews=[];return;}
+ const used=new Set();
+ state.treeViews=state.treeViews.filter(v=>{
+  if(!v||typeof v.id!=='string'||!v.root||!Array.isArray(v.root.rows)||!Array.isArray(v.nodeIds))return false;
+  v.nodeIds=v.nodeIds.filter(id=>nodeById(id)&&!used.has(id));
+  if(!v.nodeIds.length)return false;
+  v.nodeIds.forEach(id=>used.add(id));
+  const a=treeAnchorId(v);
+  if(v.anchorId&&a&&v.anchorId!==a&&nodeById(v.anchorId)){const o=nodeById(v.anchorId),nn=nodeById(a);nn.x=o.x;nn.y=o.y;}
+  v.anchorId=a;
+  const an=nodeById(a);
+  v.x=an?an.x:(Number.isFinite(v.x)?v.x:100);v.y=an?an.y:(Number.isFinite(v.y)?v.y:100);
+  if(!Number.isFinite(v.ax)){v.ax=v.x;v.ay=v.y;}
+  return true;
+ });
+}
+/* ---- tree -> graph: keeps the nodes and links in step with whatever the tree now looks like ---- */
+function syncTreeToGraph(v){
+ tsEnsureIds(v.root);
+ const needs=new Set();
+ const mark=cell=>{let any=!!String(cell.text||'').trim();if(cell.subgrid)cell.subgrid.rows.forEach(r=>r.cells.forEach(c=>{if(mark(c))any=true;}));if(any)needs.add(cell);return any;};
+ v.root.rows.forEach(r=>r.cells.forEach(mark));
+ const want=new Map(),parentOf=new Map(),edges=[],orders=[];
+ const visit=(cell,pid)=>{
+  if(!needs.has(cell))return;
+  want.set(cell.id,cell);if(pid){parentOf.set(cell.id,pid);edges.push([pid,cell.id]);}
+  if(cell.subgrid){
+   const kids=[];cell.subgrid.rows.forEach(r=>r.cells.forEach(c=>{if(needs.has(c))kids.push(c.id);}));
+   orders.push([cell.id,kids]);
+   cell.subgrid.rows.forEach(r=>r.cells.forEach(c=>visit(c,cell.id)));
+  }
+ };
+ v.root.rows.forEach(r=>r.cells.forEach(c=>visit(c,null)));
+ const old=new Set(v.nodeIds||[]),nodes=new Map(state.nodes.map(n=>[n.id,n])),childCount=new Map();
+ let rootRow=0;
+ want.forEach((cell,id)=>{
+  const raw=String(cell.text||''),p=raw.trim()?parseTextAndUrl(raw):{text:'',url:null};
+  let n=nodes.get(id);
+  if(!n){
+   const par=parentOf.has(id)?nodes.get(parentOf.get(id)):null;let x,y;
+   if(par){const k=childCount.get(par.id)||0;x=par.x+190;y=par.y+k*10;}else{x=v.x;y=v.y+rootRow*50;rootRow++;}
+   n={id,text:p.text,url:p.url,x:Math.round(x),y:Math.round(y),size:'auto',collapsed:false};
+   state.nodes.push(n);nodes.set(id,n);
+  }else{n.text=p.text;n.url=p.url;}
+  if(parentOf.has(id))childCount.set(parentOf.get(id),(childCount.get(parentOf.get(id))||0)+1);
+  n.collapsed=!!(cell.subgrid&&cell.childrenHidden);
+ });
+ const gone=new Set([...old].filter(id=>!want.has(id)));
+ if(gone.size){
+  state.nodes=state.nodes.filter(n=>!gone.has(n.id));
+  state.lines=state.lines.filter(l=>!gone.has(l.from)&&!gone.has(l.to));
+  gone.forEach(id=>selected.delete(id));
+ }
+ const inView=new Set([...old,...want.keys()]);inView.forEach(id=>{if(!nodes.has(id))inView.delete(id);});
+ const key=(a,b)=>a<b?a+'|'+b:b+'|'+a,wantKeys=new Set(edges.map(e=>key(e[0],e[1]))),have=new Set();
+ state.lines=state.lines.filter(l=>{
+  if(l.cycleHidden||!inView.has(l.from)||!inView.has(l.to))return true;
+  const k=key(l.from,l.to);
+  if(!wantKeys.has(k)||have.has(k))return false;
+  have.add(k);return true;
+ });
+ edges.forEach(([p,c])=>{
+  if(have.has(key(p,c)))return;
+  state.lines.push({id:uid(),from:p,to:c,label:'',arrow:$('arrow-style').value,width:+$('line-width').value,color:$('line-color').value});
+ });
+ orders.forEach(([pid,kids])=>{
+  if(kids.length<2)return;
+  const cur=[...kids].sort(treeOrder);
+  if(cur.some((id,i)=>id!==kids[i])){const p=nodes.get(pid);kids.forEach((id,i)=>{nodes.get(id).y=Math.round(p.y+i*10);});}
+ });
+ v.nodeIds=[...want.keys()];
+}
+function treeLayoutModel(v){
+ const needs=new Set();
+ const mark=cell=>{let any=!!String(cell.text||'').trim();if(cell.subgrid)cell.subgrid.rows.forEach(r=>r.cells.forEach(c=>{if(mark(c))any=true;}));if(any)needs.add(cell);return any;};
+ v.root.rows.forEach(r=>r.cells.forEach(mark));
+ let row=0;
+ const place=(cell,depth)=>{
+  const n=nodeById(cell.id);if(!n)return 0;
+  const kids=[];if(cell.subgrid)cell.subgrid.rows.forEach(r=>r.cells.forEach(c=>{if(needs.has(c))kids.push(c);}));
+  n.x=Math.round(v.x+depth*200);
+  if(!kids.length){n.y=Math.round(v.y+row*50);row++;}
+  else{const ys=kids.map(k=>place(k,depth+1));n.y=Math.round((ys[0]+ys[ys.length-1])/2);}
+  return n.y;
+ };
+ v.root.rows.forEach(r=>r.cells.forEach(c=>{if(needs.has(c))place(c,0);}));
+}
+function treeToConceptMap(id){
+ const v=getTreeView(id);if(!v)return;
+ const aid=treeAnchorId(v),an=nodeById(aid);
+ if(an){v.x=an.x;v.y=an.y;}
+ syncTreeToGraph(v);
+ if(an){
+  const ax=an.x,ay=an.y;
+  if(v.dirty)treeLayoutModel(v);
+  else{const dx=ax-v.ax,dy=ay-v.ay;if(dx||dy)v.nodeIds.forEach(i=>{const n=nodeById(i);if(n&&i!==aid){n.x+=dx;n.y+=dy;}});}
+  const fx=ax-an.x,fy=ay-an.y;
+  if(fx||fy)v.nodeIds.forEach(i=>{const n=nodeById(i);if(n){n.x+=fx;n.y+=fy;}});
+ }
+ state.treeViews=state.treeViews.filter(t=>t.id!==id);
+ if(activeTreeId===id)activeTreeId=null;
+ saveState();render();
+}
+function showSubtree(){
+ if(selected.size!==1){toast('Select exactly one node first: it becomes the top of the tree.');return;}
+ const rootId=[...selected][0],taken=treeHiddenSet();
+ if(taken.has(rootId)){toast('That node is already shown in a tree.');return;}
+ const info=treeInfo(rootId);
+ if(!info.ok){toast('Cannot show as a tree: '+info.reason+'.');return;}
+ if(info.ids.size<2){toast('That node is not linked to anything yet.');return;}
+ if([...info.ids].some(id=>taken.has(id))){toast('Part of that map is already shown in a tree.');return;}
+ const v=addTreeViewFor(rootId);
+ activeTreeId=v.id;selected.clear();selectedLineId=null;
+ saveState();render();
+}
+function maybeAutoTree(idsArr){
+ if(!state.openAsTreeSheets&&!state.treeSheetsIfPossible)return;
+ const taken=treeHiddenSet(),ids=new Set(idsArr.filter(id=>nodeById(id)&&!taken.has(id)));
+ if(ids.size<2)return;
+ const indeg=new Map();
+ state.lines.forEach(l=>{if(l.cycleHidden)return;const[p,c]=dir(l);if(ids.has(p)&&ids.has(c))indeg.set(c,(indeg.get(c)||0)+1);});
+ const sorted=[...ids].sort(treeOrder),cand=[...sorted.filter(id=>!indeg.get(id)),...sorted.filter(id=>indeg.get(id))];
+ const seen=new Set(),roots=[];
+ for(const id of cand){
+  if(seen.has(id))continue;
+  const comp=componentOf(id);
+  for(const c of comp)if(!ids.has(c))return;
+  comp.forEach(c=>seen.add(c));
+  if(comp.size<2)continue;
+  const info=treeInfo(id);
+  if(!info.ok)return;
+  roots.push(id);
+ }
+ if(!roots.length)return;
+ roots.forEach(addTreeViewFor);
+ toast('Opened as TreeSheets'+(roots.length>1?' ('+roots.length+' trees)':''));
+}
+
+/* ---- one instance of the original TreeSheets engine per tree ---- */
+function createTreeSheets(viewId){
+ const el=document.createElement('div');el.className='ts-tree';el.tabIndex=0;el.dataset.view=viewId;world.appendChild(el);
+ const view=()=>getTreeView(viewId);
+ const S={activePath:'root_r0c0',selectedPaths:new Set(['root_r0c0']),activeGapPath:null,editing:false,pending:false};
+ Object.keys(TS_DEFAULTS).forEach(k=>Object.defineProperty(S,k,{get:()=>tsSettings()[k],set:val=>{tsSettings()[k]=val;},enumerable:true}));
+ Object.defineProperty(S,'root',{get:()=>view().root,set:val=>{view().root=val;}});
+ ['fixedColumnWidths','columnMaxTextboxWidths'].forEach(k=>Object.defineProperty(S,k,{get:()=>view()[k]||(view()[k]={}),set:val=>{view()[k]=val;}}));
+ Object.defineProperty(S,'clipboard',{get:()=>tsClipboard,set:val=>{tsClipboard=val;}});
+ let lastSig='',moveCandidate=false;
+ const anchorId=()=>{const v=view();return v?treeAnchorId(v):null;};
+
+ /* ---- the original engine functions ---- */
+ function emptyCell() {
+      return { id: newCellId(), text: "", subgrid: null, childrenHidden: false };
+    }
+
+    function emptyGrid() {
+      return { rows: [{ cells: [emptyCell()] }] };
+    }
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function cellPath(prefix, row, column) {
+      return `${prefix}_r${row}c${column}`;
+    }
+
+    function parseCellPath(path) {
+      const match = path.match(/^(.*)_r(\d+)c(\d+)$/);
+      return match ? { prefix: match[1], row: Number(match[2]), column: Number(match[3]) } : null;
+    }
+
+    function getCell(path, grid = S.root, prefix = "root") {
+      for (let row = 0; row < grid.rows.length; row++) {
+        for (let column = 0; column < grid.rows[row].cells.length; column++) {
+          const cell = grid.rows[row].cells[column];
+          const currentPath = cellPath(prefix, row, column);
+          if (currentPath === path) return cell;
+          if (cell.subgrid && path.startsWith(currentPath)) {
+            const nested = getCell(path, cell.subgrid, currentPath);
+            if (nested) return nested;
+          }
+        }
+      }
+      return null;
+    }
+
+    function findGrid(path, grid = S.root, prefix = "root", owner = null, ownerPath = null) {
+      for (let row = 0; row < grid.rows.length; row++) {
+        for (let column = 0; column < grid.rows[row].cells.length; column++) {
+          const cell = grid.rows[row].cells[column];
+          const currentPath = cellPath(prefix, row, column);
+          if (currentPath === path) return { grid, owner, ownerPath };
+          if (cell.subgrid && path.startsWith(currentPath)) {
+            const nested = findGrid(path, cell.subgrid, currentPath, cell, currentPath);
+            if (nested) return nested;
+          }
+        }
+      }
+      return null;
+    }
+
+    function pathsInGrid(grid = S.root, prefix = "root") {
+      const paths = [];
+      grid.rows.forEach((row, rowIndex) => {
+        row.cells.forEach((cell, columnIndex) => {
+          const path = cellPath(prefix, rowIndex, columnIndex);
+          paths.push(path);
+          if (cell.subgrid && !cell.childrenHidden) paths.push(...pathsInGrid(cell.subgrid, path));
+        });
+      });
+      return paths;
+    }
+
+    function rangeSelection(start, end) {
+      const first = parseCellPath(start);
+      const last = parseCellPath(end);
+      if (!first || !last || first.prefix !== last.prefix) return new Set([start, end]);
+      const paths = new Set();
+      for (let row = Math.min(first.row, last.row); row <= Math.max(first.row, last.row); row++) {
+        for (let column = Math.min(first.column, last.column); column <= Math.max(first.column, last.column); column++) {
+          paths.add(cellPath(first.prefix, row, column));
+        }
+      }
+      return paths;
+    }
+
+ function saveState(){S.pending=true;}
+ function undo(){hostUndo();}
+ function redo(){hostRedo();}
+ function setActive(path, extendSelection = false) {
+      S.activePath = path;
+      S.activeGapPath = null;
+      S.editing = false;
+      S.selectedPaths = extendSelection
+        ? new Set([...S.selectedPaths, path])
+        : new Set([path]);
+    }
+
+    function selectCell(path, extendSelection) {
+      if (!extendSelection && S.activePath === path && S.selectedPaths.size === 1 && S.selectedPaths.has(path) && !S.editing && !S.activeGapPath) {
+        return;
+      }
+      if (extendSelection) S.selectedPaths = rangeSelection(S.activePath, path);
+      else S.selectedPaths = new Set([path]);
+      S.activePath = path;
+      S.activeGapPath = null;
+      S.editing = false;
+      render();
+    }
+
+    function moveLinear(direction, extendSelection = false) {
+      const paths = pathsInGrid();
+      const index = paths.indexOf(S.activePath);
+      if (index < 0) return;
+      const next = Math.max(0, Math.min(paths.length - 1, index + direction));
+      setActive(paths[next], extendSelection);
+      render();
+    }
+
+    function moveByCell(rowDelta, columnDelta) {
+      const parsed = parseCellPath(S.activePath);
+      const info = findGrid(S.activePath);
+      if (!parsed || !info) return;
+      const row = Math.max(0, Math.min(info.grid.rows.length - 1, parsed.row + rowDelta));
+      const columnCount = info.grid.rows[0]?.cells.length || 1;
+      const column = Math.max(0, Math.min(columnCount - 1, parsed.column + columnDelta));
+      setActive(cellPath(parsed.prefix, row, column));
+      render();
+    }
+
+    function moveThroughGap(key) {
+      const rowGap = S.activeGapPath?.match(/^(.*)_gap(\d+)$/);
+      const columnGap = S.activeGapPath?.match(/^(.*)_r(\d+)_colgap(\d+)$/);
+
+      if (rowGap && (key === "ArrowUp" || key === "ArrowDown")) {
+        const grid = rowGap[1] === "root" ? S.root : getCell(rowGap[1])?.subgrid;
+        const row = Number(rowGap[2]) + (key === "ArrowUp" ? -1 : 0);
+        if (grid && row >= 0 && row < grid.rows.length) {
+          setActive(cellPath(rowGap[1], row, 0));
+          render();
+        }
+        return true;
+      }
+
+      if (columnGap && (key === "ArrowLeft" || key === "ArrowRight")) {
+        const grid = columnGap[1] === "root" ? S.root : getCell(columnGap[1])?.subgrid;
+        const column = Number(columnGap[3]) + (key === "ArrowLeft" ? -1 : 0);
+        const count = grid?.rows[0]?.cells.length || 0;
+        if (grid && column >= 0 && column < count) {
+          setActive(cellPath(columnGap[1], Number(columnGap[2]), column));
+          render();
+        }
+        return true;
+      }
+
+      const current = parseCellPath(S.activePath);
+      if (!current) return false;
+      if (key === "ArrowUp" || key === "ArrowDown") {
+        const gapIndex = current.row + (key === "ArrowDown" ? 1 : 0);
+        S.activeGapPath = `${current.prefix}_gap${gapIndex}`;
+      } else if (key === "ArrowLeft" || key === "ArrowRight") {
+        const gapIndex = current.column + (key === "ArrowRight" ? 1 : 0);
+        S.activeGapPath = `${current.prefix}_r${current.row}_colgap${gapIndex}`;
+      } else {
+        return false;
+      }
+      render();
+      return true;
+    }
+
+    function moveToParent() {
+      const parsed = parseCellPath(S.activePath);
+      if (!parsed || parsed.row !== 0 || parsed.prefix === "root") return false;
+      setActive(parsed.prefix);
+      render();
+      return true;
+    }
+
+    function enterChild() {
+      const cell = getCell(S.activePath);
+      if (!cell?.subgrid || cell.childrenHidden) return false;
+      const childPath = cellPath(S.activePath, 0, 0);
+      if (!getCell(childPath)) return false;
+      setActive(childPath);
+      render();
+      return true;
+    }
+
+    function editActiveCell() {
+      if (!getCell(S.activePath)) return;
+      saveState();
+      S.editing = true;
+      render();
+      const editor = el.querySelector("#active-editor");
+      if (editor) {
+        editor.focus();
+        editor.setSelectionRange(editor.value.length, editor.value.length);
+      }
+    }
+
+    function commitEditor(editor) {
+      const cell = getCell(S.activePath);
+      if (cell) cell.text = editor.value;
+      S.editing = false;
+    }
+
+    function notifyTextChange(editor) {
+      const cell = getCell(S.activePath);
+      if (cell) cell.text = editor.value;
+      S.pending = true;
+      editor.style.height = "auto";
+      editor.style.height = `${Math.max(38, editor.scrollHeight)}px`;
+    }
+
+    function makeElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function makeButton(label, action, className = "") {
+      const button = makeElement("button", className, label);
+      button.type = "button";
+      button.addEventListener("click", action);
+      return button;
+    }
+
+    function makeGap(prefix, index) {
+      const path = `${prefix}_gap${index}`;
+      const gap = makeElement("div", `gap${S.activeGapPath === path ? " active" : ""}`);
+      gap.tabIndex = 0;
+      gap.title = "Select row gap; press Enter to insert a row";
+      gap.addEventListener("click", () => {
+        S.activeGapPath = path;
+        render();
+      });
+      return gap;
+    }
+
+    function gapShadow(prefix, row, column) {
+      if (!S.activeGapPath) return "";
+      const rowGap = S.activeGapPath.match(/^(.*)_gap(\d+)$/);
+      if (rowGap && rowGap[1] === prefix) {
+        const index = Number(rowGap[2]);
+        if (index === row) return "inset 0 3px 0 #3b82f6";
+        if (index === row + 1) return "inset 0 -3px 0 #3b82f6";
+      }
+      const colGap = S.activeGapPath.match(/^(.*)_r(\d+)_colgap(\d+)$/);
+      if (colGap && colGap[1] === prefix && Number(colGap[2]) === row) {
+        const index = Number(colGap[3]);
+        if (index === column) return "inset 3px 0 0 #3b82f6";
+        if (index === column + 1) return "inset -3px 0 0 #3b82f6";
+      }
+      return "";
+    }
+
+    function renderGrid(grid, prefix = "root", isRoot = false) {
+      const container = makeElement("div", `grid${isRoot ? "" : " child-grid"}`);
+      const columns = Math.max(1, grid.rows[0]?.cells.length || 1);
+      container.style.gridTemplateColumns = Array.from({ length: columns }, (_, column) => {
+        const width = S.fixedColumnWidths[`${prefix}|${column}`];
+        if (Number.isFinite(width)) return `minmax(0, ${width}px)`;
+        return S.shrinkToText ? "max-content" : "minmax(140px, max-content)";
+      }).join(" ");
+      container.style.setProperty("--gap-v", `${Math.round(S.globalPadding * 0.75)}px`);
+      container.style.setProperty("--gap-h", `${S.globalPadding}px`);
+      if (!isRoot) container.style.padding = `${Math.max(0, Math.min(6, S.globalPadding))}px`;
+
+      if (!S.compactGaps || S.activeGapPath === `${prefix}_gap0`) container.append(makeGap(prefix, 0));
+      grid.rows.forEach((row, rowIndex) => {
+        row.cells.forEach((cell, columnIndex) => {
+          container.append(renderCell(cell, cellPath(prefix, rowIndex, columnIndex), prefix, rowIndex, columnIndex));
+        });
+        if (!S.compactGaps || S.activeGapPath === `${prefix}_gap${rowIndex + 1}`) {
+          container.append(makeGap(prefix, rowIndex + 1));
+        }
+      });
+      return container;
+    }
+
+    function renderCell(cell, path, prefix, row, column) {
+      const active = S.activePath === path;
+      const selected = S.selectedPaths.has(path);
+      const element = makeElement("div", "cell");
+      element.dataset.path = path;
+      element.tabIndex = 0;
+      element.draggable = true;
+      element.style.setProperty("--cell-pad-v", `${Math.round(S.globalPadding * 0.75)}px`);
+      element.style.setProperty("--cell-pad-h", `${S.globalPadding}px`);
+      element.style.fontSize = `${S.fontSize}px`;
+      const maxTextboxWidth = getMaxTextboxWidth(prefix, column);
+      if (maxTextboxWidth) element.style.setProperty("--textbox-max-width", `${maxTextboxWidth}px`);
+      if (!S.shrinkToText) element.style.minHeight = `${Math.max(28, S.globalPadding * 6 + 12)}px`;
+      if (active) element.classList.add("active");
+      if (selected && !active) element.classList.add("selected");
+      if (!S.showGridLines) element.classList.add("no-grid-lines");
+      const shadow = gapShadow(prefix, row, column);
+      if (shadow) element.style.boxShadow = shadow;
+
+      if (active && S.editing) {
+        const editor = makeElement("textarea");
+        editor.id = "active-editor";
+        editor.value = cell.text || "";
+        editor.style.fontSize = `${S.fontSize}px`;
+        editor.addEventListener("input", () => notifyTextChange(editor));
+        editor.addEventListener("keydown", handleEditorKeydown);
+        editor.addEventListener("blur", () => {
+          if (S.editing) {
+            S.editing = false;
+            setTimeout(render, 0);
+          }
+        });
+        element.append(editor);
+      } else {
+        const textBox = makeElement("div", "cell-text", cell.text || "");
+        element.append(textBox);
+        const photoNode = S.showPhotos && cell.id ? nodeById(cell.id) : null;
+        if (photoNode && photoNode.isImage && photoNode.imageData) {
+          if (!S.showPhotoFilename) textBox.style.display = "none";
+          const photo = makeElement("img", "cell-photo");
+          photo.src = photoNode.imageData; photo.alt = photoNode.text || "Image"; photo.draggable = false;
+          photo.style.cssText = `display:block;max-width:${Math.max(60, Number(photoNode.customWidth) || Number(photoNode.imageWidth) || 160)}px;max-height:${Math.max(40, Number(photoNode.customHeight) || Number(photoNode.imageHeight) || 120)}px;object-fit:contain;margin:2px auto 0;border-radius:2px`;
+          element.append(photo);
+        }
+      }
+
+      if (cell.subgrid && cell.childrenHidden) {
+        const marker = makeElement("span", "hidden-marker");
+        marker.title = "Children hidden (H)";
+        element.append(marker);
+      } else if (cell.subgrid) {
+        element.append(renderGrid(cell.subgrid, path));
+      }
+
+      return element;
+    }
+
+ function activeColumnWidthKey() {
+      const parsed = parseCellPath(S.activePath);
+      return parsed ? `${parsed.prefix}|${parsed.column}` : null;
+    }
+
+    function getMaxTextboxWidth(prefix, column) {
+      if (S.maxTextboxWidthEntireTree) return S.maxTextboxWidth;
+      return S.columnMaxTextboxWidths[`${prefix}|${column}`] ?? S.maxTextboxWidth;
+    }
+
+    function setActiveColumnFixed(fixed, width) {
+      const key = activeColumnWidthKey();
+      if (!key) return;
+      if (fixed) S.fixedColumnWidths[key] = width;
+      else delete S.fixedColumnWidths[key];
+      renderGridOnly();
+    }
+
+    function setActiveColumnWidth(width) {
+      const key = activeColumnWidthKey();
+      if (!key) return;
+      S.fixedColumnWidths[key] = width;
+      renderGridOnly();
+    }
+
+    function setMaxTextboxWidth(width) {
+      const key = activeColumnWidthKey();
+      if (S.maxTextboxWidthEntireTree) {
+        S.maxTextboxWidth = width;
+      } else if (key) {
+        S.columnMaxTextboxWidths[key] = width;
+      }
+      renderGridOnly();
+    }
+
+    function setMaxTextboxWidthEntireTree(enabled) {
+      const key = activeColumnWidthKey();
+      if (enabled && key && S.columnMaxTextboxWidths[key] !== undefined) {
+        S.maxTextboxWidth = S.columnMaxTextboxWidths[key];
+      } else if (!enabled && key) {
+        S.columnMaxTextboxWidths[key] = S.maxTextboxWidth;
+      }
+      S.maxTextboxWidthEntireTree = enabled;
+      render();
+    }
+
+ function applyTheme(){el.dataset.theme=S.theme;}
+ function applyTreeScale(){const w=el.firstElementChild;if(w)w.style.zoom=String(S.treeScale/100);}
+ function renderGridOnly(){
+  const wrap=makeElement('div','ts-scale');
+  wrap.append(renderGrid(S.root,'root',true));
+  el.replaceChildren(wrap);
+  applyTreeScale();
+ }
+ function setDragMode(mode) {
+      S.dragMode = mode;
+      render();
+    }
+
+    function hasSubgrid() {
+      return Boolean(getCell(S.activePath)?.subgrid);
+    }
+
+    function clearCell() {
+      saveState();
+      [...S.selectedPaths].forEach(path => {
+        const cell = getCell(path);
+        const parsed = parseCellPath(path);
+        if (!cell || !parsed) return;
+        if (cell.text) {
+          cell.text = "";
+          return;
+        }
+        const info = findGrid(path);
+        if (!info) return;
+        if (info.grid.rows[parsed.row].cells.length > 1) {
+          info.grid.rows[parsed.row].cells.splice(parsed.column, 1);
+          S.activePath = cellPath(parsed.prefix, parsed.row, Math.max(0, parsed.column - 1));
+        } else if (info.grid.rows.length > 1) {
+          info.grid.rows.splice(parsed.row, 1);
+          S.activePath = cellPath(parsed.prefix, Math.max(0, parsed.row - 1), 0);
+        } else {
+          info.grid.rows[0].cells[0] = emptyCell();
+          S.activePath = cellPath(parsed.prefix, 0, 0);
+        }
+      });
+      S.selectedPaths = new Set([S.activePath]);
+      S.editing = false;
+      render();
+    }
+
+    function addRow() {
+      const info = findGrid(S.activePath);
+      if (!info) return;
+      saveState();
+      const columns = info.grid.rows[0]?.cells.length || 1;
+      info.grid.rows.push({ cells: Array.from({ length: columns }, emptyCell) });
+      render();
+    }
+
+    function addColumn() {
+      const info = findGrid(S.activePath);
+      if (!info) return;
+      saveState();
+      info.grid.rows.forEach(row => row.cells.push(emptyCell()));
+      render();
+    }
+
+    function deleteRow() {
+      const info = findGrid(S.activePath);
+      const parsed = parseCellPath(S.activePath);
+      if (!info || !parsed || info.grid.rows.length < 2) return;
+      saveState();
+      info.grid.rows.splice(parsed.row, 1);
+      S.activePath = cellPath(parsed.prefix, Math.max(0, parsed.row - 1), 0);
+      S.selectedPaths = new Set([S.activePath]);
+      render();
+    }
+
+    function deleteColumn() {
+      const info = findGrid(S.activePath);
+      const parsed = parseCellPath(S.activePath);
+      if (!info || !parsed || info.grid.rows[0].cells.length < 2) return;
+      saveState();
+      info.grid.rows.forEach(row => row.cells.splice(parsed.column, 1));
+      S.activePath = cellPath(parsed.prefix, 0, Math.max(0, parsed.column - 1));
+      S.selectedPaths = new Set([S.activePath]);
+      render();
+    }
+
+    function toggleNest() {
+      const cell = getCell(S.activePath);
+      if (!cell) return;
+      saveState();
+      if (cell.subgrid) {
+        if (confirm("Remove this sub-grid?")) cell.subgrid = null;
+      } else {
+        cell.subgrid = emptyGrid();
+        S.activePath = cellPath(S.activePath, 0, 0);
+        S.selectedPaths = new Set([S.activePath]);
+      }
+      S.editing = false;
+      render();
+    }
+
+    function transposeGrid() {
+      const cell = getCell(S.activePath);
+      if (!cell?.subgrid) {
+        alert("No child grid found.");
+        return;
+      }
+      saveState();
+      const grid = cell.subgrid;
+      const rows = grid.rows.length;
+      const columns = grid.rows[0].cells.length;
+      grid.rows = Array.from({ length: columns }, (_, column) => ({
+        cells: Array.from({ length: rows }, (_, row) => grid.rows[row].cells[column] || emptyCell())
+      }));
+      render();
+    }
+
+    function addParent() {
+      const info = findGrid(S.activePath);
+      if (!info) return;
+      saveState();
+      if (info.owner) {
+        info.owner.subgrid = { rows: [{ cells: [{ text: "", subgrid: info.owner.subgrid, childrenHidden: false }] }] };
+        S.activePath = info.ownerPath;
+      } else {
+        S.root = { rows: [{ cells: [{ text: "", subgrid: S.root, childrenHidden: false }] }] };
+        S.activePath = "root_r0c0";
+      }
+      S.selectedPaths = new Set([S.activePath]);
+      S.editing = false;
+      render();
+    }
+
+    function addParentToCell() {
+      const info = findGrid(S.activePath);
+      const parsed = parseCellPath(S.activePath);
+      if (!info || !parsed) return;
+      saveState();
+      const oldCell = info.grid.rows[parsed.row].cells[parsed.column];
+      info.grid.rows[parsed.row].cells[parsed.column] = { text: "", subgrid: { rows: [{ cells: [oldCell] }] }, childrenHidden: false };
+      S.editing = false;
+      render();
+    }
+
+    function toggleChildren() {
+      const cell = getCell(S.activePath);
+      if (!cell?.subgrid) return;
+      saveState();
+      cell.childrenHidden = !cell.childrenHidden;
+      render();
+    }
+
+    function pruneGrid(grid) {
+      grid.rows = grid.rows.filter(row => !row.cells.every(cell => !cell.text && !cell.subgrid));
+      if (!grid.rows.length) grid.rows.push({ cells: [emptyCell()] });
+      const count = grid.rows[0].cells.length;
+      const keep = new Set();
+      grid.rows.forEach(row => row.cells.forEach((cell, column) => {
+        if (cell.text || cell.subgrid) keep.add(column);
+      }));
+      if (!keep.size) keep.add(0);
+      if (keep.size < count) grid.rows.forEach(row => { row.cells = row.cells.filter((cell, index) => keep.has(index)); });
+      grid.rows.forEach(row => row.cells.forEach(cell => { if (cell.subgrid) pruneGrid(cell.subgrid); }));
+    }
+
+    function pruneCurrentGrid() {
+      const info = findGrid(S.activePath);
+      if (!info) return;
+      saveState();
+      pruneGrid(info.grid);
+      S.activePath = "root_r0c0";
+      S.selectedPaths = new Set([S.activePath]);
+      render();
+    }
+
+    function pruneTree() {
+      saveState();
+      pruneGrid(S.root);
+      S.activePath = "root_r0c0";
+      S.selectedPaths = new Set([S.activePath]);
+      render();
+    }
+
+    function handleDrop(targetPath, draggedPaths, dropMode, payloadMode) {
+      if (draggedPaths.includes(targetPath)) return;
+      const keepIds = S.dragMode === "cut" || S.dragMode === "move" || payloadMode === "cut";
+      const draggedCells = draggedPaths.map(path => getCell(path)).filter(Boolean).map(cell => keepIds ? clone(cell) : cloneFresh(cell));
+      if (!draggedCells.length) return;
+      saveState();
+      const target = getCell(targetPath);
+      const info = findGrid(targetPath);
+      const parsed = parseCellPath(targetPath);
+      const cut = S.dragMode === "cut" || payloadMode === "cut";
+
+      if (dropMode === "child" && target) {
+        if (!target.subgrid) target.subgrid = { rows: [] };
+        target.subgrid.rows.push({ cells: draggedCells });
+        target.childrenHidden = false;
+      } else if ((dropMode === "row-before" || dropMode === "row-after") && info && parsed) {
+        const index = parsed.row + (dropMode === "row-after" ? 1 : 0);
+        info.grid.rows.splice(index, 0, { cells: draggedCells });
+      } else if ((dropMode === "col-before" || dropMode === "col-after") && info && parsed) {
+        const index = parsed.column + (dropMode === "col-after" ? 1 : 0);
+        draggedCells.forEach((cell, offset) => {
+          const row = info.grid.rows[parsed.row + offset];
+          if (row) row.cells.splice(index, 0, cell);
+          else info.grid.rows.push({ cells: [cell] });
+        });
+      }
+
+      if (cut || S.dragMode === "move") {
+        draggedPaths.forEach(path => {
+          const cell = getCell(path);
+          if (cell) Object.assign(cell, emptyCell());
+        });
+      }
+      S.activePath = targetPath;
+      S.selectedPaths = new Set([targetPath]);
+      S.activeGapPath = null;
+      S.editing = false;
+      render();
+    }
+
+    function insertRowAtGap(path) {
+      const match = path.match(/^(.*)_gap(\d+)$/);
+      if (!match) return;
+      const prefix = match[1];
+      const info = prefix === "root" ? { grid: S.root } : { grid: getCell(prefix)?.subgrid };
+      if (!info.grid) return;
+      saveState();
+      const count = info.grid.rows[0]?.cells.length || 1;
+      const index = Number(match[2]);
+      info.grid.rows.splice(index, 0, { cells: Array.from({ length: count }, emptyCell) });
+      S.activePath = cellPath(prefix, index, 0);
+      S.selectedPaths = new Set([S.activePath]);
+      S.activeGapPath = null;
+      S.editing = true;
+      render();
+    }
+
+    function insertColumnAtGap(path) {
+      const match = path.match(/^(.*)_r(\d+)_colgap(\d+)$/);
+      if (!match) return;
+      const prefix = match[1];
+      const info = prefix === "root" ? { grid: S.root } : { grid: getCell(prefix)?.subgrid };
+      if (!info.grid) return;
+      saveState();
+      const column = Number(match[3]);
+      info.grid.rows.forEach(row => row.cells.splice(column, 0, emptyCell()));
+      S.activePath = cellPath(prefix, Number(match[2]), column);
+      S.selectedPaths = new Set([S.activePath]);
+      S.activeGapPath = null;
+      S.editing = true;
+      render();
+    }
+
+    function copySelection() {
+      S.clipboard = [...S.selectedPaths].map(path => ({ path, cell: getCell(path) })).filter(item => item.cell).map(item => ({ path: item.path, cell: clone(item.cell) }));
+      navigator.clipboard?.writeText(S.clipboard.map(item => item.cell.text || "").join("\n")).catch(() => {});
+    }
+
+    function pasteSelection() {
+      if (!S.clipboard?.length) return;
+      saveState();
+      [...S.selectedPaths].forEach((path, index) => {
+        const target = getCell(path);
+        const source = S.clipboard[index % S.clipboard.length]?.cell;
+        if (target && source) Object.assign(target, cloneFresh(source), { id: target.id });
+      });
+      render();
+    }
+
+ function handleEditorKeydown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        commitEditor(event.currentTarget);
+        render();
+        return;
+      }
+      if (event.key !== "Enter") return;
+      const editor = event.currentTarget;
+      const paths = pathsInGrid();
+      const index = paths.indexOf(S.activePath);
+
+      if (S.enterAddSibling && !event.shiftKey) {
+        event.preventDefault();
+        const info = findGrid(S.activePath);
+        const parsed = parseCellPath(S.activePath);
+        if (info && parsed) {
+          saveState();
+          const columns = info.grid.rows[0]?.cells.length || 1;
+          info.grid.rows.splice(parsed.row + 1, 0, { cells: Array.from({ length: columns }, emptyCell) });
+          saveState();
+          S.activePath = cellPath(parsed.prefix, parsed.row + 1, parsed.column);
+          S.selectedPaths = new Set([S.activePath]);
+          S.editing = true;
+          render();
+        }
+        return;
+      }
+
+      if (S.enterNextCell && !event.shiftKey) {
+        event.preventDefault();
+        commitEditor(editor);
+        if (index >= 0 && index < paths.length - 1) {
+          saveState();
+          S.activePath = paths[index + 1];
+          S.selectedPaths = new Set([S.activePath]);
+          S.editing = true;
+        } else if (S.enterAddCellAtEnd && index === paths.length - 1) {
+          const info = findGrid(S.activePath);
+          if (info) {
+            saveState();
+            const columns = info.grid.rows[0]?.cells.length || 1;
+            info.grid.rows.push({ cells: Array.from({ length: columns }, emptyCell) });
+            saveState();
+            const allPaths = pathsInGrid();
+            S.activePath = allPaths[allPaths.length - 1];
+            S.selectedPaths = new Set([S.activePath]);
+            S.editing = true;
+          }
+        }
+        render();
+      } else if (S.enterNextCell && event.shiftKey) {
+        event.preventDefault();
+        commitEditor(editor);
+        if (index > 0) {
+          saveState();
+          S.activePath = paths[index - 1];
+          S.selectedPaths = new Set([S.activePath]);
+          S.editing = true;
+        }
+        render();
+      } else if (event.ctrlKey || event.metaKey || !S.enterNextCell) {
+        event.preventDefault();
+        commitEditor(editor);
+        render();
+      }
+    }
+
+    function handleGlobalKeydown(event) {
+      const isEditing = event.target instanceof HTMLTextAreaElement;
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === "z") {
+        event.preventDefault();
+        event.shiftKey ? redo() : undo();
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && key === "y") { event.preventDefault(); redo(); return; }
+      if ((event.ctrlKey || event.metaKey) && key === "c" && !isEditing) { event.preventDefault(); copySelection(); return; }
+      if ((event.ctrlKey || event.metaKey) && key === "v" && !isEditing) { event.preventDefault(); pasteSelection(); return; }
+      if ((event.ctrlKey || event.metaKey) && key === "p") { event.preventDefault(); addParent(); return; }
+      if (isEditing) return;
+
+      if (S.activeGapPath) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          S.activeGapPath.includes("_colgap") ? insertColumnAtGap(S.activeGapPath) : insertRowAtGap(S.activeGapPath);
+          return;
+        }
+        if (event.key === "Escape") { S.activeGapPath = null; render(); return; }
+      }
+      if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); clearCell(); return; }
+      if (event.key === "Enter") { event.preventDefault(); editActiveCell(); return; }
+      if (key === "x") { setDragMode("cut"); return; }
+      if (key === "c") { setDragMode("copy"); return; }
+      if (key === "h") { toggleChildren(); return; }
+      if (key === "t") { transposeGrid(); return; }
+      if (key === "p") { addParentToCell(); return; }
+      if (key === "i") { toggleNest(); return; }
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+        event.preventDefault();
+        if (event.ctrlKey || event.metaKey) {
+          if (event.key === "ArrowDown" && enterChild()) return;
+          if (event.key === "ArrowUp" && moveToParent()) return;
+          const direction = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
+          moveLinear(direction, event.shiftKey);
+          return;
+        }
+        if (S.navigateFutureEdgeCells && moveThroughGap(event.key)) return;
+        moveByCell(
+          event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0, 
+          event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0
+        );
+      }
+    }
+
+ /* ---- glue: drawing, saving into the graph, keyboard, mouse ---- */
+ function sigNow(){return JSON.stringify([state.nodes.filter(n=>n.isImage).map(n=>n.id+':'+(n.imageData?n.imageData.length:0)+':'+(n.customWidth||'')+':'+(n.customHeight||'')),S.root,S.activePath,[...S.selectedPaths],S.activeGapPath,tsSettings(),view().fixedColumnWidths||{},view().columnMaxTextboxWidths||{}]);}
+ function commitToGraph(){
+  const v=view();if(!v)return;
+  const an=nodeById(treeAnchorId(v));if(an){v.x=an.x;v.y=an.y;}
+  syncTreeToGraph(v);v.dirty=true;
+  hostSaveState();
+  setTimeout(hostRender,0);
+ }
+ function render(){
+  const v=view();if(!v)return;
+  tsEnsureIds(S.root);
+  if(!getCell(S.activePath))S.activePath='root_r0c0';
+  S.selectedPaths=new Set([...S.selectedPaths].filter(p=>getCell(p)));
+  if(!S.selectedPaths.size)S.selectedPaths=new Set([S.activePath]);
+  applyTheme();
+  const hadEditor=!!el.querySelector('#active-editor');
+  renderGridOnly();
+  if(hadEditor&&!S.editing)setTimeout(()=>el.focus({preventScroll:true}),0);
+  if(S.pending){S.pending=false;commitToGraph();}
+  if(S.editing){const editor=el.querySelector('#active-editor');if(editor){editor.focus();editor.setSelectionRange(editor.value.length,editor.value.length);}}
+  lastSig=sigNow();
+  scheduleTreePanel();
+ }
+ function refresh(){
+  const v=view();if(!v||S.editing)return;
+  if(sigNow()!==lastSig)render();
+ }
+ function info(){
+  const c=getCell(S.activePath),key=activeColumnWidthKey();
+  return{hasActive:!!c,hasSubgrid:!!(c&&c.subgrid),columnFixed:!!(key&&S.fixedColumnWidths[key]),columnWidth:key?(S.fixedColumnWidths[key]||180):180,
+   maxTextWidth:S.maxTextboxWidthEntireTree?S.maxTextboxWidth:((key&&S.columnMaxTextboxWidths[key])||S.maxTextboxWidth),label:c?String(c.text||'').slice(0,40):''};
+ }
+ function command(cmd,arg){
+  switch(cmd){
+   case 'addRow':addRow();break;case 'addColumn':addColumn();break;case 'deleteRow':deleteRow();break;case 'deleteColumn':deleteColumn();break;
+   case 'transpose':transposeGrid();break;case 'addParent':addParent();break;case 'addParentToCell':addParentToCell();break;
+   case 'toggleNest':toggleNest();break;case 'toggleChildren':toggleChildren();break;case 'clearCell':clearCell();break;
+   case 'pruneGrid':pruneCurrentGrid();break;case 'pruneTree':pruneTree();break;
+   case 'dragMode':setDragMode(arg);break;
+   case 'fixedColumn':setActiveColumnFixed(!!arg.on,arg.width);render();break;
+   case 'activeColumnWidth':setActiveColumnWidth(+arg);break;
+   case 'maxTextboxWidth':setMaxTextboxWidth(+arg);break;
+   case 'maxEntire':setMaxTextboxWidthEntireTree(!!arg);break;
+  }
+  setTimeout(()=>el.focus({preventScroll:true}),0);
+ }
+ function destroy(){el.remove();}
+
+ /* mouse: select, edit, drag-and-drop (the original handlers, bound to this tree) */
+ el.addEventListener('pointerdown',e=>{
+  e.stopPropagation();activeTreeId=viewId;scheduleTreePanel();
+  moveCandidate=false;
+  if(e.button!==0||e.target.closest('textarea'))return;
+  const cell=e.target.closest('.cell'),single=S.root.rows.length===1&&S.root.rows[0].cells.length===1;
+  if(!(e.altKey||(cell&&single&&cell.dataset.path==='root_r0c0')))return;
+  moveCandidate=true;if(e.altKey)e.preventDefault();
+  const p0=toWorld(e.clientX,e.clientY),x0=e.clientX,y0=e.clientY,an0=nodeById(anchorId()),vx=an0?an0.x:0,vy=an0?an0.y:0;let moved=false;
+  const mv=m=>{
+   if(!moved&&Math.hypot(m.clientX-x0,m.clientY-y0)<6)return;
+   moved=true;const q=toWorld(m.clientX,m.clientY),an=nodeById(anchorId());if(!an)return;
+   an.x=Math.max(0,Math.round(vx+q.x-p0.x));an.y=Math.max(0,Math.round(vy+q.y-p0.y));
+   const box=el.parentElement;if(box&&box.classList.contains('tree-node')){box.style.left=an.x+'px';box.style.top=an.y+'px';}
+   queueLines();
+  };
+  const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);moveCandidate=false;if(moved){hostSaveState();hostRender();}};
+  window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+ });
+ ['click','dblclick','contextmenu'].forEach(t=>el.addEventListener(t,e=>e.stopPropagation()));
+ el.addEventListener('click',e=>{const a=e.target.closest('.ts-url');if(a)window.open(a.dataset.url,'_blank','noopener');});
+ el.addEventListener('mousedown',event=>{
+  activeTreeId=viewId;
+  if(event.target===el)el.focus();
+  const cell=event.target.closest('.cell');
+  if(cell&&(event.target===cell||event.target.classList.contains('cell-text')||event.target.classList.contains('cell-photo'))){selectCell(cell.dataset.path,event.shiftKey);setTimeout(()=>{if(!S.editing)el.focus({preventScroll:true});},0);}
+ });
+ el.addEventListener('dblclick',event=>{
+  const cell=event.target.closest('.cell');
+  if(cell&&(event.target===cell||event.target.classList.contains('cell-text')||event.target.classList.contains('cell-photo'))){
+   setActive(cell.dataset.path);saveState();S.editing=true;render();
+   const editor=el.querySelector('#active-editor');if(editor)editor.focus();
+  }
+ });
+ el.addEventListener('dragstart',event=>{
+  const cell=event.target.closest('.cell');
+  if(!cell)return;
+  if(moveCandidate){event.preventDefault();return;}
+  const path=cell.dataset.path;
+  if(!S.selectedPaths.has(path)){S.activePath=path;S.selectedPaths=new Set([path]);}
+  event.dataTransfer.setData('text/plain',JSON.stringify({view:viewId,paths:[...S.selectedPaths],mode:S.dragMode}));
+  event.dataTransfer.effectAllowed=S.dragMode==='copy'?'copy':'move';
+  event.stopPropagation();
+ });
+ el.addEventListener('dragover',event=>{
+  const cell=event.target.closest('.cell');
+  if(!cell)return;
+  event.preventDefault();event.stopPropagation();
+  const bounds=cell.getBoundingClientRect(),x=event.clientX-bounds.left,y=event.clientY-bounds.top;
+  let mode='child';
+  if(y<10)mode='row-before';else if(y>bounds.height-10)mode='row-after';else if(x<10)mode='col-before';else if(x>bounds.width-10)mode='col-after';
+  cell.dataset.dropMode=mode;cell.classList.add('drag-target',S.dragMode);
+  const existing=cell.querySelector(':scope>.drop-edge');
+  if(!existing||!existing.classList.contains(mode)){if(existing)existing.remove();cell.append(makeElement('span','drop-edge '+mode));}
+ });
+ el.addEventListener('dragleave',event=>{
+  const cell=event.target.closest('.cell');
+  if(!cell)return;
+  if(event.relatedTarget&&cell.contains(event.relatedTarget))return;
+  cell.classList.remove('drag-target','move','cut','copy');
+  const edge=cell.querySelector(':scope>.drop-edge');if(edge)edge.remove();
+ });
+ el.addEventListener('drop',event=>{
+  const cell=event.target.closest('.cell');
+  if(!cell)return;
+  event.preventDefault();event.stopPropagation();
+  cell.classList.remove('drag-target','move','cut','copy');
+  const edge=cell.querySelector(':scope>.drop-edge');if(edge)edge.remove();
+  try{
+   const payload=JSON.parse(event.dataTransfer.getData('text/plain'));
+   if(payload.view!==viewId)return;
+   handleDrop(cell.dataset.path,payload.paths,cell.dataset.dropMode||'child',payload.mode);
+  }catch(err){}
+ });
+ el.addEventListener('keydown',event=>{
+  activeTreeId=viewId;
+  const k=event.key.toLowerCase();
+  handleGlobalKeydown(event);
+  if(!((event.ctrlKey||event.metaKey)&&k==='s'))event.stopPropagation();
+ });
+ return{el,viewId,refresh,render,command,info,destroy,anchorId,get S(){return S;}};
+}
+
+/* ---- the tree's outer box is a real concept node: it has the circle buttons, takes links, and drags like one ---- */
+function decorateTreeNode(el,n,v){
+ const inst=treeRuntime.get(v.id);
+ el.classList.add('tree-node');
+ el.querySelectorAll(':scope>.node-content,:scope>.node-url-text,:scope>.node-image,:scope>.node-image-label,:scope>textarea').forEach(x=>x.remove());
+ el.style.width='';el.style.height='';el.style.minWidth='';
+ el.title='TreeSheets box: drag the frame to move it, use the circles to link it like any node';
+ el.ondblclick=e=>{e.stopPropagation();};
+ const cb=el.querySelector(':scope>.collapse-btn');
+ if(cb){
+  const cell=(function find(grid){for(const r of grid.rows)for(const c of r.cells){if(c.id===n.id)return c;if(c.subgrid){const f=find(c.subgrid);if(f)return f;}}return null;})(v.root);
+  const hidden=!!(cell&&cell.childrenHidden);
+  cb.textContent=hidden?'+':'−';cb.classList.toggle('is-collapsed',hidden);
+  cb.title=hidden?'Show the tree cells below the top cell':'Hide the tree cells below the top cell';
+  cb.onclick=e=>{e.stopPropagation();if(isLocked||!cell||!cell.subgrid)return;cell.childrenHidden=!cell.childrenHidden;n.collapsed=cell.childrenHidden;saveState();render();};
+ }
+ if(inst)el.appendChild(inst.el);
+}
+
+/* ---- keeping the canvas in step with state ---- */
+function syncTreeWindows(){
+ const views=state.treeViews||[],alive=new Set(views.map(v=>v.id));
+ treeRuntime.forEach((inst,id)=>{if(!alive.has(id)){inst.destroy();treeRuntime.delete(id);if(activeTreeId===id)activeTreeId=null;}});
+ views.forEach(v=>{
+  let inst=treeRuntime.get(v.id);
+  if(!inst){inst=createTreeSheets(v.id);treeRuntime.set(v.id,inst);inst.render();}
+  else inst.refresh();
+ });
+ scheduleTreePanel();
+}
+/* ---- the sidebar panel (conceptmap_treesheets.html) ---- */
+function activeTree(){
+ const v=getTreeView(activeTreeId)||((state.treeViews||[]).length===1?state.treeViews[0]:null);
+ return v?treeRuntime.get(v.id)||null:null;
+}
+function treeCommand(cmd,arg){
+ if(cmd==='subtree')return showSubtree();
+ if(cmd==='refreshPhotos')return refreshTreePhotos();
+ if(cmd==='undo'){restore(histIdx-1);return;}
+ if(cmd==='redo'){restore(histIdx+1);return;}
+ const a=activeTree();
+ if(!a){toast('Click a tree on the canvas first.');return;}
+ if(cmd==='toConceptMap')return treeToConceptMap(a.viewId);
+ a.command(cmd,arg);
+}
+function scheduleTreePanel(){if(treePanelRaf)return;treePanelRaf=requestAnimationFrame(()=>{treePanelRaf=0;pushTreePanel();});}
+function pushTreePanel(){
+ if(!treePanelReady||!treeFrame||!treeFrame.contentWindow)return;
+ const a=activeTree(),i=a?a.info():{};
+ const payload={ch:'conceptmap-treesheets-host',type:'state',settings:{...tsSettings()},
+  hasActive:!!i.hasActive,hasSubgrid:!!i.hasSubgrid,columnFixed:!!i.columnFixed,columnWidth:i.columnWidth||180,maxTextWidth:i.maxTextWidth||tsSettings().maxTextboxWidth,
+  hasTree:(state.treeViews||[]).length>0,selCount:selected.size,canUndo:histIdx>0,canRedo:histIdx<hist.length-1,activeLabel:i.label||''};
+ const sig=JSON.stringify(payload);
+ if(sig===treePanelSig)return;
+ treePanelSig=sig;
+ try{treeFrame.contentWindow.postMessage(payload,'*');}catch(err){}
+}
+const TS_VALID=Object.fromEntries(Object.entries(TS_SETTINGS).map(([k,v])=>[k,v[1]]));
+window.addEventListener('message',e=>{
+ const d=e.data;
+ if(!d||d.ch!=='conceptmap-treesheets'||!treeFrame||e.source!==treeFrame.contentWindow)return;
+ if(d.type==='ready'){treePanelReady=true;treePanelSig='';scheduleTreePanel();}
+ else if(d.type==='height')treeFrame.style.height=Math.min(2400,Math.max(120,+d.h||120))+'px';
+ else if(d.type==='cmd')treeCommand(String(d.cmd),d.arg);
+ else if(d.type==='set'&&TS_VALID[d.k]){
+  tsSettings()[d.k]=TS_VALID[d.k](d.v);
+  if(d.k==='navigateFutureEdgeCells'&&!tsSettings()[d.k])treeRuntime.forEach(i=>{i.S.activeGapPath=null;});
+  treeRuntime.forEach(i=>i.refresh());scheduleTreePanel();
+ }
+});
+
 async function openNode(n){
 if(n.url){window.open(n.url,'_blank','noopener,noreferrer');return;}
 if(mode()==='arrow')return;
 if(state.editMode==='editInstead'){editingId=n.id;render();return;}
 try{
 const{text,handle}=await getFileContent(n.text);
-const parsed=parseGraphText(text);
+const parsed=await parseGraphText(text);
 if(state.linkOpenMode==='current'){
 openInCurrent(n.text,parsed,{handle:handle||null,name:handle?.name||fileNameFor(n.text),format:graphFormat(text)});
 }else if(state.linkOpenMode==='new'){
@@ -1082,42 +2360,22 @@ render();
 }
 }
 }
-const OFFLINE_TRANSLATIONS={
-pt:{hello:'olá',hi:'oi',good:'bom',bad:'mau',morning:'manhã',night:'noite',day:'dia',today:'hoje',tomorrow:'amanhã',yesterday:'ontem',goodbye:'tchau',bye:'tchau',please:'por favor',thanks:'obrigado',thank:'agradecer',you:'você',your:'seu',yours:'seu',i:'eu',me:'me',my:'meu',we:'nós',they:'eles',he:'ele',she:'ela',it:'isso',is:'é',are:'são',am:'sou',was:'era',were:'eram',the:'o',a:'um',an:'um',and:'e',or:'ou',but:'mas',not:'não',no:'não',yes:'sim',what:'o que',why:'por que',where:'onde',when:'quando',who:'quem',how:'como',love:'amor',like:'gostar',want:'querer',need:'precisar',have:'ter',has:'tem',go:'ir',come:'vir',see:'ver',know:'saber',think:'pensar',make:'fazer',do:'fazer',work:'trabalho',home:'casa',house:'casa',school:'escola',friend:'amigo',family:'família',people:'pessoas',man:'homem',woman:'mulher',child:'criança',children:'crianças',water:'água',food:'comida',coffee:'café',book:'livro',car:'carro',money:'dinheiro',time:'tempo',world:'mundo',life:'vida',happy:'feliz',sad:'triste',big:'grande',small:'pequeno',new:'novo',old:'velho',beautiful:'bonito',important:'importante',help:'ajuda',please:'por favor',because:'porque',with:'com',without:'sem',for:'para',from:'de',in:'em',on:'sobre',to:'para',this:'isto',that:'aquilo',here:'aqui',there:'lá',fast:'rápido',slow:'lento',one:'um',two:'dois',three:'três',four:'quatro',five:'cinco'},
-es:{hello:'hola',hi:'hola',good:'bueno',bad:'malo',morning:'mañana',night:'noche',day:'día',today:'hoy',tomorrow:'mañana',yesterday:'ayer',goodbye:'adiós',bye:'adiós',please:'por favor',thanks:'gracias',thank:'agradecer',you:'tú',your:'tu',yours:'tuyo',i:'yo',me:'me',my:'mi',we:'nosotros',they:'ellos',he:'él',she:'ella',it:'eso',is:'es',are:'son',am:'soy',was:'era',were:'eran',the:'el',a:'un',an:'un',and:'y',or:'o',but:'pero',not:'no',no:'no',yes:'sí',what:'qué',why:'por qué',where:'dónde',when:'cuándo',who:'quién',how:'cómo',love:'amor',like:'gustar',want:'querer',need:'necesitar',have:'tener',has:'tiene',go:'ir',come:'venir',see:'ver',know:'saber',think:'pensar',make:'hacer',do:'hacer',work:'trabajo',home:'casa',house:'casa',school:'escuela',friend:'amigo',family:'familia',people:'personas',man:'hombre',woman:'mujer',child:'niño',children:'niños',water:'agua',food:'comida',coffee:'café',book:'libro',car:'coche',money:'dinero',time:'tiempo',world:'mundo',life:'vida',happy:'feliz',sad:'triste',big:'grande',small:'pequeño',new:'nuevo',old:'viejo',beautiful:'hermoso',important:'importante',help:'ayuda',because:'porque',with:'con',without:'sin',for:'para',from:'de',in:'en',on:'sobre',to:'a',this:'esto',that:'eso',here:'aquí',there:'allí',fast:'rápido',slow:'lento',one:'uno',two:'dos',three:'tres',four:'cuatro',five:'cinco'},
-en:{hola:'hello',gracias:'thanks',adiós:'goodbye',casa:'house',agua:'water',amor:'love',amigo:'friend',familia:'family',sí:'yes',no:'no'}};
-function offlineTranslate(text,lang){
- const dict=OFFLINE_TRANSLATIONS[lang]||{};
- return String(text).replace(/[\p{L}À-ž]+(?:['’][\p{L}À-ž]+)*/gu,word=>{const key=word.toLocaleLowerCase();const translated=dict[key];if(!translated)return word;if(word===word.toUpperCase())return translated.toLocaleUpperCase();if(word[0]===word[0].toUpperCase())return translated[0].toLocaleUpperCase()+translated.slice(1);return translated;});
-}
+
 async function onlineTranslate(text,lang){
  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+encodeURIComponent(lang)+'&dt=t&q='+encodeURIComponent(text);
  const response=await fetch(url,{method:'GET',mode:'cors',cache:'no-store'});
  if(!response.ok)throw new Error('Online translation service returned '+response.status);
  const data=await response.json();
  if(!Array.isArray(data)||!Array.isArray(data[0]))throw new Error('Unexpected translation response');
- return data[0].map(part=>part&&part[0]||'').join('')||offlineTranslate(text,lang);
+ return data[0].map(part=>part&&part[0]||'').join('')||await F('offlineTranslate',text,lang);
 }
-function gujaratiToEnglish(input){
- const consonants={'ક':'k','ખ':'kh','ગ':'g','ઘ':'gh','ઙ':'ng','ચ':'ch','છ':'chh','જ':'j','ઝ':'jh','ઞ':'ny','ટ':'ṭ','ઠ':'ṭh','ડ':'ḍ','ઢ':'ḍh','ણ':'ṇ','ત':'t','થ':'th','દ':'d','ધ':'dh','ન':'n','પ':'p','ફ':'ph','બ':'b','ભ':'bh','મ':'m','ય':'y','ર':'r','લ':'l','ળ':'ḷ','વ':'v','શ':'sh','ષ':'ṣ','સ':'s','હ':'h','ક્ષ':'ksh','જ્ઞ':'gn'};
- const vowels={'અ':'a','આ':'aa','ઇ':'i','ઈ':'ee','ઉ':'u','ઊ':'oo','ઋ':'ru','એ':'e','ઐ':'ai','ઓ':'o','ઔ':'au'};
- const signs={'ા':'aa','િ':'i','ી':'ee','ુ':'u','ૂ':'oo','ૃ':'ru','ે':'e','ૈ':'ai','ો':'o','ૌ':'au','ં':'n','ઃ':'h','ઁ':'n','ૅ':'e','ૉ':'o','઼':'','્':''};
- const chars=Array.from(String(input));let out='';
- for(let i=0;i<chars.length;i++){
-  const c=chars[i];
-  if(c==='જ'&&chars[i+1]==='્'&&chars[i+2]==='ઞ'){out+='gn';i+=2;continue;}
-  if(c==='ક'&&chars[i+1]==='્'&&chars[i+2]==='ષ'){out+='ksh';i+=2;continue;}
-  if(consonants[c]){out+=consonants[c];if(chars[i+1]==='્'){i++;}else if(signs[chars[i+1]]!==undefined){out+=signs[chars[++i]];}else out+='a';continue;}
-  if(vowels[c])out+=vowels[c];else if(signs[c]!==undefined)out+=signs[c];else out+=c;
- }
- return out.replace(/aa+/g,'aa').replace(/\s+/g,' ');
-}
+
 async function translateNode(source,button){
  const lang=['pt','es','en','fr','de','it','gu'].includes(displayParagraph.translationLanguage)?displayParagraph.translationLanguage:'pt';
  let translated,usedOnline=false;
- if(displayParagraph.translationOnline){try{translated=await onlineTranslate(source.text,lang);usedOnline=true;}catch(err){translated=offlineTranslate(source.text,lang);toast('Online translation unavailable; used limited offline dictionary.');}}
- else translated=offlineTranslate(source.text,lang);
- if(lang==='gu'&&displayParagraph.gujaratiRomanized)translated=gujaratiToEnglish(translated);
+ if(displayParagraph.translationOnline){try{translated=await onlineTranslate(source.text,lang);usedOnline=true;}catch(err){translated=await F('offlineTranslate',source.text,lang);toast('Online translation unavailable; used limited offline dictionary.');}}
+ else translated=await F('offlineTranslate',source.text,lang);
+ if(lang==='gu'&&displayParagraph.gujaratiRomanized)translated=await F('gujaratiToEnglish',translated);
  const label={pt:'Português',es:'Español',en:'English',fr:'Français',de:'Deutsch',it:'Italiano',gu:'ગુજરાતી'}[lang];
  const key=lang;
  let targetId=source.translations&&source.translations[key];
@@ -1172,21 +2430,23 @@ el.classList.add('fixed-size');
 el.style.width=Math.round(n.customWidth*k)+'px';
 el.style.height=Math.round(n.customHeight*k)+'px';
 }
-if(displayParagraph.showTranslateSpeakButtons!==false||displayParagraph.showProcessingBall!==false||displayParagraph.showHoverTranslateBall!==false){
- if(displayParagraph.showProcessingBall!==false){
+if(displayParagraph.showProcessingBall||displayParagraph.showHoverTranslateBall||displayParagraph.showTranslateBall||displayParagraph.showSpeakBall){
+ if(displayParagraph.showProcessingBall){
   const existingProcessed=state.nodes.find(x=>x.processedFrom===n.id);
   const processBall=document.createElement('button');processBall.type='button';processBall.className='node-processing-ball';processBall.textContent=existingProcessed?'−':'+';processBall.title=existingProcessed?'Remove processed-text node':'Create a connected node showing abbreviations and modifications';processBall.setAttribute('aria-label',processBall.title);processBall.onpointerdown=e=>e.stopPropagation();processBall.onclick=e=>{e.stopPropagation();const found=state.nodes.find(x=>x.processedFrom===n.id);if(found){state.nodes=state.nodes.filter(x=>x.id!==found.id);state.lines=state.lines.filter(l=>l.from!==found.id&&l.to!==found.id);}else{let x=n.x,y=n.y+100;const used=state.nodes.map(q=>({x:q.x,y:q.y}));for(let i=0;i<40&&used.some(q=>Math.abs(q.x-x)<140&&Math.abs(q.y-y)<55);i++)y+=55;const child={id:uid(),text:(displayParagraph.processedNodeFullText&&(['abbreviationsEnabled','prefixEnabled','suffixEnabled','internalEnabled'].some(k=>displayParagraph[k]))?String(n.text??''):displayNodeText(n.text)),url:null,x,y,size:'auto',collapsed:false,processedFrom:n.id};state.nodes.push(child);state.lines.push({id:uid(),from:n.id,to:child.id,arrow:'none',width:2,color:'#80ed99',label:'processed text',processed:true});}saveState();render();};el.appendChild(processBall);
  }
- if(displayParagraph.showHoverTranslateBall!==false){
+ if(displayParagraph.showHoverTranslateBall){
   const hoverBall=document.createElement('button');hoverBall.type='button';hoverBall.className='node-hover-translate-ball';hoverBall.textContent=n.hoverTranslateEnabled?'−':'+';hoverBall.title=n.hoverTranslateEnabled?'Disable word-hover translation':'Enable temporary word-hover translation';hoverBall.setAttribute('aria-label',hoverBall.title);hoverBall.onpointerdown=e=>e.stopPropagation();hoverBall.onclick=e=>{e.stopPropagation();n.hoverTranslateEnabled=!n.hoverTranslateEnabled;saveState();render();};el.appendChild(hoverBall);
  }
- if(displayParagraph.showTranslateSpeakButtons!==false){
+ if(displayParagraph.showTranslateBall){
  const translateBall=document.createElement('button');
  translateBall.type='button';translateBall.className='node-translate-ball';translateBall.textContent='文';
  translateBall.title='Translate node and connect translated node';translateBall.setAttribute('aria-label',translateBall.title);
  translateBall.onpointerdown=e=>e.stopPropagation();
  translateBall.onclick=async e=>{e.stopPropagation();if(translateBall.disabled)return;translateBall.disabled=true;translateBall.textContent='…';try{await translateNode(n,translateBall);}catch(err){toast('Translation failed: '+(err.message||err));}finally{if(translateBall.isConnected){translateBall.disabled=false;translateBall.textContent='文';}}};
  el.appendChild(translateBall);
+ }
+ if(displayParagraph.showSpeakBall){
  const speakBall=document.createElement('button');speakBall.type='button';speakBall.className='node-speak-ball';speakBall.textContent='▶';speakBall.title='Read node text aloud';speakBall.setAttribute('aria-label',speakBall.title);speakBall.onpointerdown=e=>e.stopPropagation();speakBall.onclick=e=>{e.stopPropagation();speakNode(n,speakBall);};
  el.appendChild(speakBall);
  }
@@ -1232,7 +2492,7 @@ return;
 }
 try{
 const{text,handle}=await getFileContent(n.text);
-const parsed=parseGraphText(text);
+const parsed=await parseGraphText(text);
 if(state.linkOpenMode==='current'){
 openInCurrent(n.text,parsed,{handle:handle||null,name:handle?.name||fileNameFor(n.text),format:graphFormat(text)});
 return;
@@ -1316,7 +2576,7 @@ if(n.hoverTranslateEnabled){
   let hoverTimer,hoverActive=false;
   word.addEventListener('mouseenter',()=>{hoverActive=true;hoverTimer=setTimeout(async()=>{
    const lang=displayParagraph.translationLanguage||'pt';let result='';
-   try{result=displayParagraph.translationOnline?await onlineTranslate(lookup,lang):offlineTranslate(lookup,lang);if(lang==='gu'&&displayParagraph.gujaratiRomanized)result=gujaratiToEnglish(result);}catch(_){result=offlineTranslate(lookup,lang);}
+   try{result=displayParagraph.translationOnline?await onlineTranslate(lookup,lang):await F('offlineTranslate',lookup,lang);if(lang==='gu'&&displayParagraph.gujaratiRomanized)result=await F('gujaratiToEnglish',result);}catch(_){result=await F('offlineTranslate',lookup,lang);}
    if(!hoverActive||!word.isConnected||!result||result===lookup)return;
    const tip=document.createElement('span');tip.className='word-translation-tip';tip.textContent=result;
    tip.style.cssText='position:fixed;z-index:3000;background:#fff3b0;color:#172033;border:1px solid #b08900;border-radius:5px;padding:3px 6px;font:'+Math.max(12,Math.min(48,Number(displayParagraph.hoverTranslationFontSize)||12))+'px sans-serif;box-shadow:0 2px 8px #0008;pointer-events:none;white-space:nowrap;';
@@ -1379,11 +2639,13 @@ const up=view.chain.up.has(line.id),down=view.chain.down.has(line.id);
 if(up||down){color=up&&down?CHAIN.both:up?CHAIN.up:CHAIN.down;width++;}
 else dim=true;
 }
+if(line.cycleHidden&&!line.translation){color='#ff4d6d';dim=false;}
 const ra=rect(a),rb=rect(b);
 const p1=edgePoint(ra,center(rb)),p2=edgePoint(rb,center(ra));
 const d=`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 const path=svgEl('path',{d,stroke:color,fill:'none','stroke-width':(sel?Math.max(width+1,3):width)+'px'});
 if(dim)path.setAttribute('opacity','0.2');
+if(line.cycleHidden){path.setAttribute('stroke-dasharray','8 6');path.setAttribute('opacity','0.85');}
 if(sel)path.classList.add('line-selected');
 if(line.arrow==='end'||line.arrow==='both')path.setAttribute('marker-end',markerFor(color));
 if(line.arrow==='start'||line.arrow==='both')path.setAttribute('marker-start',markerFor(color));
@@ -1411,8 +2673,10 @@ function drawLineControls(){
 const line=selectedLineId&&state.lines.find(l=>l.id===selectedLineId);
 if(selectedLineId&&!line)selectedLineId=null;
 $('line-controls-group').style.display=line?'flex':'none';
-if(!line)return;
+$('selected-line-label').disabled=!line;
+if(!line){$('selected-line-label').value='';return;}
 $('selected-line-label').value=line.label||'';
+$('hide-line-btn').textContent=line.cycleHidden?'Unhide link':'Hide link (cycle)';
 if(line.arrow)$('arrow-style').value=line.arrow;
 if(line.width)$('line-width').value=String(line.width);
 if(line.color)$('line-color').value=line.color;
@@ -1436,7 +2700,9 @@ if(i<12)add('timeline-label',x+usable/24,`${MONTHS[(m0 + i) % 12]} '${String(y0 
 }
 function updateExtent(){
 let minX=100,minY=100,maxX=viewport.clientWidth/zoom,maxY=viewport.clientHeight/zoom;
+const treeHid=treeHiddenCanvas();
 state.nodes.forEach(n=>{
+if(treeHid.has(n.id))return;
 const el=els.get(n.id);
 const w=el?el.offsetWidth:120;
 const h=el?el.offsetHeight:50;
@@ -1448,6 +2714,7 @@ maxY=Math.max(maxY,n.y+h+400);
 if(minX<100||minY<100){
 const dx=minX<100?100-minX:0;
 const dy=minY<100?100-minY:0;
+(state.treeViews||[]).forEach(v=>{v.x+=dx;v.y+=dy;v.ax+=dx;v.ay+=dy;});
 state.nodes.forEach(n=>{
 n.x+=dx;
 n.y+=dy;
@@ -1471,6 +2738,7 @@ render();
 if(live)el.addEventListener('change',saveState);
 });
 function syncControls(){
+delete state.showTopBalls;
 controls.forEach(el=>{
 const v=state[el.dataset.k];
 if(el.type==='checkbox')el.checked=!!v;
@@ -1478,6 +2746,8 @@ else if(el.type==='radio')el.checked=v===el.value;
 else el.value=v;
 });
 document.body.classList.toggle('touch-mode',isTouchActive());
+if(typeof fontLabel==='function')fontLabel();
+if($('touchscreen-chk'))$('touchscreen-chk').checked=isTouchActive();
 document.body.classList.toggle('draggable-panels-enabled',!!state.draggablePanels);
 if($('file-dir'))$('file-dir').value=state.fileDir||'';
 }
@@ -1499,12 +2769,14 @@ btn.title=(collapse?'Expand the ':'Collapse the ')+name;
 });
 }
 bindCollapse('conceptmap-ai-collapse','conceptmap-ai-frame-wrap','AI assistant panel');
+bindCollapse('treesheets-collapse','treesheets-frame-wrap','TreeSheets panel');
 bindCollapse('display-paragraph-collapse','display-paragraph-frame-wrap','text node display panel');
 function getPanelOrder(){
 return $$('#toolbar .tool-group').map(el=>el.dataset.panelId).filter(Boolean);
 }
 function applyPanelOrder(){
-if(!state.panelOrder||!state.panelOrder.length)return;
+if(state.panelOrderVersion!==4||!state.panelOrder||!state.panelOrder.length){state.panelOrder=structuredClone(DEFAULTS.panelOrder);state.panelOrderVersion=4;}
+if(state.panelOrder.indexOf('panel-history')!==state.panelOrder.indexOf('panel-gemini')-1){state.panelOrder=state.panelOrder.filter(x=>x!=='panel-history');const g=state.panelOrder.indexOf('panel-gemini');state.panelOrder.splice(g<0?0:g,0,'panel-history');}
 const map=new Map($$('#toolbar .tool-group').map(el=>[el.dataset.panelId,el]));
 const want=state.panelOrder.map(id=>map.get(id)).filter(Boolean);
 const have=[...toolbar.children].filter(c=>want.includes(c));
@@ -1546,8 +2818,22 @@ window.addEventListener('pointermove',onPointerMove);
 window.addEventListener('pointerup',onPointerUp);
 });
 });
+const qtip=document.createElement('div');qtip.id='qtip';document.body.appendChild(qtip);
+let qPinned=null;
+function showQ(el){qtip.textContent=el.dataset.tip;qtip.style.display='block';const r=el.getBoundingClientRect(),w=qtip.offsetWidth,h=qtip.offsetHeight;qtip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';let y=r.bottom+6;if(y+h>innerHeight-8)y=r.top-h-6;qtip.style.top=Math.max(8,y)+'px';}
+document.addEventListener('mouseover',e=>{const q=e.target.closest&&e.target.closest('.q');if(q&&!qPinned)showQ(q);});
+document.addEventListener('mouseout',e=>{const q=e.target.closest&&e.target.closest('.q');if(q&&!qPinned)qtip.style.display='none';});
+document.addEventListener('click',e=>{const q=e.target.closest&&e.target.closest('.q');if(q){e.stopPropagation();if(qPinned===q){qPinned=null;qtip.style.display='none';}else{qPinned=q;showQ(q);}}else if(qPinned){qPinned=null;qtip.style.display='none';}},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&qPinned){qPinned=null;qtip.style.display='none';}});
+function fontLabel(){if($('font-out'))$('font-out').textContent=state.fontMin+'\u2013'+state.fontMax;}
+['fontMin','fontMax'].forEach(k=>document.querySelector('[data-k='+k+']').addEventListener('input',()=>{if(state.fontMin>state.fontMax){if(k==='fontMin')state.fontMin=state.fontMax;else state.fontMax=state.fontMin;syncControls();}fontLabel();scheduleSideSync();}));
+$$('[data-k^=colorDist],[data-k=autoSizeAll]').forEach(el=>el.addEventListener('change',()=>scheduleSideSync()));
+$('chain-chk').addEventListener('change',e=>{chainOn=e.target.checked;render();});
+$('touchscreen-chk').addEventListener('change',e=>{state.inputMode=e.target.checked?'touch':'desktop';displayParagraph.touchEnlarge=e.target.checked;if(!e.target.checked)state.nodes.forEach(n=>{n.ballsExpanded=false;});try{displayParagraphPost({type:'settings',settings:displayParagraph});}catch(err){}
+if(e.target.checked&&$('display-paragraph-frame-wrap').style.display==='none')$('display-paragraph-collapse').click();
+saveState();syncControls();render();});
 const SETTING_KEYS=Object.keys(DEFAULTS).filter(k=>
-  !['nodes','lines','fileDir'].includes(k)
+  !['nodes','lines','fileDir','treeViews'].includes(k)
 );
 function applyImportedSettings(updates){
   for(const key of SETTING_KEYS)if(updates[key]!==undefined)state[key]=updates[key];
@@ -1565,6 +2851,104 @@ const createBox=()=>{const t=$('node-text').value;if(t.trim())addBoxes([t]);};
 const createBoxes=()=>{const t=$('node-text').value.trim();if(t)addBoxes(t.split(/\s+/));};
 $('add-btn').onclick=createBox;
 $('add-boxes-btn').onclick=createBoxes;
+function treeifyClumps(){
+ if(isLocked)return;
+ const pool=state.nodes.filter(n=>!view.hidden.has(n.id)&&els.has(n.id)&&(!selected.size||selected.has(n.id)));
+ const R=new Map(pool.map(n=>[n.id,rect(n)])),par=new Map(pool.map(n=>[n.id,n.id]));
+ const find=a=>{while(par.get(a)!==a){par.set(a,par.get(par.get(a)));a=par.get(a);}return a;};
+ const tol=2,touch=(a,b)=>a.x<=b.x+b.width+tol&&b.x<=a.x+a.width+tol&&a.y<=b.y+b.height+tol&&b.y<=a.y+a.height+tol;
+ for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++)if(touch(R.get(pool[i].id),R.get(pool[j].id)))par.set(find(pool[i].id),find(pool[j].id));
+ const groups=new Map();pool.forEach(n=>{const r=find(n.id);if(!groups.has(r))groups.set(r,[]);groups.get(r).push(n);});
+ const clumps=[...groups.values()].filter(g=>g.length>1);
+ if(!clumps.length){toast('No touching clumps found'+(selected.size?' among the selected boxes.':'.'));return;}
+ const mk=(text,x,y)=>{const n={id:uid(),text,x:Math.round(x),y:Math.round(y),size:'auto',collapsed:false};state.nodes.push(n);return n;};
+ const link=(a,b)=>state.lines.push({id:uid(),from:a.id,to:b.id,label:'',arrow:$('arrow-style').value,width:+$('line-width').value,color:$('line-color').value});
+ const parents=clumps.map((g,i)=>{
+  const x0=Math.min(...g.map(n=>R.get(n.id).x)),x1=Math.max(...g.map(n=>R.get(n.id).x+R.get(n.id).width)),y0=Math.min(...g.map(n=>R.get(n.id).y));
+  const pn=mk('Clump '+(i+1),(x0+x1)/2-30,y0-90);g.forEach(n=>link(pn,n));return pn;
+ });
+ const x0=Math.min(...parents.map(n=>n.x)),x1=Math.max(...parents.map(n=>n.x)),y0=Math.min(...parents.map(n=>n.y));
+ const root=mk('root',(x0+x1)/2,y0-90);parents.forEach(pn=>link(root,pn));
+ state.lines=normalizeLines(state.lines);
+ afterExternalChange([root.id,...parents.map(n=>n.id)]);saveState();render();renderViews();
+ toast('Treeified '+clumps.length+' clump'+(clumps.length===1?'':'s')+' under "root".');
+}
+$('treeify-btn').onclick=treeifyClumps;
+function hideMinimumCycles(){
+ if(isLocked)return;
+ const par=new Map(state.nodes.map(n=>[n.id,n.id]));
+ const find=a=>{while(par.get(a)!==a){par.set(a,par.get(par.get(a)));a=par.get(a);}return a;};
+ let n=0;
+ state.lines.forEach(l=>{
+  if(l.cycleHidden||!par.has(l.from)||!par.has(l.to))return;
+  const a=find(l.from),b=find(l.to);
+  if(a===b){l.cycleHidden=true;n++;}else par.set(a,b);
+ });
+ if(!n){toast('No cycles found among the visible links.');return;}
+ saveState();render();renderViews();
+ toast('Hid '+n+' link'+(n===1?'':'s')+' to remove all cycles (red dashed; still saved).');
+}
+$('min-cycles-btn').onclick=hideMinimumCycles;
+function rootPlan(hubs){
+ const hubSet=new Set(hubs),par=new Map(state.nodes.map(n=>[n.id,n.id]));
+ if(hubs.length)par.set('@root','@root');
+ const find=a=>{while(par.get(a)!==a){par.set(a,par.get(par.get(a)));a=par.get(a);}return a;};
+ const real=state.lines.filter(l=>!l.cycleHidden&&par.has(l.from)&&par.has(l.to));
+ const isSib=l=>hubSet.has(l.from)&&hubSet.has(l.to);
+ const hidden=[];
+ hubs.forEach(h=>{const a=find('@root'),b=find(h);if(a!==b)par.set(a,b);});
+ [...real.filter(l=>!isSib(l)),...real.filter(isSib)].forEach(l=>{const a=find(l.from),b=find(l.to);if(a===b)hidden.push(l);else par.set(a,b);});
+ return{hidden,siblingHidden:hidden.filter(isSib).length,lost:hidden.filter(l=>!isSib(l)).length};
+}
+function suggestRoot(){
+ if(isLocked)return;
+ const deg=new Map(state.nodes.map(n=>[n.id,0]));
+ state.lines.forEach(l=>{if(l.cycleHidden||l.from===l.to||!deg.has(l.from)||!deg.has(l.to))return;deg.set(l.from,deg.get(l.from)+1);deg.set(l.to,deg.get(l.to)+1);});
+ const ranked=[...deg.entries()].filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+ if(ranked.length<2){toast('Not enough connected nodes to look for hubs.');return;}
+ const base=rootPlan([]),minDeg=Math.max(3,Math.ceil(ranked[0][1]/2)),cand=ranked.filter(e=>e[1]>=minDeg);
+ if(cand.length<2){toast('No real hubs: need at least two nodes with '+minDeg+'+ links.');return;}
+ let best=null;
+ for(let k=2;k<=Math.min(8,cand.length);k++){
+  const hubs=cand.slice(0,k).map(e=>e[0]),pl=rootPlan(hubs);
+  if(!best||pl.lost<best.pl.lost)best={k,hubs,pl};
+ }
+ const nm=id=>'"'+String(nodeById(id).text||'(blank)').slice(0,24)+'"';
+ const top=ranked.slice(0,5).map(e=>nm(e[0])+' ('+e[1]+')').join(', ');
+ const msg='Most connected: '+top+'.\n\nWithout a root: '+base.hidden.length+' link'+(base.hidden.length===1?'':'s')+' hidden to remove cycles.\n'
+  +'With a new "root" over the top '+best.k+' ('+best.hubs.map(nm).join(', ')+'): '+best.pl.hidden.length+' hidden, of which '+best.pl.siblingHidden+' join siblings (already connected through root), so '+best.pl.lost+' real connection'+(best.pl.lost===1?'':'s')+' lost.\n\n'
+  +(best.pl.lost<base.hidden.length?'The root reduces lost connections by '+(base.hidden.length-best.pl.lost)+'. Create it and hide those links?':'The root would not reduce lost connections ('+best.pl.lost+' vs '+base.hidden.length+'). Create it anyway?');
+ if(!confirm(msg))return;
+ const hs=best.hubs.map(nodeById),x0=Math.min(...hs.map(n=>n.x)),x1=Math.max(...hs.map(n=>n.x)),y0=Math.min(...hs.map(n=>n.y));
+ const root={id:uid(),text:'root',x:Math.round((x0+x1)/2),y:Math.round(y0-120),size:'auto',collapsed:false};
+ state.nodes.push(root);
+ best.hubs.forEach(h=>state.lines.push({id:uid(),from:root.id,to:h,label:'',arrow:$('arrow-style').value,width:+$('line-width').value,color:$('line-color').value}));
+ const final=rootPlanApply(best.hubs,root.id);
+ state.lines=normalizeLines(state.lines);
+ afterExternalChange([root.id]);saveState();render();renderViews();
+ toast('Added "root" over '+best.k+' hubs; hid '+final+' link'+(final===1?'':'s')+' (red dashed).');
+}
+function rootPlanApply(hubs,rootId){
+ const hubSet=new Set(hubs),par=new Map(state.nodes.map(n=>[n.id,n.id]));
+ const find=a=>{while(par.get(a)!==a){par.set(a,par.get(par.get(a)));a=par.get(a);}return a;};
+ const live=state.lines.filter(l=>!l.cycleHidden&&par.has(l.from)&&par.has(l.to));
+ const isRoot=l=>l.from===rootId,isSib=l=>hubSet.has(l.from)&&hubSet.has(l.to)&&l.from!==rootId;
+ let n=0;
+ [...live.filter(isRoot),...live.filter(l=>!isRoot(l)&&!isSib(l)),...live.filter(isSib)].forEach(l=>{const a=find(l.from),b=find(l.to);if(a===b){l.cycleHidden=true;n++;}else par.set(a,b);});
+ return n;
+}
+$('suggest-root-btn').onclick=suggestRoot;
+$('unhide-cycles-btn').onclick=()=>{
+ if(isLocked)return;
+ const hid=state.lines.filter(l=>l.cycleHidden);
+ if(!hid.length){toast('No hidden cycle links.');return;}
+ hid.forEach(l=>{delete l.cycleHidden;});saveState();render();renderViews();toast('Unhid '+hid.length+' link'+(hid.length===1?'':'s')+'.');
+};
+$('hide-line-btn').onclick=()=>{
+ const l=selectedLineId&&state.lines.find(x=>x.id===selectedLineId);if(!l||isLocked)return;
+ if(l.cycleHidden)delete l.cycleHidden;else l.cycleHidden=true;
+ saveState();render();renderViews();
+};
 $('node-text').onkeydown=e=>{if(e.key==='Enter')createBox();};
 $('clear-btn').onclick=()=>{
 if(isLocked||!confirm('Clear all nodes and connections?'))return;
@@ -1657,6 +3041,7 @@ if(e.pointerType==='touch'){capture(e.pointerId);spec.touch=true;}
 g=spec;
 }
 function cancelGesture(){
+world.classList.remove('tree-dragging');
 if(g&&g.moved)saveState();
 g=null;
 liveArrow.style.display=selBox.style.display='none';
@@ -2042,7 +3427,7 @@ if(!ioWin)alert('Allow pop-ups to open the Import/Export tool.');
 const sideFrame=$('side-frame');
 let sideTimer=null,sideLast='',aiLast='',aiKeys={};
 const displayParagraphFrame=$('display-paragraph-frame');
-let displayParagraph={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:true,artificialWrapLength:30,showTranslateSpeakButtons:true,showProcessingBall:true,showHoverTranslateBall:true,touchEnlarge:false,ballSize:100,touchBallSize:100,hoverEnlargeEnabled:false,hoverEnlargePercent:25,hoverTranslationFontSize:12,enableAllShorthand:false,processedNodeFullText:true,gujaratiRomanized:false,abbreviationsEnabled:false,prefixEnabled:false,suffixEnabled:false,internalEnabled:false,conversions:'',prefixRules:"under un\ninter intr\ntrans trns\nsuper spr\nover ovr\nanti ant\npost pst\nsemi smi\nmulti mlt\nmicro mcr\nmacro mcr\nauto aut\nfore fr\nextra xtra\nultra ultr\nsub sb\ncon c\ncom c\npro pr\npre pr\nre r\nun n\nnon n\ndis d\nmis m\nin n\nim m\nir r\nde d\nbi b",suffixRules:"ational atn\ntion shn\nsion zhn\nment mnt\nness ns\nless ls\nful fl\nable abl\nible ibl\nously usly\ning n\ned d\nies ys\nied yd\nly y\nally aly\nous us\neous us\nious us\nive iv\ntive tiv\native natv\nize iz\nise iz\nship shp\nhood hd\ner r\nest st\nor r\nity ty\n't t\n's s",internalRules:"ough of\naugh af\nph f\nck k\nqu kw\nsh sh\nch ch\nth th\nwh w\nwr r\nkn n\ngn n\nmb m\nmn m\nps s\npt t\nsc s\nce s\nci s\ncy sy\ntion shn\nsion zhn\ntch ch\ndge j\nigh i\nee i\noo u\nou ow\nau o\nai ay",removeRepeatingLetters:false,removeInternalVowels:false,translationLanguage:'pt',translationOnline:true,speechOnline:false,speechVoice:'',speechRate:0.75,loadDefaultListsIfMissing:true};
+let displayParagraph={firstWords:false,firstCount:200,longerWords:false,minWordLength:7,longestWord:false,wordWrap:true,artificialWordWrap:true,artificialWrapLength:30,showTranslateBall:false,showSpeakBall:false,showProcessingBall:false,showHoverTranslateBall:false,touchEnlarge:false,ballSize:100,touchBallSize:100,hoverEnlargeEnabled:false,hoverEnlargePercent:25,hoverTranslationFontSize:12,enableAllShorthand:false,processedNodeFullText:true,gujaratiRomanized:false,abbreviationsEnabled:false,prefixEnabled:false,suffixEnabled:false,internalEnabled:false,conversions:'',prefixRules:"under un\ninter intr\ntrans trns\nsuper spr\nover ovr\nanti ant\npost pst\nsemi smi\nmulti mlt\nmicro mcr\nmacro mcr\nauto aut\nfore fr\nextra xtra\nultra ultr\nsub sb\ncon c\ncom c\npro pr\npre pr\nre r\nun n\nnon n\ndis d\nmis m\nin n\nim m\nir r\nde d\nbi b",suffixRules:"ational atn\ntion shn\nsion zhn\nment mnt\nness ns\nless ls\nful fl\nable abl\nible ibl\nously usly\ning n\ned d\nies ys\nied yd\nly y\nally aly\nous us\neous us\nious us\nive iv\ntive tiv\native natv\nize iz\nise iz\nship shp\nhood hd\ner r\nest st\nor r\nity ty\n't t\n's s",internalRules:"ough of\naugh af\nph f\nck k\nqu kw\nsh sh\nch ch\nth th\nwh w\nwr r\nkn n\ngn n\nmb m\nmn m\nps s\npt t\nsc s\nce s\nci s\ncy sy\ntion shn\nsion zhn\ntch ch\ndge j\nigh i\nee i\noo u\nou ow\nau o\nai ay",removeRepeatingLetters:false,removeInternalVowels:false,translationLanguage:'pt',translationOnline:true,speechOnline:false,speechVoice:'',speechRate:0.75,loadDefaultListsIfMissing:true};
 function displayRules(text){return String(text||'').split(/\r?\n/).map(line=>line.trim()).filter(line=>line&&!line.startsWith('#')&&!line.startsWith('//')).map(line=>{const m=line.match(/^(\S+)\s+(.+)$/);return m?[m[1],m[2].trim()]:null;}).filter(Boolean).sort((a,b)=>b[0].length-a[0].length);}
 function preserveCase(match,replacement){const letters=match.match(/\p{L}/gu)||[];if(letters.length&&letters.every(ch=>ch===ch.toLocaleUpperCase()&&ch!==ch.toLocaleLowerCase()))return replacement.toLocaleUpperCase();const first=match.match(/\p{L}/u)?.[0];if(first&&first===first.toLocaleUpperCase()&&first!==first.toLocaleLowerCase())return replacement[0].toLocaleUpperCase()+replacement.slice(1);return replacement;}
 function displayNodeText(raw){
@@ -2180,7 +3565,7 @@ if(e.source===displayParagraphFrame.contentWindow&&d&&d.ch==='conceptmap-display
  if(d.type==='check-rule-files')checkDisplayRuleFiles();
  if(d.type==='save-rule-file'&&typeof d.filename==='string'&&typeof d.content==='string'&&['cm_abbrev.txt','cm_prefix.txt','cm_suffix.txt','cm_internal.txt'].includes(d.filename))saveDisplayRuleFile(d.filename,d.content);
  if(d.type==='get-speech-voices'){const voices=('speechSynthesis' in window)?speechSynthesis.getVoices().map(v=>({name:v.name,voiceURI:v.voiceURI,lang:v.lang,localService:v.localService,default:v.default})):[];displayParagraphPost({type:'speech-voices',voices});}
- if(d.type==='settings'&&d.settings){displayParagraph={...displayParagraph,...d.settings};if(!displayParagraph.touchEnlarge)state.nodes.forEach(n=>{n.ballsExpanded=false;});render();}
+ if(d.type==='settings'&&d.settings){const wasTouch=!!displayParagraph.touchEnlarge;displayParagraph={...displayParagraph,...d.settings};if(!!displayParagraph.touchEnlarge!==wasTouch){state.inputMode=displayParagraph.touchEnlarge?'touch':'desktop';saveState();syncControls();}if(!displayParagraph.touchEnlarge)state.nodes.forEach(n=>{n.ballsExpanded=false;});render();}
  return;
 }
 if(e.source!==sideFrame.contentWindow||!d||d.ch!=='conceptmap-side')return;
@@ -2215,7 +3600,7 @@ saveState();render();
 break;
 case 'apply-settings':sideLast='';applyImportedSettings(d.updates||{});break;
 case 'reset-defaults':{
-const keep={nodes:state.nodes,lines:state.lines,fileDir:state.fileDir};
+const keep={nodes:state.nodes,lines:state.lines,fileDir:state.fileDir,treeViews:state.treeViews};
 state={...structuredClone(DEFAULTS),...keep};
 sideLast='';applyPanelOrder();saveState();render();
 break;}
@@ -2246,18 +3631,22 @@ case 'toast':toast(String(d.text||''));break;
 case 'hotkey':window.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,shiftKey:!!d.shift,ctrlKey:!!d.ctrl,metaKey:!!d.meta,bubbles:true,cancelable:true}));break;
 }
 });
-function afterExternalChange(){
+function afterExternalChange(autoIds){
 selected.clear();selectedLineId=null;editingId=null;
+pruneTreeViews();
+maybeAutoTree(autoIds||state.nodes.map(n=>n.id));
 saveState();render();
 }
 function applyImportedJson(src){
+const keepTreeChk=state.treeSheetsIfPossible;
 const keepTouch=Object.fromEntries([...TOUCH_KEYS,'fileDir'].map(k=>[k,state[k]]));
 state={...structuredClone(DEFAULTS),...keepTouch,...src,nodes:src.nodes||[],lines:normalizeLines(src.lines||[])};
-if(state.panelOrderVersion!==2){state.panelOrder=structuredClone(DEFAULTS.panelOrder);state.panelOrderVersion=2;}
+state.treeSheetsIfPossible=!!keepTreeChk;
+if(state.panelOrderVersion!==4){state.panelOrder=structuredClone(DEFAULTS.panelOrder);state.panelOrderVersion=4;}
 applyPanelOrder();
 afterExternalChange();
 }
-window.addEventListener('message',e=>{
+window.addEventListener('message',async e=>{
 const d=e.data;
 if(!d||typeof d!=='object'||typeof d.type!=='string')return;
 if(d.type==='cm-child-ready'&&pendingChildren.has(e.source)){
@@ -2266,7 +3655,7 @@ pendingChildren.delete(e.source);
 return postIo({type:'cm-load-text',...payload},e.source);
 }
 if(d.type==='cm-load-text'&&e.source===window.opener){
-const parsed=parseGraphText(d.text);
+const parsed=await parseGraphText(d.text);
 if(!state.fileDir&&d.fileDir)state.fileDir=d.fileDir;
 state.nodes=parsed.nodes;state.lines=parsed.lines;
 views[0].name=d.name||'Main map';
@@ -2288,6 +3677,16 @@ postIo(ioPayload(),e.source);
 }
 }else if(d.type==='cm-request-state'){
 postIo(ioPayload(),e.source);
+}else if(d.type==='cm-import-text'){
+try{
+const info=await importMapText(String(d.text||''),d.format,d.name||'file',!!d.replace);
+postIo({type:'cm-ack',ok:true,message:info.message,imported:{fmt:info.fmt,announce:info.announce,name:d.name}},e.source);
+postIo(ioPayload(),e.source);
+}catch(err){postIo({type:'cm-ack',ok:false,message:(d.name?d.name+': ':'')+(err.message||err)},e.source);}
+}else if(d.type==='cm-set-embed'){state.embedPhotos=!!d.value;saveState();
+}else if(d.type==='cm-serialize'){
+try{postIo({type:'cm-serialized',id:d.id,format:d.format,text:await serializeFor(d.format)},e.source);}
+catch(err){postIo({type:'cm-serialized',id:d.id,format:d.format,error:String(err.message||err)},e.source);}
 }else if(d.type==='cm-import-json'){
 try{
 if(!d.data||!Array.isArray(d.data.nodes)||!Array.isArray(d.data.lines))throw new Error('bad structure');
@@ -2297,20 +3696,7 @@ postIo(ioPayload(),e.source);
 }else if(d.type==='cm-import-graph'){
 try{
 if(!Array.isArray(d.nodes)||!Array.isArray(d.lines))throw new Error('bad graph structure');
-const incomingNodes=d.nodes.map(n=>({...n}));
-const incomingLines=d.lines.map(l=>({...l}));
-if(d.replace){
-state.nodes=incomingNodes;
-state.lines=normalizeLines(incomingLines);
-}else{
-const ids=new Set(state.nodes.map(n=>n.id));
-const remap=new Map();
-for(const node of incomingNodes){const oldId=node.id;let nextId=oldId;if(ids.has(nextId)){do{nextId=uid();}while(ids.has(nextId));}ids.add(nextId);remap.set(oldId,nextId);node.id=nextId;}
-state.nodes.push(...incomingNodes);
-state.lines.push(...incomingLines.map(l=>({...l,from:remap.get(l.from)||l.from,to:remap.get(l.to)||l.to})));
-state.lines=normalizeLines(state.lines);
-}
-afterExternalChange();renderViews();
+const{nodes:incomingNodes,lines:incomingLines}=importGraphData(d.nodes,d.lines,!!d.replace);
 postIo({type:'cm-ack',ok:true,message:`Imported graph (${incomingNodes.length} nodes, ${incomingLines.length} lines).`},e.source);
 postIo(ioPayload(),e.source);
 }catch(err){postIo({type:'cm-ack',ok:false,message:'Graph import failed: '+(err.message||err)},e.source);}
@@ -2343,7 +3729,7 @@ break;
 }
 case 'load-file-text': {
 const name=String(d.name||'Imported map');
-loadMapText(String(d.text||''),name,false);
+await loadMapText(String(d.text||''),name,false);
 postIo({type:'cm-ack',ok:true,message:'Loaded '+name},e.source);postIo(ioPayload(),e.source);break;
 }
 default: throw new Error('Unknown IO command: '+d.action);
@@ -2482,72 +3868,48 @@ if(lvl>0&&parent)lines.push({id:uid(),from:parent.id,to:node.id,arrow:'end',widt
 return{nodes,lines};
 }
 
-function parseExtendedLines(text){
-  const nodes = [], lines = [];
-  let section = '';
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (line === '--- NODES ---') { section = 'nodes'; continue; }
-    if (line === '--- CONNECTIONS ---') { section = 'lines'; continue; }
-    if (!section || /^VERSION:|^CREATED:|^NODES:|^LINES:/.test(line)) continue;
-    if (section === 'nodes') {
-      const parts = line.split(' | '), id = parts[0]?.trim();
-      if (!id) continue;
-      const pos = (line.match(/\|\s*x:([+-]?\d+(?:\.\d+)?)\s+y:([+-]?\d+(?:\.\d+)?)/) || []);
-      const textMatch = line.match(/\|\s*text:\s*([\s\S]*?)(?=\s*\|\s*(?:URL:|size:|collapsed:|IMAGE:|imageWidth:|imageHeight:|imagePath:|ocr:)|$)/);
-      const urlMatch = line.match(/\|\s*URL:\s*([^|]*)/);
-      const sizeMatch = line.match(/\|\s*size:\s*([^|]*)/);
-      const collapsedMatch = line.match(/\|\s*collapsed:\s*(true|false)/i);
-      const imageMatch = line.match(/\|\s*IMAGE:\s*true/i);
-      const imageWidthMatch = line.match(/\|\s*imageWidth:\s*(\d+)/i);
-      const imageHeightMatch = line.match(/\|\s*imageHeight:\s*(\d+)/i);
-      const imagePathMatch = line.match(/\|\s*imagePath:\s*([^|]*)/);
-      const ocrMatch = line.match(/\|\s*ocr:\s*([\s\S]*)$/);
-      
-      let textContent = textMatch ? textMatch[1].trim() : parts.slice(2).join(' | ').replace(/^text:\s*/, '');
-      textContent = textContent.replace(/\\n/g, '\n');
-      
-      const parsed = parseTextAndUrl(textContent);
-      const url = urlMatch ? urlMatch[1].trim() : (parsed.url || null);
-      const node = {
-        id,
-        text: parsed.text,
-        url,
-        x: pos[1] ? Number(pos[1]) : 120 + (nodes.length % 8) * 140,
-        y: pos[2] ? Number(pos[2]) : 140 + Math.floor(nodes.length / 8) * 60,
-        size: sizeMatch ? sizeMatch[1].trim() : 'auto',
-        collapsed: collapsedMatch ? collapsedMatch[1].toLowerCase() === 'true' : false,
-        ...(imageMatch ? {isImage:true,imageWidth:Number(imageWidthMatch?.[1])||160,imageHeight:Number(imageHeightMatch?.[1])||120,customWidth:Number(imageWidthMatch?.[1])||160,customHeight:Number(imageHeightMatch?.[1])||120,...(imagePathMatch&&imagePathMatch[1].trim()?{imagePath:imagePathMatch[1].trim()}:{}),...(ocrMatch?{ocrText:ocrMatch[1].replace(/\\n/g,'\n')}:{})} : {})
-      };
-      nodes.push(node);
-    } else if (section === 'lines') {
-      const id = (line.match(/\bid:([^|]+)/) || [])[1]?.trim() || uid();
-      const from = (line.match(/\bfrom:([^|]+)/) || [])[1]?.trim();
-      const to = (line.match(/\bto:([^|]+)/) || [])[1]?.trim();
-      if (!from || !to) continue;
-      lines.push({
-        id,
-        from,
-        to,
-        arrow: ((line.match(/\barrow:([^|]+)/) || [])[1] || 'end').trim(),
-        width: Number(((line.match(/\bwidth:([^|]+)/) || [])[1] || '1').trim()),
-        color: ((line.match(/\bcolor:([^|]+)/) || [])[1] || '#00b4d8').trim(),
-        label: ((line.match(/\blabel:([\s\S]*)$/) || [])[1] || '').trim()
-      });
-    }
-  }
-  return { nodes, lines };
+function importGraphData(nodesIn,linesIn,replace){
+const incomingNodes=nodesIn.map(n=>({...n}));
+const incomingLines=linesIn.map(l=>({...l}));
+if(replace){
+state.nodes=incomingNodes;
+state.lines=normalizeLines(incomingLines);
+}else{
+const ids=new Set(state.nodes.map(n=>n.id));
+const remap=new Map();
+for(const node of incomingNodes){const oldId=node.id;let nextId=oldId;if(ids.has(nextId)){do{nextId=uid();}while(ids.has(nextId));}ids.add(nextId);remap.set(oldId,nextId);node.id=nextId;}
+state.nodes.push(...incomingNodes);
+state.lines.push(...incomingLines.map(l=>({...l,from:remap.get(l.from)||l.from,to:remap.get(l.to)||l.to})));
+state.lines=normalizeLines(state.lines);
 }
-
-function parseGraphText(text){
+afterExternalChange(incomingNodes.map(n=>n.id));renderViews();
+return{nodes:incomingNodes,lines:incomingLines};
+}
+async function importMapText(text,format,name,replace){
+const fmtNames={simple:'txt-simple',indent:'txt-indent'};
+let f=format&&format!=='auto'?format:graphFormat(text);f=fmtNames[f]||f;
+if(f==='json'||f==='html'){
+let data;
+if(f==='html'){const m=text.match(/const mapData = (\{[\s\S]*?\});/);if(!m)throw new Error('No embedded mapData JSON found in this HTML file.');data=JSON.parse(m[1]);}
+else data=JSON.parse(text);
+if(!data||!Array.isArray(data.nodes)||!Array.isArray(data.lines))throw new Error('JSON must contain arrays named nodes and lines.');
+applyImportedJson(data);
+return{fmt:f,announce:true,message:'Imported '+(f==='html'?'HTML':'JSON')+' "'+name+'".'};
+}
+const parsed=f==='lines'?await F('parseExtendedLines',text):f==='txt-simple'?parseSimpleTxt(text):parseIndentTxt(text);
+if(f==='lines'&&!parsed.nodes.length)throw new Error('No extended-lines nodes were found.');
+if(!parsed.nodes.length&&!parsed.lines.length)throw new Error('No map records were found.');
+const r=importGraphData(parsed.nodes,parsed.lines,replace);
+return{fmt:f,announce:!!replace,message:'Imported "'+name+'" ('+r.nodes.length+' nodes, '+r.lines.length+' lines).'};
+}
+async function parseGraphText(text){
 const trimmed=text.trim();
 if(/^<!doctype html|^<html/i.test(trimmed)){
   const match=trimmed.match(/const mapData = (\{.*?\});/s);
   if(match)return JSON.parse(match[1]);
 }
 if(trimmed.startsWith('{')||trimmed.startsWith('['))return JSON.parse(trimmed);
-if(/^VERSION:\s*2\.0_METADATA\s*$/m.test(text)||/--- NODES ---/.test(text))return parseExtendedLines(text);
+if(graphFormat(text)==='lines')return F('parseExtendedLines',text);
 return/^\s*-[12]\s+\S+\s+\S+\s*$/m.test(text)?parseSimpleTxt(text):parseIndentTxt(text);
 }
 $('copy-dir-btn').onclick=async()=>{
@@ -2663,9 +4025,9 @@ return{text:await res.text(),handle:null};
 const views=[{name:'Main map',depth:0,nodes:null,lines:null}];
 let activeView=0;
 const cloneJ=o=>JSON.parse(JSON.stringify(o));
-function saveActiveView(){views[activeView].nodes=cloneJ(state.nodes);views[activeView].lines=cloneJ(state.lines);}
+function saveActiveView(){views[activeView].nodes=cloneJ(state.nodes);views[activeView].lines=cloneJ(state.lines);views[activeView].treeViews=cloneJ(state.treeViews||[]);}
 function loadView(v){
-state.nodes=cloneJ(v.nodes);state.lines=cloneJ(v.lines);
+state.nodes=cloneJ(v.nodes);state.lines=cloneJ(v.lines);state.treeViews=cloneJ(v.treeViews||[]);
 selected.clear();selectedLineId=null;editingId=null;
 saveState();render();renderViews();
 }

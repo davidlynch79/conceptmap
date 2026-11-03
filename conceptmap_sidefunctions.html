@@ -65,21 +65,10 @@ body.touch-mode input[type=text],body.touch-mode select,body.touch-mode textarea
   <button id="treset">Reset touches now</button>
 </details>
 
-<div class="g"><div class="sl"><span>Linkage Font Range: <b data-out="fontMin"></b>&ndash;<b data-out="fontMax"></b></span>
-  <div class="rw"><input type="range" data-k="fontMin" min="6" max="36" step="1"><input type="range" data-k="fontMax" min="6" max="36" step="1"></div></div></div>
-
-<div class="g"><span class="cap">DISTANCE-BASED LINE COLORING</span>
-  <div class="r"><label><input type="checkbox" data-k="colorDist1"> 1 away line</label><input type="color" data-k="colorDist1Hex"></div>
-  <div class="r"><label><input type="checkbox" data-k="colorDist2"> 2 away line</label><input type="color" data-k="colorDist2Hex"></div>
-  <div class="r"><label><input type="checkbox" data-k="colorDist3"> 3 away line</label><input type="color" data-k="colorDist3Hex"></div></div>
-
 <div class="g"><div class="sl"><span>Hide nodes &gt; dist: <b data-out="maxDistanceLimit"></b></span><input type="range" data-k="maxDistanceLimit" min="1" max="10" step="1"></div></div>
 
 <div class="g">
-  <label><input type="checkbox" data-k="autoSizeAll"> Auto-size All Nodes</label>
-  <label><input type="checkbox" id="chain" checked> Highlight Chain <span class="up">&#9644;up</span> <span class="dn">&#9644;down</span></label>
   <label><input type="checkbox" data-k="showTimeline"> Timeline Overlay</label>
-  <label><input type="checkbox" data-k="showUrls"> Show URLs</label>
 </div>
 
 <details class="g"><summary>DUPLICATE DETECTOR OPTIONS</summary>
@@ -266,7 +255,7 @@ $$('[data-k]').forEach(el=>{
     ['pointerup','pointercancel'].forEach(t=>el.addEventListener(t,()=>{dragging=false;syncControls();}));
   }
 });
-$('chain').onchange=e=>post('chain',{on:e.target.checked});
+if($('chain'))$('chain').onchange=e=>post('chain',{on:e.target.checked});
 $('treset').onclick=()=>post('reset-touches');
 
 /* settings text */
@@ -435,6 +424,169 @@ if(connected){
   document.addEventListener('toggle',sendH,true);
   tryReady();
 }
+/* ===== Functions index.html asks this panel to run (open/import, save/export, translate) ===== */
+const HOSTED=(()=>{
+const uid=()=>'id_'+Math.random().toString(36).slice(2,11);
+function parseTextAndUrl(input){
+const url=(input.match(/https?:\/\/[^\s]+/i)||[])[0];
+return url?{text:input.replace(url,'').trim()||url,url}:{text:input.trim()||'Node',url:null};
+}
+const EXT_LITERAL=/^(-?\d+(\.\d+)?|true|false|null|["\[{][\s\S]*)$/;
+const EXT_NODE_SKIP=new Set(['id','x','y','text','url','size','collapsed','isImage','customWidth','customHeight','imageWidth','imageHeight','ocrText','imageData','photoWidth','photoHeight','ballsExpanded','fileExpansion']);
+const EXT_LINE_SKIP=new Set(['id','from','to','arrow','width','color','label','cycleHidden']);
+function extEsc(str){return String(str).replace(/\r?\n/g,'\\n').replace(/ \| /g,' \\| ');}
+function extVal(v){return typeof v==='string'?(EXT_LITERAL.test(v)?JSON.stringify(v):extEsc(v)):extEsc(JSON.stringify(v));}
+function extExtras(o,skip){
+  let out='';
+  for(const k of Object.keys(o)){
+    const v=o[k];
+    if(skip.has(k)||!/^[A-Za-z_]\w*$/.test(k)||v===undefined||v===null||v===false||v===''||typeof v==='function')continue;
+    if(typeof v==='string'&&/^data:/.test(v))continue;
+    out+=` | ${k}: ${extVal(v)}`;
+  }
+  return out;
+}
+function serializeLines(s){
+  const out=[];
+  s.nodes.forEach(n=>{
+    out.push(`${n.id} | x:${Math.round(n.x)} y:${Math.round(n.y)} | text: ${extEsc(n.text||'')}`
+      +(n.url?` | URL: ${n.url}`:'')+(n.size&&n.size!=='auto'?` | size: ${n.size}`:'')+(n.collapsed?' | collapsed: true':'')
+      +(n.isImage?' | IMAGE: true':'')+(n.isImage&&n.customWidth?` | imageWidth: ${n.customWidth}`:'')+(n.isImage&&n.customHeight?` | imageHeight: ${n.customHeight}`:'')
+      +extExtras(n,EXT_NODE_SKIP)+(n.isImage&&n.ocrText?` | ocr: ${extEsc(n.ocrText)}`:''));
+  });
+  s.lines.forEach(l=>out.push(`LINE | id:${l.id} | from:${l.from} | to:${l.to} | arrow:${l.arrow} | width:${l.width||1} | color:${l.color||'#00b4d8'}${l.cycleHidden?' | hidden:1':''}${extExtras(l,EXT_LINE_SKIP)} | label:${extEsc(l.label||'')}`));
+  return out.join('\n');
+}
+function serializeSimple(s){
+const out=s.nodes.map(n=>`${n.id} ${n.url ? `${n.text.replace(/\r?\n/g,' ')} ${n.url}` : n.text.replace(/\r?\n/g,' ')} ${Math.round(n.x)} ${Math.round(n.y)}`);
+s.lines.forEach(l=>{
+const rev=l.arrow==='start';
+out.push(`${l.arrow === 'none' ? '-2' : '-1'} ${rev ? l.to : l.from} ${rev ? l.from : l.to}`);
+});
+return out.join('\n');
+}
+function serializeIndent(s){
+const kids=new Map(),parentCount=new Map();
+s.nodes.forEach(n=>{kids.set(n.id,[]);parentCount.set(n.id,0);});
+s.lines.forEach(l=>{
+const[p,c]=l.arrow==='start'?[l.to,l.from]:[l.from,l.to];
+if(kids.has(p)&&kids.has(c)){kids.get(p).push(c);parentCount.set(c,parentCount.get(c)+1);}
+});
+let roots=s.nodes.filter(n=>parentCount.get(n.id)===0);
+if(!roots.length)roots=[...s.nodes];
+roots.sort((a,b)=>(a.y-b.y)||(a.x-b.x));
+const seen=new Set(),out=[];
+const walk=(id,lvl)=>{
+if(seen.has(id))return;
+seen.add(id);
+const n=s.nodes.find(x=>x.id===id);
+if(!n)return;
+out.push('    '.repeat(lvl)+(n.url?`${n.text.replace(/\r?\n/g,' ')} ${n.url}`:n.text.replace(/\r?\n/g,' ')));
+(kids.get(id)||[]).forEach(c=>walk(c,lvl+1));
+};
+roots.forEach(r=>walk(r.id,0));
+s.nodes.forEach(n=>walk(n.id,0));
+return out.join('\n');
+}
+const OFFLINE_TRANSLATIONS={
+pt:{hello:'olá',hi:'oi',good:'bom',bad:'mau',morning:'manhã',night:'noite',day:'dia',today:'hoje',tomorrow:'amanhã',yesterday:'ontem',goodbye:'tchau',bye:'tchau',please:'por favor',thanks:'obrigado',thank:'agradecer',you:'você',your:'seu',yours:'seu',i:'eu',me:'me',my:'meu',we:'nós',they:'eles',he:'ele',she:'ela',it:'isso',is:'é',are:'são',am:'sou',was:'era',were:'eram',the:'o',a:'um',an:'um',and:'e',or:'ou',but:'mas',not:'não',no:'não',yes:'sim',what:'o que',why:'por que',where:'onde',when:'quando',who:'quem',how:'como',love:'amor',like:'gostar',want:'querer',need:'precisar',have:'ter',has:'tem',go:'ir',come:'vir',see:'ver',know:'saber',think:'pensar',make:'fazer',do:'fazer',work:'trabalho',home:'casa',house:'casa',school:'escola',friend:'amigo',family:'família',people:'pessoas',man:'homem',woman:'mulher',child:'criança',children:'crianças',water:'água',food:'comida',coffee:'café',book:'livro',car:'carro',money:'dinheiro',time:'tempo',world:'mundo',life:'vida',happy:'feliz',sad:'triste',big:'grande',small:'pequeno',new:'novo',old:'velho',beautiful:'bonito',important:'importante',help:'ajuda',please:'por favor',because:'porque',with:'com',without:'sem',for:'para',from:'de',in:'em',on:'sobre',to:'para',this:'isto',that:'aquilo',here:'aqui',there:'lá',fast:'rápido',slow:'lento',one:'um',two:'dois',three:'três',four:'quatro',five:'cinco'},
+es:{hello:'hola',hi:'hola',good:'bueno',bad:'malo',morning:'mañana',night:'noche',day:'día',today:'hoy',tomorrow:'mañana',yesterday:'ayer',goodbye:'adiós',bye:'adiós',please:'por favor',thanks:'gracias',thank:'agradecer',you:'tú',your:'tu',yours:'tuyo',i:'yo',me:'me',my:'mi',we:'nosotros',they:'ellos',he:'él',she:'ella',it:'eso',is:'es',are:'son',am:'soy',was:'era',were:'eran',the:'el',a:'un',an:'un',and:'y',or:'o',but:'pero',not:'no',no:'no',yes:'sí',what:'qué',why:'por qué',where:'dónde',when:'cuándo',who:'quién',how:'cómo',love:'amor',like:'gustar',want:'querer',need:'necesitar',have:'tener',has:'tiene',go:'ir',come:'venir',see:'ver',know:'saber',think:'pensar',make:'hacer',do:'hacer',work:'trabajo',home:'casa',house:'casa',school:'escuela',friend:'amigo',family:'familia',people:'personas',man:'hombre',woman:'mujer',child:'niño',children:'niños',water:'agua',food:'comida',coffee:'café',book:'libro',car:'coche',money:'dinero',time:'tiempo',world:'mundo',life:'vida',happy:'feliz',sad:'triste',big:'grande',small:'pequeño',new:'nuevo',old:'viejo',beautiful:'hermoso',important:'importante',help:'ayuda',because:'porque',with:'con',without:'sin',for:'para',from:'de',in:'en',on:'sobre',to:'a',this:'esto',that:'eso',here:'aquí',there:'allí',fast:'rápido',slow:'lento',one:'uno',two:'dos',three:'tres',four:'cuatro',five:'cinco'},
+en:{hola:'hello',gracias:'thanks',adiós:'goodbye',casa:'house',agua:'water',amor:'love',amigo:'friend',familia:'family',sí:'yes',no:'no'}};
+function offlineTranslate(text,lang){
+ const dict=OFFLINE_TRANSLATIONS[lang]||{};
+ return String(text).replace(/[\p{L}À-ž]+(?:['’][\p{L}À-ž]+)*/gu,word=>{const key=word.toLocaleLowerCase();const translated=dict[key];if(!translated)return word;if(word===word.toUpperCase())return translated.toLocaleUpperCase();if(word[0]===word[0].toUpperCase())return translated[0].toLocaleUpperCase()+translated.slice(1);return translated;});
+}
+function gujaratiToEnglish(input){
+ const consonants={'ક':'k','ખ':'kh','ગ':'g','ઘ':'gh','ઙ':'ng','ચ':'ch','છ':'chh','જ':'j','ઝ':'jh','ઞ':'ny','ટ':'ṭ','ઠ':'ṭh','ડ':'ḍ','ઢ':'ḍh','ણ':'ṇ','ત':'t','થ':'th','દ':'d','ધ':'dh','ન':'n','પ':'p','ફ':'ph','બ':'b','ભ':'bh','મ':'m','ય':'y','ર':'r','લ':'l','ળ':'ḷ','વ':'v','શ':'sh','ષ':'ṣ','સ':'s','હ':'h','ક્ષ':'ksh','જ્ઞ':'gn'};
+ const vowels={'અ':'a','આ':'aa','ઇ':'i','ઈ':'ee','ઉ':'u','ઊ':'oo','ઋ':'ru','એ':'e','ઐ':'ai','ઓ':'o','ઔ':'au'};
+ const signs={'ા':'aa','િ':'i','ી':'ee','ુ':'u','ૂ':'oo','ૃ':'ru','ે':'e','ૈ':'ai','ો':'o','ૌ':'au','ં':'n','ઃ':'h','ઁ':'n','ૅ':'e','ૉ':'o','઼':'','્':''};
+ const chars=Array.from(String(input));let out='';
+ for(let i=0;i<chars.length;i++){
+  const c=chars[i];
+  if(c==='જ'&&chars[i+1]==='્'&&chars[i+2]==='ઞ'){out+='gn';i+=2;continue;}
+  if(c==='ક'&&chars[i+1]==='્'&&chars[i+2]==='ષ'){out+='ksh';i+=2;continue;}
+  if(consonants[c]){out+=consonants[c];if(chars[i+1]==='્'){i++;}else if(signs[chars[i+1]]!==undefined){out+=signs[chars[++i]];}else out+='a';continue;}
+  if(vowels[c])out+=vowels[c];else if(signs[c]!==undefined)out+=signs[c];else out+=c;
+ }
+ return out.replace(/aa+/g,'aa').replace(/\s+/g,' ');
+}
+function extUnesc(str){return String(str).replace(/ \\\| /g,' | ');}
+function extTyped(raw){
+  const t=raw.trim();
+  if(t[0]==='"'||t[0]==='['||t[0]==='{'){try{return JSON.parse(t);}catch(e){}}
+  if(/^-?\d+(\.\d+)?$/.test(t))return Number(t);
+  if(t==='true')return true;if(t==='false')return false;if(t==='null')return null;
+  return extUnesc(raw).replace(/\\n/g,'\n');
+}
+function extFields(parts){
+  const f=[];let pos=null;
+  parts.forEach(part=>{
+    const m=part.match(/^([A-Za-z_]\w*):\s?([\s\S]*)$/);
+    if(!pos&&/^x:\S+\s+y:\S+$/.test(part)){pos=part.match(/^x:([+-]?\d+(?:\.\d+)?)\s+y:([+-]?\d+(?:\.\d+)?)$/);return;}
+    if(m&&!/^\s/.test(part))f.push([m[1],m[2]]);
+    else if(f.length)f[f.length-1][1]+=' | '+part;
+  });
+  return{f,pos};
+}
+function parseExtendedLines(text) {
+  const nodes = [], lines = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/^---.*---$/.test(line) || /^(VERSION|CREATED|NODES|LINES):/.test(line)) continue;
+    if (/^LINE\s*\|/.test(line)) {
+      const o = {};
+      extFields(line.split(' | ').slice(1)).f.forEach(([k, v]) => { o[k] = v; });
+      const labelAt = line.search(/\|\s*label:/);
+      const label = labelAt >= 0 ? extUnesc(line.slice(labelAt).replace(/^\|\s*label:\s?/, '')).replace(/\\n/g, '\n').trim() : '';
+      if (!o.from || !o.to) continue;
+      const ln = { id: String(o.id || uid()).trim(), from: String(o.from).trim(), to: String(o.to).trim(), arrow: String(o.arrow || 'end').trim(), width: Number(o.width || 1) || 1, color: String(o.color || '#00b4d8').trim(), label };
+      for (const k of Object.keys(o)) {
+        if (['id', 'from', 'to', 'arrow', 'width', 'color', 'label'].includes(k)) continue;
+        if (k === 'hidden') { if (String(o[k]).trim() === '1') ln.cycleHidden = true; continue; }
+        ln[k] = extTyped(String(o[k]));
+      }
+      lines.push(ln);
+      continue;
+    }
+    const parts = line.split(' | '), id = parts[0]?.trim();
+    if (!id) continue;
+    const { f, pos } = extFields(parts.slice(1));
+    const node = { id, text: '', url: null, x: pos ? Number(pos[1]) : 120 + (nodes.length % 8) * 140, y: pos ? Number(pos[2]) : 140 + Math.floor(nodes.length / 8) * 60, size: 'auto', collapsed: false };
+    let textRaw = null, imgW, imgH;
+    for (const [k, v] of f) {
+      if (k === 'text') textRaw = v;
+      else if (k === 'URL') node.url = v.trim() || null;
+      else if (k === 'size') node.size = v.trim() || 'auto';
+      else if (k === 'collapsed') node.collapsed = /^true$/i.test(v.trim());
+      else if (k === 'IMAGE') { if (/^true$/i.test(v.trim())) node.isImage = true; }
+      else if (k === 'imageWidth') imgW = Number(v) || undefined;
+      else if (k === 'imageHeight') imgH = Number(v) || undefined;
+      else if (k === 'ocr') node.ocrText = extUnesc(v).replace(/\\n/g, '\n');
+      else if (k !== 'id') node[k] = extTyped(v);
+    }
+    if (textRaw === null) textRaw = parts.slice(2).join(' | ').replace(/^text:\s*/, '');
+    const parsed = parseTextAndUrl(extUnesc(textRaw).replace(/\\n/g, '\n').trim());
+    node.text = parsed.text;
+    if (!node.url) node.url = parsed.url || null;
+    if (node.isImage) { node.imageWidth = imgW || 160; node.imageHeight = imgH || 120; node.customWidth = imgW || 160; node.customHeight = imgH || 120; }
+    nodes.push(node);
+  }
+  return { nodes, lines };
+}
+return{parseExtendedLines,serializeLines,serializeSimple,serializeIndent,offlineTranslate,gujaratiToEnglish};
+})();
+window.addEventListener('message',e=>{
+  const d=e.data;if(!d||d.ch!=='conceptmap-f'||e.source!==parent)return;
+  if(d.type==='hello'){parent.postMessage({ch:'conceptmap-f',type:'ready'},'*');return;}
+  if(d.type!=='call')return;
+  const reply=o=>parent.postMessage({ch:'conceptmap-f',type:'result',id:d.id,...o},'*');
+  try{
+    const f=HOSTED[d.fn];if(!f)throw new Error('Unknown function: '+d.fn);
+    Promise.resolve(f(...(d.args||[]))).then(v=>reply({value:v}),err=>reply({error:String(err&&err.message||err)}));
+  }catch(err){reply({error:String(err&&err.message||err)});}
+});
+if(parent!==window)parent.postMessage({ch:'conceptmap-f',type:'ready'},'*');
 </script>
 </body>
 </html>
